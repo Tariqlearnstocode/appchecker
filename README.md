@@ -67,12 +67,21 @@ For the following steps, make sure you have the ["Test Mode" toggle](https://str
 
 We need to create a webhook in the `Developers` section of Stripe. Pictured in the architecture diagram above, this webhook is the piece that connects Stripe to your Vercel Serverless Functions.
 
-1. Click the "Add Endpoint" button on the [test Endpoints page](https://dashboard.stripe.com/test/webhooks).
-1. Enter your production deployment URL followed by `/api/webhooks` for the endpoint URL. (e.g. `https://your-deployment-url.vercel.app/api/webhooks`)
-1. Click `Select events` under the `Select events to listen to` heading.
-1. Click `Select all events` in the `Select events to send` section.
-1. Copy `Signing secret` as we'll need that in the next step (e.g `whsec_xxx`) (/!\ be careful not to copy the webook id we_xxxx).
-1. In addition to the `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and the `STRIPE_SECRET_KEY` we've set earlier during deployment, we need to add the webhook secret as `STRIPE_WEBHOOK_SECRET` env var.
+1. Click the "Add Endpoint" (or "Create an event destination") button on the [test Endpoints page](https://dashboard.stripe.com/test/webhooks).
+2. **Important:** When selecting events, you may see a notice about "Snapshot payloads" vs "Thin payloads". This template uses **snapshot payloads** (the traditional format). Only select events that use snapshot payloads, or if given the option, skip creating a destination for thin payloads.
+3. Select the following event types (these all use snapshot payloads):
+   - `customer.*`
+   - `product.*`
+   - `price.*`
+   - `checkout.session.*`
+   - `invoice.*`
+   - `subscription.*`
+   
+   Alternatively, you can select "All events" but be aware you may need to create separate destinations for different payload styles.
+4. Click "Continue" and select "Webhook endpoint" as the destination type.
+5. Enter your production deployment URL followed by `/api/webhooks` for the endpoint URL. (e.g. `https://your-deployment-url.vercel.app/api/webhooks`)
+6. Copy the `Signing secret` as we'll need that in the next step (e.g `whsec_xxx`) (/!\ be careful not to copy the webhook id `we_xxxx`).
+7. In addition to the `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and the `STRIPE_SECRET_KEY` we've set earlier during deployment, we need to add the webhook secret as `STRIPE_WEBHOOK_SECRET` env var.
 
 #### Redeploy with new env vars
 
