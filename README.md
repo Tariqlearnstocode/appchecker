@@ -1,9 +1,5 @@
 # Next.js Subscription Payments Starter
 
-
-> [!WARNING]  
-> This repo has been sunset and replaced by a new template: https://github.com/nextjs/saas-starter
-
 ## Features
 
 - Secure user management and authentication with [Supabase](https://supabase.io/docs/guides/auth)
@@ -29,7 +25,7 @@ When deploying this template, the sequence of steps is important. Follow the ste
 
 #### Vercel Deploy Button
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnextjs-subscription-payments&env=NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,STRIPE_SECRET_KEY&envDescription=Enter%20your%20Stripe%20API%20keys.&envLink=https%3A%2F%2Fdashboard.stripe.com%2Fapikeys&project-name=nextjs-subscription-payments&repository-name=nextjs-subscription-payments&integration-ids=oac_VqOgBHqhEoFTPzGkPd7L0iH6&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnextjs-subscription-payments%2Ftree%2Fmain)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnextjs-subscription-payments&env=NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,STRIPE_SECRET_KEY&envDescription=Enter%20your%20Stripe%20API%20keys.&envLink=https%3A%2F%2Fdashboard.stripe.com%2Fapikeys&project-name=nextjs-subscription-payments&repository-name=nextjs-subscription-payments&integration-ids=oac_VqOgBHqhEoFTPzGkPd7L0iH6&external-id=https%3A%2F%2Fgithub.com%2FSamRome1%2Fsubscription-payments-modern%2Ftree%2Fmain)
 
 The Vercel Deployment will create a new repository with this template on your GitHub account and guide you through a new Supabase project creation. The [Supabase Vercel Deploy Integration](https://vercel.com/integrations/supabase) will set up the necessary Supabase environment variables and run the [SQL migrations](./supabase/migrations/20230530034630_init.sql) to set up the Database schema on your account. You can inspect the created tables in your project's [Table editor](https://app.supabase.com/project/_/editor).
 
@@ -148,7 +144,13 @@ Running this command will create a new `.env.local` file in your project folder.
 
 It's highly recommended to use a local Supabase instance for development and testing. We have provided a set of custom commands for this in `package.json`.
 
-First, you will need to install [Docker](https://www.docker.com/get-started/). You should also copy or rename:
+First, you will need to install [Docker](https://www.docker.com/get-started/). You will also need to install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started):
+
+```bash
+brew install supabase/tap/supabase
+```
+
+Next, copy or rename:
 
 - `.env.local.example` -> `.env.local`
 - `.env.example` -> `.env`

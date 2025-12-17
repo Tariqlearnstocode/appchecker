@@ -104,6 +104,9 @@ const upsertCustomerToSupabase = async (uuid: string, customerId: string) => {
 };
 
 const createCustomerInStripe = async (uuid: string, email: string) => {
+  if (!stripe) {
+    throw new Error('Stripe API key not configured. Unable to create customer.');
+  }
   const customerData = { metadata: { supabaseUUID: uuid }, email: email };
   const newCustomer = await stripe.customers.create(customerData);
   if (!newCustomer) throw new Error('Stripe customer creation failed.');
