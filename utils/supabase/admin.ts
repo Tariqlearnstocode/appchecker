@@ -199,6 +199,9 @@ const copyBillingDetailsToCustomer = async (
   uuid: string,
   payment_method: Stripe.PaymentMethod
 ) => {
+  if (!stripe) {
+    throw new Error('Stripe API key not configured. Unable to update customer.');
+  }
   //Todo: check this assertion
   const customer = payment_method.customer as string;
   const { name, phone, address } = payment_method.billing_details;
@@ -220,6 +223,9 @@ const manageSubscriptionStatusChange = async (
   customerId: string,
   createAction = false
 ) => {
+  if (!stripe) {
+    throw new Error('Stripe API key not configured. Unable to manage subscription.');
+  }
   // Get customer's UUID from mapping table.
   const { data: customerData, error: noCustomerError } = await supabaseAdmin
     .from('customers')
