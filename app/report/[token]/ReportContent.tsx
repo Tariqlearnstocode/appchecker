@@ -1,19 +1,6 @@
 'use client';
 
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Wallet, 
-  CreditCard, 
-  ArrowDownLeft, 
-  ArrowUpRight,
-  Building2,
-  CheckCircle,
-  Download,
-  PiggyBank,
-  Receipt,
-  ArrowLeft
-} from 'lucide-react';
+import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { IncomeReport, formatCurrency, formatDate } from '@/lib/income-calculations';
 
@@ -75,6 +62,7 @@ interface Props {
     applicant_email: string;
     landlord_name?: string | null;
     property_unit?: string | null;
+    monthly_rent?: number | null;
     created_at: string;
     completed_at: string;
   };
@@ -89,6 +77,7 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
     const d = data as IncomeReport;
     return {
       summary: {
+        totalIncome12Mo: d.summary.totalIncome12Mo,
         totalIncome3Mo: d.summary.totalIncome3Mo,
         estimatedMonthlyIncome: d.summary.estimatedMonthlyIncome,
         totalBalance: d.summary.totalBalance,
@@ -98,6 +87,7 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
       },
       accounts: d.accounts,
       income: {
+        total12Mo: d.income.total12Mo,
         total3Mo: d.income.total3Mo,
         monthlyEstimate: d.income.monthlyEstimate,
         recurringDeposits: d.income.recurringDeposits,
@@ -105,14 +95,26 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
       },
       expenses: d.expenses,
       transactions: d.transactions,
+      transactions3Mo: d.transactions3Mo || d.transactions,
       generatedAt: d.generatedAt,
     };
   }
   
   // Legacy format - convert to common format
   const d = data as LegacyReportData;
+  const transactions = d.transactions.map(t => ({
+    date: t.date,
+    amount: t.amount,
+    name: t.name,
+    category: t.category || 'Uncategorized',
+    pending: t.pending,
+    isIncome: t.amount < 0,
+    runningBalance: null as number | null,
+  }));
+  
   return {
     summary: {
+      totalIncome12Mo: d.summary.total_income_3mo, // Legacy only has 3mo
       totalIncome3Mo: d.summary.total_income_3mo,
       estimatedMonthlyIncome: d.summary.estimated_monthly_income,
       totalBalance: d.summary.total_balance,
@@ -130,6 +132,7 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
       mask: a.mask,
     })),
     income: {
+      total12Mo: d.income.total_3mo,
       total3Mo: d.income.total_3mo,
       monthlyEstimate: d.income.monthly_estimate,
       recurringDeposits: d.income.recurring_deposits.map(r => ({
@@ -149,291 +152,292 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
       total3Mo: d.expenses.total_3mo,
       byCategory: d.expenses.by_category,
     },
-    transactions: d.transactions.map(t => ({
-      date: t.date,
-      amount: t.amount,
-      name: t.name,
-      category: t.category || 'Uncategorized',
-      pending: t.pending,
-      isIncome: t.amount < 0,
-    })),
+    transactions,
+    transactions3Mo: transactions,
     generatedAt: d.generated_at,
   };
 }
 
 export default function ReportContent({ verification, reportData, isCalculated }: Props) {
   const data = normalizeReportData(reportData);
-  const { summary, accounts, income, expenses, transactions } = data;
-  const maxRentAffordable = summary.estimatedMonthlyIncome / 3;
+  const { summary, income, transactions } = data;
+  
+  // Historical figures (based on actual 12-month data)
+  const historicalAnnualGross = summary.totalIncome12Mo;
+  const historicalAnnualNet = historicalAnnualGross * 0.73; // Approximate net after taxes
+  const historicalMonthlyGross = historicalAnnualGross / 12;
+  
+  // Projected figures (based on 3-month data, extrapolated)
+  const projectedAnnualGross = summary.estimatedMonthlyIncome * 12;
+  const projectedAnnualNet = projectedAnnualGross * 0.73; // Approximate net after taxes
+  const projectedMonthlyGross = summary.estimatedMonthlyIncome;
+  
+  // Get primary income source from recurring deposits
+  const topRecurringDeposit = income.recurringDeposits.length > 0
+    ? income.recurringDeposits.sort((a, b) => (b.approximateAmount * b.occurrences) - (a.approximateAmount * a.occurrences))[0]
+    : null;
+  const primaryIncomeSource = topRecurringDeposit?.likelySource || 'Not Detected';
+  const primarySourceTotal90Days = topRecurringDeposit 
+    ? topRecurringDeposit.approximateAmount * topRecurringDeposit.occurrences 
+    : 0;
+  const primarySourceMonthlyEst = topRecurringDeposit 
+    ? primarySourceTotal90Days / 3 
+    : 0;
+  
+  // Income to rent ratio calculation (using projected/recent income)
+  const monthlyRent = verification.monthly_rent || 0;
+  const incomeToRentRatio = monthlyRent > 0 ? projectedMonthlyGross / monthlyRent : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 print:bg-white">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Back Button */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 print:hidden"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
+    <div className="min-h-screen bg-[#f5f5f5] print:bg-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        
+        {/* Print Button - Hidden on Print */}
+        <div className="flex justify-end mb-4 print:hidden">
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-4 py-2 bg-[#00969B] hover:bg-[#007a7e] text-white rounded transition-colors text-sm"
+          >
+            <Download className="w-4 h-4" />
+            Export PDF
+          </button>
+        </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-              </div>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-full">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex-1 h-[2px] bg-[#00969B]"></div>
+          <h1 className="text-[#00969B] text-xl font-semibold tracking-wide">REPORT DETAILS</h1>
+          <div className="flex-1 h-[2px] bg-[#00969B]"></div>
+        </div>
+
+        {/* Disclaimer Box */}
+        <div className="bg-[#FFF8E7] border border-[#E8DFC7] rounded p-4 mb-6 text-sm text-gray-700 leading-relaxed">
+          <strong>Disclaimer:</strong> This report is based on income data directly reported by the applicant's financial institution(s). The applicant has made available all the data used to compile this report by connecting to their financial institutions. It may not reflect the applicant's entire income or all of their financial institutions. If deposits are not regularly made to the applicant's provided bank account(s), the amounts may not be recognized as income.
+        </div>
+
+        {/* Income Summary Section */}
+        <div className="bg-white border border-gray-200 rounded mb-6">
+          <div className="px-5 py-3 border-b border-gray-200">
+            <span className="font-semibold text-gray-900">Income Summary</span>
+            <span className="text-gray-500 text-sm ml-2">Provided by Teller</span>
+          </div>
+          
+          <div className="p-5">
+            {/* Bank Account Owner */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-gray-700">Bank Account Owner Name(s): <strong>{verification.applicant_name}</strong></span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00969B] text-white text-xs font-medium rounded-full">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
                 Verified
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Income Verification Report</h1>
-            <p className="text-gray-500">Generated {formatDate(data.generatedAt)}</p>
-          </div>
-          <div className="flex gap-2 print:hidden">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export PDF
-            </button>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              Historical income values are estimated using the applicant's gross and net income from the past twelve (12) complete calendar months.<br/>
+              Projected income values are estimated using the applicant's gross and net income from the past three (3) complete calendar months.
+            </p>
+
+            {/* Historical & Projected Cards - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Historical Annual Card */}
+              <div className="bg-white border border-gray-200 rounded p-6">
+                <div className="mb-4">
+                  <span className="text-5xl font-light text-[#00969B]">{formatCurrency(historicalAnnualGross)}</span>
+                  <div className="text-gray-600 mt-1">
+                    <span className="text-sm">Historical</span><br/>
+                    <span className="text-sm font-medium">Estimated Annual (Gross)</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Annual (Gross)</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(historicalAnnualGross)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Annual (Net)</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(historicalAnnualNet)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Monthly (Gross)</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(historicalMonthlyGross)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Projected Annual Card */}
+              <div className="bg-white border border-gray-200 rounded p-6">
+                <div className="mb-4">
+                  <span className="text-5xl font-light text-[#00969B]">{formatCurrency(projectedAnnualGross)}</span>
+                  <div className="text-gray-600 mt-1">
+                    <span className="text-sm">Projected</span><br/>
+                    <span className="text-sm font-medium">Estimated Annual (Gross)</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Annual (Gross)</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(projectedAnnualGross)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Annual (Net)</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(projectedAnnualNet)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#00969B] font-medium">Estimated Monthly (Gross)</span>
+                    <span className="font-medium text-[#00969B]">{formatCurrency(projectedMonthlyGross)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Applicant & Landlord Info */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-emerald-500 rounded-xl flex items-center justify-center text-white text-xl font-bold">
-                {verification.applicant_name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {verification.applicant_name}
-                </h2>
-                <p className="text-gray-500">{verification.applicant_email}</p>
-              </div>
+        {/* Income to Rent Ratio & Primary Income Source - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Income to Rent Ratio */}
+          <div className="bg-white border border-gray-200 rounded p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">Income to Rent Ratio</h3>
+            {monthlyRent > 0 ? (
+              <>
+                <div className="text-[#00969B] text-2xl font-light mb-2">
+                  {formatCurrency(projectedMonthlyGross)} / {formatCurrency(monthlyRent)} = <strong>{incomeToRentRatio.toFixed(2)}</strong>
+                </div>
+                <p className="text-xs text-gray-500">(Estimated Monthly Gross Income / Monthly Rent)</p>
+              </>
+            ) : (
+              <p className="text-gray-500 text-sm">Monthly rent not provided</p>
+            )}
+          </div>
+
+          {/* Primary Income Source */}
+          <div className="bg-white border border-gray-200 rounded p-5">
+            <div className="flex items-baseline gap-2 mb-4">
+              <h3 className="font-semibold text-gray-900">Primary Income Source</h3>
+              <span className="text-gray-500 text-xs">Provided by Teller</span>
             </div>
-            {verification.landlord_name && (
-              <div className="text-right">
-                <p className="text-xs text-gray-400 uppercase tracking-wide">Requested by</p>
-                <p className="font-medium text-gray-900">{verification.landlord_name}</p>
-                {verification.property_unit && (
-                  <p className="text-sm text-gray-500">{verification.property_unit}</p>
-                )}
+            <div className="text-[#00969B] text-xl font-medium mb-3">
+              {primaryIncomeSource}
+            </div>
+            {topRecurringDeposit && (
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total (Last 90 Days)</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(primarySourceTotal90Days)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Est. Monthly Income</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(primarySourceMonthlyEst)}</span>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-              </div>
-              <span className="text-sm text-gray-500">Monthly Income</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.estimatedMonthlyIncome)}</p>
-            <p className="text-xs text-gray-400 mt-1">Estimated from 3-month data</p>
+        {/* Recent Deposits */}
+        <div className="bg-white border border-gray-200 rounded mb-6">
+          <div className="px-5 py-3 border-b border-gray-200">
+            <span className="font-semibold text-gray-900">Recent Deposits</span>
+            <span className="text-gray-500 text-sm ml-2">Provided by Teller</span>
           </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-blue-600" />
-              </div>
-              <span className="text-sm text-gray-500">Total Balance</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalBalance)}</p>
-            <p className="text-xs text-gray-400 mt-1">Across {summary.accountCount} accounts</p>
+          
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
+            <div className="col-span-2">Pay Date</div>
+            <div className="col-span-5">Description</div>
+            <div className="col-span-2 text-right">Earnings (Net)</div>
+            <div className="col-span-3 text-right">3-Month Total</div>
           </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-purple-600" />
-              </div>
-              <span className="text-sm text-gray-500">3-Month Income</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalIncome3Mo)}</p>
-            <p className="text-xs text-gray-400 mt-1">Total deposits received</p>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <PiggyBank className="w-5 h-5 text-amber-600" />
-              </div>
-              <span className="text-sm text-gray-500">Max Rent (3x Rule)</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(maxRentAffordable)}</p>
-            <p className="text-xs text-gray-400 mt-1">Based on 1/3 of income</p>
-          </div>
+          
+          {/* Deposit Rows */}
+          {(() => {
+            const deposits = income.allDeposits.slice().sort((a, b) => 
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+            let runningTotal = income.total3Mo;
+            
+            return deposits.map((deposit, i) => {
+              const total = runningTotal;
+              runningTotal -= deposit.amount;
+              
+              return (
+                <div 
+                  key={i} 
+                  className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
+                >
+                  <div className="col-span-2 text-[#00969B]">
+                    {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                  </div>
+                  <div className="col-span-5 text-[#00969B] truncate">
+                    {deposit.name}
+                  </div>
+                  <div className="col-span-2 text-right text-gray-900">
+                    {formatCurrency(deposit.amount)}
+                  </div>
+                  <div className="col-span-3 text-right text-gray-900">
+                    {formatCurrency(total)}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Bank Accounts */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-gray-400" />
-                  Bank Accounts
-                </h3>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {accounts.map((account, i) => (
-                  <div key={i} className="px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{account.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {account.type} {account.subtype && `• ${account.subtype}`} 
-                          {account.mask && ` •••• ${account.mask}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">{formatCurrency(account.currentBalance || 0)}</p>
-                      {account.availableBalance !== null && account.availableBalance !== account.currentBalance && (
-                        <p className="text-sm text-gray-500">{formatCurrency(account.availableBalance)} available</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recurring Income */}
-            {income.recurringDeposits.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-500" />
-                    Recurring Income Detected
-                  </h3>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {income.recurringDeposits.map((deposit, i) => (
-                    <div key={i} className="px-6 py-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-gray-900">{deposit.likelySource}</p>
-                        <p className="text-emerald-600 font-semibold">~{formatCurrency(deposit.approximateAmount)}</p>
-                      </div>
-                      <p className="text-sm text-gray-500">{deposit.occurrences} occurrences in last 3 months</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Transactions */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-gray-400" />
-                  Recent Transactions
-                </h3>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                <div className="divide-y divide-gray-100">
-                  {transactions.slice(0, 30).map((txn, i) => (
-                    <div key={i} className="px-6 py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${txn.amount < 0 ? 'bg-emerald-100' : 'bg-gray-100'}`}>
-                          {txn.amount < 0 ? <ArrowDownLeft className="w-4 h-4 text-emerald-600" /> : <ArrowUpRight className="w-4 h-4 text-gray-500" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">{txn.name}</p>
-                          <p className="text-xs text-gray-500">{formatDate(txn.date)}{txn.category && ` • ${txn.category}`}</p>
-                        </div>
-                      </div>
-                      <p className={`font-medium ${txn.amount < 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-                        {txn.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(txn.amount))}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+        {/* Transaction Ledger */}
+        <div className="bg-white border border-gray-200 rounded mb-6">
+          <div className="px-5 py-3 border-b border-gray-200">
+            <span className="font-semibold text-gray-900">Transaction History</span>
+            <span className="text-gray-500 text-sm ml-2">Provided by Teller • Last 12 Months</span>
           </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Spending by Category */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">Spending by Category</h3>
-                <p className="text-sm text-gray-500">Last 3 months</p>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {expenses.byCategory.slice(0, 8).map((cat, i) => {
-                    const percentage = (cat.amount / expenses.total3Mo) * 100;
-                    return (
-                      <div key={i}>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-gray-600">{cat.category}</span>
-                          <span className="text-gray-900 font-medium">{formatCurrency(cat.amount)}</span>
-                        </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(percentage, 100)}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+          
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+            <div className="col-span-2">Date</div>
+            <div className="col-span-4">Description</div>
+            <div className="col-span-2 text-right">Debit</div>
+            <div className="col-span-2 text-right">Credit</div>
+            <div className="col-span-2 text-right">Balance</div>
+          </div>
+          
+          {/* Table Rows */}
+          <div className="max-h-[500px] overflow-y-auto">
+            {transactions.map((txn, i) => (
+              <div 
+                key={i} 
+                className={`grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
+              >
+                <div className="col-span-2 text-[#00969B]">
+                  {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
                 </div>
-                <div className="mt-6 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Total Spending</span>
-                    <span className="text-xl font-bold text-gray-900">{formatCurrency(expenses.total3Mo)}</span>
-                  </div>
+                <div className="col-span-4 text-gray-900 truncate">
+                  {txn.name}
+                  {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
                 </div>
-              </div>
-            </div>
-
-            {/* Income Deposits */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <ArrowDownLeft className="w-5 h-5 text-emerald-500" />
-                  Income Deposits
-                </h3>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                <div className="divide-y divide-gray-100">
-                  {income.allDeposits.slice(0, 15).map((deposit, i) => (
-                    <div key={i} className="px-6 py-3">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{deposit.name}</p>
-                          <p className="text-xs text-gray-500">{formatDate(deposit.date)}</p>
-                        </div>
-                        <p className="text-emerald-600 font-medium ml-4">+{formatCurrency(deposit.amount)}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="col-span-2 text-right text-gray-900">
+                  {!txn.isIncome && formatCurrency(txn.amount)}
+                </div>
+                <div className="col-span-2 text-right text-gray-900">
+                  {txn.isIncome && formatCurrency(txn.amount)}
+                </div>
+                <div className="col-span-2 text-right text-gray-500">
+                  {txn.runningBalance !== null ? formatCurrency(txn.runningBalance) : '—'}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <p>Report generated via Plaid • Data reflects account status as of {formatDate(data.generatedAt)}</p>
-            <p>Verification for {verification.applicant_email}</p>
-          </div>
+        <div className="text-center text-xs text-gray-500 mt-8 pt-6 border-t border-gray-300">
+          <p className="mb-2">
+            This report is confidential and is not to be discussed except for persons who have permissible purposes as defined in the Fair Credit Reporting Act and other applicable Federal and State regulations.
+          </p>
+          <p className="mb-1">
+            Report generated {formatDate(data.generatedAt)} • Verification for {verification.applicant_email}
+          </p>
         </div>
       </div>
     </div>

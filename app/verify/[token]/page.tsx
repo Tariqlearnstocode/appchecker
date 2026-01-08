@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { usePlaidLink } from 'react-plaid-link';
+import { useTellerConnect } from 'teller-connect-react';
 import { createClient } from '@/utils/supabase/client';
 import { useParams } from 'next/navigation';
 import { CheckCircle, Loader2, AlertCircle, Lock, Building, Mail, MapPin, ShieldCheck } from 'lucide-react';
@@ -24,7 +24,6 @@ export default function ApplicantVerificationPage() {
   const token = params.token as string;
 
   const [verification, setVerification] = useState<Verification | null>(null);
-  const [linkToken, setLinkToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -62,40 +61,18 @@ export default function ApplicantVerificationPage() {
     }
 
     setVerification(data);
-    await createLinkToken(data.applicant_name);
     setLoading(false);
   }
 
-  async function createLinkToken(applicantName: string) {
-    try {
-      const response = await fetch('/api/plaid/create-link-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          verification_token: token,
-          applicant_name: applicantName,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.link_token) {
-        setLinkToken(data.link_token);
-      } else {
-        setError('Failed to initialize bank connection');
-      }
-    } catch (err) {
-      setError('Failed to initialize bank connection');
-    }
-  }
-
-  const onPlaidSuccess = useCallback(async (publicToken: string) => {
+  // Handle Teller Connect success
+  const onTellerSuccess = useCallback(async (enrollment: { accessToken: string }) => {
     setConnecting(true);
     try {
-      const response = await fetch('/api/plaid/exchange-token', {
+      const response = await fetch('/api/teller/fetch-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          public_token: publicToken,
+          access_token: enrollment.accessToken,
           verification_token: token,
         }),
       });
@@ -104,7 +81,7 @@ export default function ApplicantVerificationPage() {
       if (data.success) {
         setSuccess(true);
       } else {
-        setError('Failed to complete verification');
+        setError(data.error || 'Failed to complete verification');
       }
     } catch (err) {
       setError('Failed to complete verification');
@@ -112,9 +89,16 @@ export default function ApplicantVerificationPage() {
     setConnecting(false);
   }, [token]);
 
-  const { open, ready } = usePlaidLink({
-    token: linkToken,
-    onSuccess: onPlaidSuccess,
+  // Teller Connect hook
+  const { open, ready } = useTellerConnect({
+    applicationId: process.env.NEXT_PUBLIC_TELLER_APPLICATION_ID || '',
+    environment: (process.env.NEXT_PUBLIC_TELLER_ENV || 'sandbox') as 'sandbox' | 'development' | 'production',
+    onSuccess: onTellerSuccess,
+    onExit: () => {
+      // User closed without completing
+    },
+    selectAccount: 'multiple', // Allow selecting multiple accounts
+    products: ['transactions', 'balance'], // Request transactions and balance
   });
 
   // Loading state
@@ -173,10 +157,10 @@ export default function ApplicantVerificationPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto px-4 py-8">
         
-        {/* Header with Plaid branding */}
+        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Income Verification</h1>
-          <p className="text-gray-500">Secure verification powered by Plaid</p>
+          <p className="text-gray-500">Secure bank connection powered by Teller</p>
         </div>
 
         {/* Requester Card - Who's asking */}
@@ -252,15 +236,15 @@ export default function ApplicantVerificationPage() {
           {connecting ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Connecting...
+              Verifying...
             </>
           ) : (
             <>
-              {/* Plaid Logo SVG */}
+              {/* Teller Logo */}
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12.944 0L6.406 2.594v5.18l6.538-2.593V0zm0 7.363L6.406 9.956v5.18l6.538-2.593V7.363zm0 7.363L6.406 17.32v5.18l6.538-2.594v-5.18zM6.406 2.594L0 5.188v5.18l6.406-2.594v-5.18zm0 7.362L0 12.55v5.18l6.406-2.593V9.956zm0 7.363L0 19.914v5.18l6.406-2.594v-5.18zM12.944 2.594v5.18l6.406-2.594V0l-6.406 2.594zm0 7.362v5.18l6.406-2.593V7.363l-6.406 2.593zm0 7.363v5.18l6.406-2.594v-5.18l-6.406 2.594zM19.35 5.188v5.18L24 7.774V2.594l-4.65 2.594zm0 7.362v5.18l4.65-2.593v-5.18l-4.65 2.593zm0 7.363v5.18l4.65-2.594v-5.18l-4.65 2.594z"/>
+                <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.08 5.1 7.63 12 4.18zM4 8.9l7 3.5v7.7l-7-3.5V8.9zm9 11.2v-7.7l7-3.5v7.7l-7 3.5z"/>
               </svg>
-              Connect with Plaid
+              Connect Your Bank
             </>
           )}
         </button>
@@ -273,21 +257,21 @@ export default function ApplicantVerificationPage() {
             <div>
               <p className="text-sm font-medium text-emerald-900">Bank-level security</p>
               <p className="text-sm text-emerald-700">
-                Plaid uses 256-bit encryption. Your bank login is never stored or shared.
+                Teller uses 256-bit encryption. Your bank login is never stored or shared.
               </p>
             </div>
           </div>
 
-          {/* Plaid trust badge */}
+          {/* Trust badge */}
           <div className="flex items-center justify-center gap-3 py-4">
             <div className="flex items-center gap-2 text-gray-400">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="opacity-60">
-                <path d="M12.944 0L6.406 2.594v5.18l6.538-2.593V0zm0 7.363L6.406 9.956v5.18l6.538-2.593V7.363zm0 7.363L6.406 17.32v5.18l6.538-2.594v-5.18zM6.406 2.594L0 5.188v5.18l6.406-2.594v-5.18zm0 7.362L0 12.55v5.18l6.406-2.593V9.956zm0 7.363L0 19.914v5.18l6.406-2.594v-5.18zM12.944 2.594v5.18l6.406-2.594V0l-6.406 2.594zm0 7.362v5.18l6.406-2.593V7.363l-6.406 2.593zm0 7.363v5.18l6.406-2.594v-5.18l-6.406 2.594zM19.35 5.188v5.18L24 7.774V2.594l-4.65 2.594zm0 7.362v5.18l4.65-2.593v-5.18l-4.65 2.593zm0 7.363v5.18l4.65-2.594v-5.18l-4.65 2.594z"/>
+                <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.08 5.1 7.63 12 4.18zM4 8.9l7 3.5v7.7l-7-3.5V8.9zm9 11.2v-7.7l7-3.5v7.7l-7 3.5z"/>
               </svg>
-              <span className="text-xs font-medium">Powered by Plaid</span>
+              <span className="text-xs font-medium">Powered by Teller</span>
             </div>
             <span className="text-gray-300">•</span>
-            <span className="text-xs text-gray-400">Used by Venmo, Coinbase & more</span>
+            <span className="text-xs text-gray-400">Direct bank connections</span>
           </div>
 
           {/* Fine print */}

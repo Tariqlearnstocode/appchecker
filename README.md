@@ -1,34 +1,32 @@
 # Income Verifier
 
-A modern income verification tool for landlords and property managers. Securely verify applicant income, bank balances, and transaction history via Plaid.
+A modern income verification tool for landlords and property managers. Securely verify applicant income, bank balances, and transaction history via Teller.
 
 ## Features
 
 - 🏠 **Landlord Dashboard** - Create and manage verification requests
 - 🔗 **Shareable Links** - Send verification links to applicants
-- 🏦 **Bank Connection** - Applicants securely connect via Plaid
+- 🏦 **Bank Connection** - Applicants securely connect via Teller
 - 📊 **Income Reports** - View deposits, balances, and transaction history
 - 💾 **Persistent Storage** - Works without an account (localStorage) or with Supabase auth
-- ⚡ **Cost Optimized** - Uses minimal Plaid products for maximum savings
+- ⚡ **Extremely Cost Effective** - Only ~$0.30 per verification with Teller!
 
 ---
 
 ## Cost Per Verification
 
-| Plaid Product | Cost | What It Does |
-|---------------|------|--------------|
-| **Auth** | $1.50 | Connects bank account |
-| **Transactions** | Included | 3 months of transaction history |
-| **Total** | **~$1.60** | Per verification |
+| Provider | Cost | Notes |
+|----------|------|-------|
+| **Teller** | **~$0.30** | Direct bank connection |
+| Plaid (previous) | ~$1.60 | Auth + Transactions |
+| Plaid Bank Income | ~$6.00 | Pre-built income product |
 
-### Why This is Cheap
+### Why Teller is Better
 
-We do NOT use Plaid's "Bank Income" product ($6/verification). Instead, we:
-1. Pull raw transactions via the Transactions API
-2. Analyze deposits ourselves to identify income
-3. Calculate monthly income estimates in our own code
-
-**Savings: ~73% cheaper than using Bank Income**
+1. **80% cheaper** than our previous Plaid implementation
+2. **No monthly fees** per connected Item
+3. **Simple pricing** - just pay per API call
+4. **Direct connections** - no aggregator middleman for many banks
 
 ---
 
@@ -39,15 +37,16 @@ We do NOT use Plaid's "Bank Income" product ($6/verification). Instead, we:
 | ✅ Monthly income estimate | Calculated from deposits |
 | ✅ Recurring deposits (paychecks) | Pattern detection |
 | ✅ Deposit sources | Transaction descriptions |
-| ✅ Current bank balances | Accounts API |
+| ✅ Current bank balances | Balances API |
 | ✅ 3 months transaction history | Transactions API |
 | ✅ Account types | Checking, savings, etc. |
+| ✅ Transaction categories | Teller enrichment |
 
 ### What This Does NOT Include
 
 - ❌ Credit scores (use TransUnion SmartMove separately)
 - ❌ FCRA-compliant reports (not needed for most landlords)
-- ❌ Identity verification (can be added for +$1.50)
+- ❌ Identity verification (can be added with Teller Identity)
 
 ---
 
@@ -56,7 +55,7 @@ We do NOT use Plaid's "Bank Income" product ($6/verification). Instead, we:
 - **Framework**: Next.js 14 (App Router)
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Supabase Auth (optional - works without account)
-- **Banking**: Plaid (Auth + Transactions)
+- **Banking**: Teller (Accounts, Balances, Transactions)
 - **Styling**: Tailwind CSS
 
 ---
@@ -71,10 +70,9 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
 SUPABASE_SECRET_KEY=your_secret_key
 
-# Plaid
-PLAID_CLIENT_ID=your_plaid_client_id
-PLAID_SECRET=your_plaid_secret
-PLAID_ENV=sandbox  # or 'development' or 'production'
+# Teller
+NEXT_PUBLIC_TELLER_APPLICATION_ID=your_teller_app_id
+NEXT_PUBLIC_TELLER_ENV=sandbox  # or 'development' or 'production'
 ```
 
 ---
@@ -95,8 +93,7 @@ PLAID_ENV=sandbox  # or 'development' or 'production'
 | `property_unit` | text | Property being applied for |
 | `verification_token` | uuid | Unique link token |
 | `status` | enum | pending, in_progress, completed, expired, failed |
-| `plaid_access_token` | text | Encrypted Plaid token |
-| `report_data` | jsonb | Full income report |
+| `raw_plaid_data` | jsonb | Raw Teller API response (named for backwards compat) |
 | `created_at` | timestamp | When created |
 | `expires_at` | timestamp | Link expiration |
 | `completed_at` | timestamp | When applicant completed |
@@ -131,13 +128,15 @@ npx supabase db push
 # Or manually run in SQL Editor:
 # - supabase/migrations/20260107000000_income_verification.sql
 # - supabase/migrations/20260107100000_add_landlord_info.sql
+# - supabase/migrations/20260107200000_separate_raw_data.sql
 ```
 
-### 3. Configure Plaid
+### 3. Configure Teller
 
-1. Create a [Plaid account](https://dashboard.plaid.com/signup)
-2. Get your API keys from the dashboard
-3. Start with `sandbox` environment for testing
+1. Create a [Teller account](https://teller.io/)
+2. Get your Application ID from the dashboard
+3. For production: Download your certificate and private key
+4. Start with `sandbox` environment for testing
 
 ### 4. Run locally
 
@@ -164,7 +163,7 @@ Visit [http://localhost:3000](http://localhost:3000)
 1. Click verification link from landlord
 2. See who is requesting verification
 3. Click "Connect Your Bank Account"
-4. Complete Plaid Link flow
+4. Complete Teller Connect flow (log into bank)
 5. Done - landlord can now view report
 
 ---
@@ -173,32 +172,54 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/api/plaid/create-link-token` | POST | Create Plaid Link token for applicant |
-| `/api/plaid/exchange-token` | POST | Exchange public token, fetch data, save report |
+| `/api/teller/fetch-data` | POST | Fetch accounts, balances, transactions and save report |
 
 ---
 
-## Plaid Products Used
+## How Teller Works
+
+### Frontend: Teller Connect
 
 ```typescript
-// create-link-token/route.ts
-products: [Products.Transactions, Products.Auth]
+import { useTellerConnect } from 'teller-connect-react';
+
+const { open, ready } = useTellerConnect({
+  applicationId: process.env.NEXT_PUBLIC_TELLER_APPLICATION_ID,
+  environment: 'sandbox',
+  onSuccess: (enrollment) => {
+    // enrollment.accessToken - use this to call Teller API
+  },
+});
 ```
 
-That's it. We intentionally don't use:
-- `Products.Income` ($6/call)
-- `Products.IncomeVerification` 
-- `Products.Identity` (+$1.50/call, optional)
+### Backend: Teller API
+
+```typescript
+// Basic Auth: access_token as username, empty password
+const authHeader = Buffer.from(`${accessToken}:`).toString('base64');
+
+// Fetch accounts
+const accounts = await fetch('https://api.teller.io/accounts', {
+  headers: { Authorization: `Basic ${authHeader}` }
+});
+
+// Fetch transactions
+const transactions = await fetch(
+  `https://api.teller.io/accounts/${accountId}/transactions`,
+  { headers: { Authorization: `Basic ${authHeader}` } }
+);
+```
 
 ---
 
-## Testing with Plaid Sandbox
+## Testing with Teller Sandbox
 
-Use these test credentials in Plaid Link:
-- **Username**: `user_good`
-- **Password**: `pass_good`
-
-Or use the "Instant" option to skip credentials entirely.
+In sandbox mode:
+1. Click "Connect Your Bank Account"
+2. Teller will show fake banks
+3. Use any credentials to "log in"
+4. Select accounts to share
+5. Data is synthetic but realistic
 
 ---
 
@@ -210,9 +231,8 @@ app/
 ├── settings/page.tsx           # User settings
 ├── verify/[token]/page.tsx     # Applicant verification page
 ├── report/[token]/page.tsx     # View completed report
-└── api/plaid/
-    ├── create-link-token/route.ts
-    └── exchange-token/route.ts
+└── api/teller/
+    └── fetch-data/route.ts     # Fetch & save Teller data
 
 components/
 ├── NewVerificationTab.tsx      # Create verification form
@@ -220,24 +240,27 @@ components/
 ├── VerificationsTable.tsx      # Reusable table component
 └── ActionsSidebar.tsx          # Actions panel
 
+lib/
+└── income-calculations.ts      # Income analysis from raw data
+
 supabase/migrations/
 ├── 20260107000000_income_verification.sql
-└── 20260107100000_add_landlord_info.sql
+├── 20260107100000_add_landlord_info.sql
+└── 20260107200000_separate_raw_data.sql
 ```
 
 ---
 
 ## Going to Production
 
-### 1. Plaid Environment
+### 1. Teller Environment
 
-Change `PLAID_ENV` from `sandbox` to `production`:
+1. Complete Teller's production onboarding
+2. Download your mTLS certificate and private key
+3. Set up certificate in your server environment
+4. Change `NEXT_PUBLIC_TELLER_ENV` to `production`
 
-```bash
-PLAID_ENV=production
-```
-
-Note: You'll need Plaid production approval first.
+**Note**: Teller requires mTLS (client certificates) for production/development environments. Only sandbox skips this.
 
 ### 2. Supabase
 
@@ -245,16 +268,30 @@ Note: You'll need Plaid production approval first.
 - Set up proper auth redirects
 - Configure site URL in Supabase dashboard
 
-### 3. Costs to Expect
+### 3. Expected Costs
 
-| Monthly Verifications | Plaid Cost |
-|----------------------|------------|
-| 10 | ~$16 |
-| 50 | ~$80 |
-| 100 | ~$160 |
-| 500 | ~$800 |
+| Monthly Verifications | Teller Cost |
+|----------------------|-------------|
+| 10 | ~$3 |
+| 50 | ~$15 |
+| 100 | ~$30 |
+| 500 | ~$150 |
 
 Plus Supabase costs (free tier covers most small apps).
+
+---
+
+## Migration from Plaid
+
+This app was previously built with Plaid. Key changes:
+
+1. **No link token flow** - Teller Connect uses Application ID directly
+2. **Direct access token** - No token exchange needed
+3. **Basic Auth** - Instead of bearer tokens
+4. **Different data format** - Amounts are strings in Teller
+5. **80% cost savings** - $0.30 vs $1.60 per verification
+
+Old Plaid API routes are still in `/app/api/plaid/` for reference but unused.
 
 ---
 
@@ -262,7 +299,7 @@ Plus Supabase costs (free tier covers most small apps).
 
 - [ ] Email notifications to applicants
 - [ ] PDF report generation
-- [ ] Identity verification (+$1.50)
+- [ ] Identity verification (Teller Identity)
 - [ ] Bulk verification creation
 - [ ] Credit check integration (TransUnion/Experian)
 - [ ] Stripe subscription for premium features
