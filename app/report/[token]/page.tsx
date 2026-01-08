@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import ReportContent from './ReportContent';
+import { calculateIncomeReport, RawPlaidData } from '@/lib/income-calculations';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -20,17 +21,21 @@ export default async function ReportPage({ params }: PageProps) {
     notFound();
   }
 
-  if (verification.status !== 'completed' || !verification.report_data) {
+  // Check if we have data (either new raw_plaid_data or old report_data)
+  const rawData = verification.raw_plaid_data as RawPlaidData | null;
+  const legacyData = verification.report_data;
+
+  if (verification.status !== 'completed' || (!rawData && !legacyData)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-amber-500/10 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Report Not Ready</h1>
-          <p className="text-zinc-400">
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Report Not Ready</h1>
+          <p className="text-gray-600">
             The applicant hasn't completed their verification yet.
           </p>
         </div>
@@ -38,11 +43,21 @@ export default async function ReportPage({ params }: PageProps) {
     );
   }
 
+  // Calculate report from raw data (or use legacy data for old verifications)
+  let reportData;
+  if (rawData) {
+    // New format: calculate from raw Plaid data
+    reportData = calculateIncomeReport(rawData);
+  } else {
+    // Legacy format: use pre-calculated data (for backwards compatibility)
+    reportData = legacyData;
+  }
+
   return (
     <ReportContent
       verification={verification}
-      reportData={verification.report_data}
+      reportData={reportData}
+      isCalculated={!!rawData}
     />
   );
 }
-

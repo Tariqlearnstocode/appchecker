@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         client_user_id: verification_token,
       },
       client_name: 'Income Verification',
-      products: [Products.Transactions, Products.Auth],
+      products: [Products.Transactions], // Only transactions - we don't need Auth (routing numbers)
       country_codes: [CountryCode.Us],
       language: 'en',
     });

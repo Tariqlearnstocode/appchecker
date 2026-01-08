@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import { createClient } from '@/utils/supabase/client';
-import { useParams, useRouter } from 'next/navigation';
-import { Shield, CheckCircle, Loader2, AlertCircle, Building2, Lock } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { CheckCircle, Loader2, AlertCircle, Lock, Building, Mail, MapPin, ShieldCheck } from 'lucide-react';
 
 type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed';
 
@@ -14,11 +14,13 @@ interface Verification {
   applicant_email: string;
   status: VerificationStatus;
   expires_at: string;
+  landlord_name: string | null;
+  landlord_email: string | null;
+  property_unit: string | null;
 }
 
 export default function ApplicantVerificationPage() {
   const params = useParams();
-  const router = useRouter();
   const token = params.token as string;
 
   const [verification, setVerification] = useState<Verification | null>(null);
@@ -37,7 +39,7 @@ export default function ApplicantVerificationPage() {
   async function fetchVerification() {
     const { data, error } = await supabase
       .from('income_verifications')
-      .select('id, applicant_name, applicant_email, status, expires_at')
+      .select('id, applicant_name, applicant_email, status, expires_at, landlord_name, landlord_email, property_unit')
       .eq('verification_token', token)
       .single();
 
@@ -115,97 +117,126 @@ export default function ApplicantVerificationPage() {
     onSuccess: onPlaidSuccess,
   });
 
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading verification...</p>
+          <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">Loading verification...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 mx-auto mb-6 bg-red-500/10 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-10 h-10 text-red-400" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Verification Error</h1>
-          <p className="text-slate-400">{error}</p>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Verification Error</h1>
+          <p className="text-gray-600">{error}</p>
         </div>
       </div>
     );
   }
 
+  // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 mx-auto mb-6 bg-emerald-500/10 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-emerald-400" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-emerald-600" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Verification Complete!</h1>
-          <p className="text-slate-400 mb-6">
-            Your income verification has been submitted successfully. The landlord will be able to view your financial report.
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Verification Complete!</h1>
+          <p className="text-gray-600 mb-6">
+            Your income verification has been submitted successfully. 
+            {verification?.landlord_name && ` ${verification.landlord_name} can now`} view your financial report.
           </p>
-          <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-            <p className="text-sm text-slate-500">
-              Your bank credentials are never stored. Only read-only financial data is shared.
-            </p>
+          <div className="p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Lock className="w-4 h-4" />
+              Your bank credentials were never stored
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Main verification page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Income Verification</h1>
-          <p className="text-slate-400">
-            Securely verify your income for your rental application
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-lg mx-auto px-4 py-8">
+        
+        {/* Header with Plaid branding */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Income Verification</h1>
+          <p className="text-gray-500">Secure verification powered by Plaid</p>
         </div>
 
-        {/* Applicant Info Card */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-              <span className="text-xl font-semibold text-white">
+        {/* Requester Card - Who's asking */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Verification requested by</p>
+          
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Building className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {verification?.landlord_name || 'Property Manager'}
+              </h2>
+              {verification?.landlord_email && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                  <Mail className="w-4 h-4" />
+                  {verification.landlord_email}
+                </div>
+              )}
+              {verification?.property_unit && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 mt-1">
+                  <MapPin className="w-4 h-4" />
+                  {verification.property_unit}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Applicant Info */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Verifying income for</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-lg font-medium text-gray-600">
                 {verification?.applicant_name?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">{verification?.applicant_name}</h2>
-              <p className="text-sm text-slate-500">{verification?.applicant_email}</p>
+              <p className="font-medium text-gray-900">{verification?.applicant_name}</p>
+              <p className="text-sm text-gray-500">{verification?.applicant_email}</p>
             </div>
           </div>
-          <p className="text-slate-400 text-sm">
-            A landlord has requested income verification for your rental application. 
-            Connect your bank account securely via Plaid to generate your financial report.
-          </p>
         </div>
 
-        {/* What Will Be Shared */}
-        <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-6 mb-8">
-          <h3 className="text-lg font-semibold text-white mb-4">What will be shared:</h3>
+        {/* What will be shared */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 className="font-semibold text-gray-900 mb-4">What will be shared:</h3>
           <ul className="space-y-3">
             {[
               'Account balances (checking, savings)',
-              'Income transactions (deposits, paychecks)',
+              'Income deposits & paychecks',
               'Transaction history (last 3 months)',
               'Estimated monthly income',
             ].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-slate-300">
-                <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+              <li key={i} className="flex items-center gap-3 text-gray-700">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
                 {item}
               </li>
             ))}
@@ -216,7 +247,7 @@ export default function ApplicantVerificationPage() {
         <button
           onClick={() => open()}
           disabled={!ready || connecting}
-          className="w-full py-4 px-6 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 disabled:from-slate-700 disabled:to-slate-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:shadow-none flex items-center justify-center gap-3"
+          className="w-full py-4 px-6 bg-black hover:bg-gray-800 disabled:bg-gray-300 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-3"
         >
           {connecting ? (
             <>
@@ -225,32 +256,47 @@ export default function ApplicantVerificationPage() {
             </>
           ) : (
             <>
-              <Building2 className="w-5 h-5" />
-              Connect Your Bank Account
+              {/* Plaid Logo SVG */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.944 0L6.406 2.594v5.18l6.538-2.593V0zm0 7.363L6.406 9.956v5.18l6.538-2.593V7.363zm0 7.363L6.406 17.32v5.18l6.538-2.594v-5.18zM6.406 2.594L0 5.188v5.18l6.406-2.594v-5.18zm0 7.362L0 12.55v5.18l6.406-2.593V9.956zm0 7.363L0 19.914v5.18l6.406-2.594v-5.18zM12.944 2.594v5.18l6.406-2.594V0l-6.406 2.594zm0 7.362v5.18l6.406-2.593V7.363l-6.406 2.593zm0 7.363v5.18l6.406-2.594v-5.18l-6.406 2.594zM19.35 5.188v5.18L24 7.774V2.594l-4.65 2.594zm0 7.362v5.18l4.65-2.593v-5.18l-4.65 2.593zm0 7.363v5.18l4.65-2.594v-5.18l-4.65 2.594z"/>
+              </svg>
+              Connect with Plaid
             </>
           )}
         </button>
 
-        {/* Security Info */}
-        <div className="mt-8 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
-          <div className="flex items-start gap-3">
-            <Lock className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+        {/* Trust indicators */}
+        <div className="mt-6 space-y-4">
+          {/* Security info */}
+          <div className="flex items-start gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-slate-400">
-                <strong className="text-slate-300">Bank-level security:</strong> Plaid uses 256-bit encryption and never stores your login credentials. We only receive read-only access to your financial data.
+              <p className="text-sm font-medium text-emerald-900">Bank-level security</p>
+              <p className="text-sm text-emerald-700">
+                Plaid uses 256-bit encryption. Your bank login is never stored or shared.
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Plaid Badge */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-slate-600">
-            Secured by Plaid • Used by thousands of financial apps
+          {/* Plaid trust badge */}
+          <div className="flex items-center justify-center gap-3 py-4">
+            <div className="flex items-center gap-2 text-gray-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="opacity-60">
+                <path d="M12.944 0L6.406 2.594v5.18l6.538-2.593V0zm0 7.363L6.406 9.956v5.18l6.538-2.593V7.363zm0 7.363L6.406 17.32v5.18l6.538-2.594v-5.18zM6.406 2.594L0 5.188v5.18l6.406-2.594v-5.18zm0 7.362L0 12.55v5.18l6.406-2.593V9.956zm0 7.363L0 19.914v5.18l6.406-2.594v-5.18zM12.944 2.594v5.18l6.406-2.594V0l-6.406 2.594zm0 7.362v5.18l6.406-2.593V7.363l-6.406 2.593zm0 7.363v5.18l6.406-2.594v-5.18l-6.406 2.594zM19.35 5.188v5.18L24 7.774V2.594l-4.65 2.594zm0 7.362v5.18l4.65-2.593v-5.18l-4.65 2.593zm0 7.363v5.18l4.65-2.594v-5.18l-4.65 2.594z"/>
+              </svg>
+              <span className="text-xs font-medium">Powered by Plaid</span>
+            </div>
+            <span className="text-gray-300">•</span>
+            <span className="text-xs text-gray-400">Used by Venmo, Coinbase & more</span>
+          </div>
+
+          {/* Fine print */}
+          <p className="text-xs text-center text-gray-400 leading-relaxed">
+            By connecting your account, you authorize read-only access to your financial data 
+            for income verification purposes. You can revoke access at any time through your bank.
           </p>
         </div>
       </div>
     </div>
   );
 }
-
