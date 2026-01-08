@@ -1,51 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Download, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-
-// Substack-style content wall component
-function ContentWall({ 
-  title, 
-  description,
-  blurredContent 
-}: { 
-  title: string; 
-  description: string;
-  blurredContent?: React.ReactNode;
-}) {
-  return (
-    <div className="relative">
-      {/* Blurred background content */}
-      {blurredContent && (
-        <div className="blur-sm opacity-50 pointer-events-none select-none" aria-hidden="true">
-          {blurredContent}
-        </div>
-      )}
-      
-      {/* Overlay */}
-      <div className={`${blurredContent ? 'absolute inset-0' : ''} bg-gradient-to-b from-white/80 via-white/95 to-white flex items-center justify-center`}>
-        <div className="text-center px-8 py-12 max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <Lock className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-          <p className="text-gray-600 mb-6">{description}</p>
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-black hover:bg-gray-800 text-white font-medium rounded-lg transition-colors"
-          >
-            <Lock className="w-4 h-4" />
-            Upgrade to PRO
-          </Link>
-          <p className="text-xs text-gray-500 mt-4">
-            Starting at $5 per report • Full transaction history • PDF exports
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 import { IncomeReport, formatCurrency, formatDate } from '@/lib/income-calculations';
 
 // Support both new calculated format and legacy format
@@ -411,7 +368,7 @@ function IncomeTypeBadge({ type }: { type: string }) {
   );
 }
 
-export default function ReportContent({ verification, reportData, isCalculated }: Props) {
+export default function ReportContentPremium({ verification, reportData, isCalculated }: Props) {
   const data = normalizeReportData(reportData);
   const { summary, income, transactions } = data;
   
@@ -635,11 +592,11 @@ export default function ReportContent({ verification, reportData, isCalculated }
           </div>
         </div>
 
-        {/* Recent Payroll Deposits - Only show last 30 days, lock the rest */}
+        {/* Recent Payroll Deposits */}
         <div className="bg-white border border-gray-200 rounded mb-6">
           <div className="px-5 py-3 border-b border-gray-200">
             <span className="font-semibold text-gray-900">Recent Payroll Deposits</span>
-            <span className="text-gray-500 text-sm ml-2">(Last 30 Days)</span>
+            <span className="text-gray-500 text-sm ml-2">(Last 90 Days)</span>
           </div>
           
           {/* Table Header */}
@@ -651,21 +608,14 @@ export default function ReportContent({ verification, reportData, isCalculated }
             <div className="col-span-2 text-right">Running Total</div>
           </div>
           
-          {/* Payroll Deposit Rows - Only last 30 days */}
+          {/* Payroll Deposit Rows */}
           {(() => {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            
             // Filter to only actual payroll deposits (using isPayroll from above)
-            const allPayrollDeposits = income.allDeposits
+            const payrollDeposits = income.allDeposits
               .filter(d => isPayroll(d.name))
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
-            // Split into visible (last 30 days) and locked (older)
-            const visibleDeposits = allPayrollDeposits.filter(d => new Date(d.date) >= thirtyDaysAgo);
-            const lockedDeposits = allPayrollDeposits.filter(d => new Date(d.date) < thirtyDaysAgo);
-            
-            if (allPayrollDeposits.length === 0) {
+            if (payrollDeposits.length === 0) {
               return (
                 <div className="px-5 py-8 text-center text-gray-500">
                   No payroll deposits identified. Income may come from other sources.
@@ -674,124 +624,39 @@ export default function ReportContent({ verification, reportData, isCalculated }
             }
             
             let runningTotal = 0;
-            // Calculate running total from oldest to newest for visible deposits
-            const depositsWithTotal = visibleDeposits.slice().reverse().map(d => {
+            // Calculate running total from oldest to newest, then reverse for display
+            const depositsWithTotal = payrollDeposits.slice().reverse().map(d => {
               runningTotal += d.amount;
               return { ...d, runningTotal };
             }).reverse();
             
-            return (
-              <>
-                {depositsWithTotal.map((deposit, i) => (
-                  <div 
-                    key={i} 
-                    className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
-                  >
-                    <div className="col-span-2 text-emerald-600">
-                      {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-                    </div>
-                    <div className="col-span-4 text-gray-900 truncate cursor-help" title={deposit.name}>
-                      {deposit.name}
-                    </div>
-                    <div className="col-span-2">
-                      <IncomeTypeBadge type="payroll" />
-                    </div>
-                    <div className="col-span-2 text-right text-gray-900 font-medium">
-                      {formatCurrency(deposit.amount)}
-                    </div>
-                    <div className="col-span-2 text-right text-gray-500">
-                      {formatCurrency(deposit.runningTotal)}
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Locked older deposits */}
-                {lockedDeposits.length > 0 && (
-                  <div className="relative overflow-hidden">
-                    {/* Blurred preview of locked content */}
-                    <div className="blur-sm opacity-40 pointer-events-none select-none">
-                      {lockedDeposits.slice(0, 3).map((deposit, i) => (
-                        <div 
-                          key={i} 
-                          className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
-                        >
-                          <div className="col-span-2 text-emerald-600">
-                            {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-                          </div>
-                          <div className="col-span-4 text-gray-900 truncate">
-                            {deposit.name}
-                          </div>
-                          <div className="col-span-2">
-                            <IncomeTypeBadge type="payroll" />
-                          </div>
-                          <div className="col-span-2 text-right text-gray-900 font-medium">
-                            {formatCurrency(deposit.amount)}
-                          </div>
-                          <div className="col-span-2 text-right text-gray-500">
-                            —
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Lock overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white flex items-center justify-center">
-                      <div className="text-center px-6 py-4">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full mb-2">
-                          <Lock className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium text-gray-700">
-                            +{lockedDeposits.length} more deposits
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">Upgrade to PRO to view full 90-day history</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            );
+            return depositsWithTotal.map((deposit, i) => (
+              <div 
+                key={i} 
+                className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
+              >
+                <div className="col-span-2 text-emerald-600">
+                  {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                </div>
+                <div className="col-span-4 text-gray-900 truncate cursor-help" title={deposit.name}>
+                  {deposit.name}
+                </div>
+                <div className="col-span-2">
+                  <IncomeTypeBadge type="payroll" />
+                </div>
+                <div className="col-span-2 text-right text-gray-900 font-medium">
+                  {formatCurrency(deposit.amount)}
+                </div>
+                <div className="col-span-2 text-right text-gray-500">
+                  {formatCurrency(deposit.runningTotal)}
+                </div>
+              </div>
+            ));
           })()}
         </div>
 
-        {/* Transaction Ledger - LOCKED for free users */}
-        <div className="bg-white border border-gray-200 rounded mb-6 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-gray-900">Transaction History</span>
-              <span className="text-gray-500 text-sm ml-2">12 months</span>
-            </div>
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">
-              <Lock className="w-3 h-3" />
-              PRO
-            </span>
-          </div>
-          
-          <ContentWall
-            title="Full Transaction History"
-            description="Upgrade to PRO to access the complete 12-month transaction ledger with monthly breakdowns, running balances, and export capabilities."
-            blurredContent={
-              <div className="p-4">
-                {/* Fake blurred rows for effect */}
-                <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-50 text-xs font-semibold text-gray-600">
-                  <div className="col-span-2">Date</div>
-                  <div className="col-span-4">Description</div>
-                  <div className="col-span-2 text-right">Debit</div>
-                  <div className="col-span-2 text-right">Credit</div>
-                  <div className="col-span-2 text-right">Balance</div>
-                </div>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm">
-                    <div className="col-span-2 text-emerald-600">01/{String(i).padStart(2, '0')}/2026</div>
-                    <div className="col-span-4 text-gray-900">Transaction Description Here</div>
-                    <div className="col-span-2 text-right text-gray-900">$1,234.56</div>
-                    <div className="col-span-2 text-right text-gray-900">—</div>
-                    <div className="col-span-2 text-right text-gray-500">$5,678.90</div>
-                  </div>
-                ))}
-              </div>
-            }
-          />
-        </div>
+        {/* Transaction Ledger with Month Tabs */}
+        <TransactionHistory transactions={transactions} />
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500 mt-8 pt-6 border-t border-gray-300">
@@ -809,3 +674,4 @@ export default function ReportContent({ verification, reportData, isCalculated }
     </div>
   );
 }
+

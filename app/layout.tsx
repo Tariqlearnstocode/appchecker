@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { Toaster } from '@/components/ui/Toasts/toaster';
 import { PropsWithChildren, Suspense } from 'react';
 import { getURL } from '@/utils/helpers';
+import Footer from '@/components/Footer';
 import 'styles/main.css';
 
 const title = 'Income Verification';
@@ -20,10 +21,11 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: PropsWithChildren) {
   return (
     <html lang="en">
-      <body className="bg-gray-50">
-        <main id="skip">
+      <body className="bg-gray-50 min-h-screen flex flex-col">
+        <main id="skip" className="flex-1">
           {children}
         </main>
+        <Footer />
         <Suspense>
           <Toaster />
         </Suspense>
