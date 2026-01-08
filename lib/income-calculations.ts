@@ -225,7 +225,11 @@ function normalizeTransactions(transactions: any[], provider: 'plaid' | 'teller'
         accountId: t.account_id,
         amount: Math.abs(amount),
         date: t.date,
-        name: t.details?.counterparty?.name || t.description || 'Unknown',
+        // CRITICAL: Use description first - it contains the FULL transaction text
+        // e.g., "Deposit from Great Lakes Prop PAYROLL" vs just "GREAT LAKES PROP"
+        // The counterparty.name strips keywords like "PAYROLL", "DIRECT DEP", etc.
+        // which breaks our income classification. DO NOT change this order!
+        name: t.description || t.details?.counterparty?.name || 'Unknown',
         category: t.details?.category || null,
         pending: t.status === 'pending',
         isIncome,

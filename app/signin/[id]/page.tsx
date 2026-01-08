@@ -21,11 +21,11 @@ export default async function SignIn({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ disable_button: boolean }>;
+  searchParams: Promise<{ disable_button?: boolean; redirect?: string }>;
 }) {
   // Await params and searchParams in Next.js 15
   const { id } = await params;
-  const { disable_button } = await searchParams;
+  const { disable_button, redirect: redirectUrl } = await searchParams;
 
   const { allowOauth, allowEmail, allowPassword } = getAuthTypes();
   const viewTypes = getViewTypes();
@@ -77,6 +77,7 @@ export default async function SignIn({
           {viewProp === 'password_signin' && (
             <PasswordSignIn
               allowEmail={allowEmail}
+              redirectUrl={redirectUrl}
             />
           )}
           {viewProp === 'email_signin' && (

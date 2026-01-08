@@ -1,26 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import Link from 'next/link';
-import { Plus, FileCheck, Settings, Crown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, FileCheck, Settings, Crown, LogOut, User, Loader2, X } from 'lucide-react';
 import { Verification } from '@/components/VerificationsTable';
 import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
 import { ActionsSidebar } from '@/components/ActionsSidebar';
 
 type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'expired';
-
-function getSessionId(): string {
-  if (typeof window === 'undefined') return '';
-  let sessionId = localStorage.getItem('landlord_session_id');
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem('landlord_session_id', sessionId);
-  }
-  return sessionId;
-}
+type AuthMode = 'signin' | 'signup';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('new');
@@ -31,8 +23,16 @@ export default function HomePage() {
   const [landlordInfo, setLandlordInfo] = useState({ name: '', email: '' });
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signup');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [pendingVerification, setPendingVerification] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     async function init() {
@@ -40,45 +40,84 @@ export default function HomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      // Load defaults
+      // Load defaults from users table
       if (user) {
-        // Load from database for logged-in users
-        const { data } = await supabase
-          .from('user_preferences')
-          .select('company_name, email')
-          .eq('user_id', user.id)
-          .single();
+        const { data: profile } = await supabase
+          .from('users')
+          .select('company_name')
+          .eq('id', user.id)
+          .single() as { data: { company_name: string | null } | null };
         
-        if (data) {
-          setLandlordInfo({ name: data.company_name || '', email: data.email || '' });
-        }
+        const companyName = profile?.company_name || '';
+        setLandlordInfo({ name: companyName, email: user.email || '' });
+        fetchVerifications(user);
       } else {
-        // Load from localStorage for anonymous users
-        const savedDefaults = localStorage.getItem('verification_defaults');
-        if (savedDefaults) {
-          const parsed = JSON.parse(savedDefaults);
-          setLandlordInfo({ name: parsed.companyName || '', email: parsed.email || '' });
-        }
+        setLoading(false);
       }
-      
-      fetchVerifications(user);
     }
     init();
-  }, []);
 
-  async function fetchVerifications(currentUser?: any) {
-    let query = supabase.from('income_verifications').select('*');
-    
-    if (currentUser) {
-      // Logged-in user: fetch by user_id
-      query = query.eq('user_id', currentUser.id);
-    } else {
-      // Anonymous user: fetch by session_id
-      const sessionId = getSessionId();
-      query = query.eq('session_id', sessionId);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        // Load landlord info from users table
+        const { data: profile } = await supabase
+          .from('users')
+          .select('company_name')
+          .eq('id', session.user.id)
+          .single() as { data: { company_name: string | null } | null };
+        
+        const companyName = profile?.company_name || '';
+        setLandlordInfo({ name: companyName, email: session.user.email || '' });
+        setShowAuthModal(false);
+        setAuthError('');
+        setAuthEmail('');
+        setAuthPassword('');
+        fetchVerifications(session.user);
+        
+        // If there was a pending verification, create it now
+        if (pendingVerification && formData.name && formData.email) {
+          setPendingVerification(false);
+          const { data, error } = await supabase
+            .from('income_verifications')
+            .insert({
+              applicant_name: formData.name,
+              applicant_email: formData.email,
+              landlord_name: landlordInfo.name || null,
+              landlord_email: landlordInfo.email || session.user.email || null,
+              user_id: session.user.id,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            setVerifications((prev) => [data, ...prev]);
+            setFormData({ name: '', email: '' });
+            setSelectedVerification(data);
+            toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setVerifications([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [pendingVerification, formData, landlordInfo]);
+
+  async function fetchVerifications(currentUser: any) {
+    if (!currentUser) {
+      setLoading(false);
+      return;
     }
     
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('income_verifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
 
     if (!error && data) {
       setVerifications(data);
@@ -88,28 +127,27 @@ export default function HomePage() {
 
   async function createVerification(e: React.FormEvent) {
     e.preventDefault();
+    
     if (!formData.name || !formData.email) return;
+    
+    // Require auth to create verifications
+    if (!user) {
+      setPendingVerification(true);
+      setShowAuthModal(true);
+      return;
+    }
 
     setCreating(true);
 
-    const insertData: any = {
-      applicant_name: formData.name,
-      applicant_email: formData.email,
-      landlord_name: landlordInfo.name || null,
-      landlord_email: landlordInfo.email || null,
-    };
-
-    if (user) {
-      // Logged-in user
-      insertData.user_id = user.id;
-    } else {
-      // Anonymous user
-      insertData.session_id = getSessionId();
-    }
-
     const { data, error } = await supabase
       .from('income_verifications')
-      .insert(insertData)
+      .insert({
+        applicant_name: formData.name,
+        applicant_email: formData.email,
+        landlord_name: landlordInfo.name || null,
+        landlord_email: landlordInfo.email || null,
+        user_id: user.id,
+      })
       .select()
       .single();
 
@@ -122,6 +160,51 @@ export default function HomePage() {
       toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
     }
     setCreating(false);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    toast({ title: 'Signed out', description: 'You have been signed out' });
+  }
+
+  async function handleAuthSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      if (authMode === 'signup') {
+        // Sign up and save landlord info to user metadata
+        const { error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+          options: {
+            data: {
+              company_name: landlordInfo.name,
+              contact_email: landlordInfo.email || authEmail,
+            }
+          }
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+      }
+    } catch (error: any) {
+      setAuthError(error.message || 'Authentication failed');
+    }
+    setAuthLoading(false);
+  }
+
+  function closeAuthModal() {
+    setShowAuthModal(false);
+    setPendingVerification(false);
+    setAuthError('');
+    setAuthEmail('');
+    setAuthPassword('');
   }
 
   function copyLink(token: string) {
@@ -149,8 +232,108 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Auth Modal - Inline Sign Up/Sign In */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {authMode === 'signup' 
+                    ? 'Sign up to create your verification request' 
+                    : 'Sign in to continue'}
+                </p>
+              </div>
+              <button onClick={closeAuthModal} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
+              {authError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                  {authError}
+                </div>
+              )}
+              
+              <div>
+                <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  id="auth-email"
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  id="auth-password"
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder={authMode === 'signup' ? 'Create a password' : 'Your password'}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {authLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {authMode === 'signup' ? 'Create Account & Continue' : 'Sign In & Continue'}
+              </button>
+            </form>
+
+            {/* Toggle */}
+            <div className="px-6 pb-6 text-center">
+              <p className="text-sm text-gray-500">
+                {authMode === 'signup' ? (
+                  <>
+                    Already have an account?{' '}
+                    <button
+                      onClick={() => { setAuthMode('signin'); setAuthError(''); }}
+                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Don't have an account?{' '}
+                    <button
+                      onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Create one
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
@@ -160,13 +343,36 @@ export default function HomePage() {
               <span className="font-semibold text-gray-900">Income Verifier</span>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200">
-                <Crown className="w-4 h-4 text-amber-500" />
-                Upgrade to PRO
-              </button>
-              <button className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors">
-                Get Started
-              </button>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
+                    <User className="w-4 h-4" />
+                    <span>{user.email}</span>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signin/password_signin"
+                    className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signin/signup"
+                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
               <Link href="/settings" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
                 <Settings className="w-5 h-5" />
               </Link>

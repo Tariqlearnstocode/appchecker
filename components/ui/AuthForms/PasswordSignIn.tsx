@@ -10,10 +10,12 @@ import React, { useState } from 'react';
 // Define prop type with allowEmail boolean
 interface PasswordSignInProps {
   allowEmail: boolean;
+  redirectUrl?: string;
 }
 
 export default function PasswordSignIn({
-  allowEmail
+  allowEmail,
+  redirectUrl
 }: PasswordSignInProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +35,10 @@ export default function PasswordSignIn({
       >
         <div className="grid gap-2">
           <div className="grid gap-1">
+            {/* Hidden field for redirect URL */}
+            {redirectUrl && (
+              <input type="hidden" name="redirectUrl" value={redirectUrl} />
+            )}
             <label htmlFor="email">Email</label>
             <input
               id="email"

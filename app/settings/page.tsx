@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FileCheck, User, FileText, CreditCard, Puzzle, ExternalLink, Info, Loader2 } from 'lucide-react';
+import { FileCheck, User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import { createClient } from '@/utils/supabase/client';
 
-type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations';
+type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations' | 'privacy';
 
 interface VerificationDefaults {
   companyName: string;
@@ -19,97 +19,54 @@ export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
 
-  // Check auth and load defaults
+  // Check auth and load defaults from users table
   useEffect(() => {
     async function init() {
-      // Check if user is logged in
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setLoadingUser(false);
 
       if (user) {
-        // Load from database
-        const { data } = await supabase
-          .from('user_preferences')
-          .select('company_name, email')
-          .eq('user_id', user.id)
-          .single();
+        // Load from users table
+        const { data: profile } = await supabase
+          .from('users')
+          .select('company_name')
+          .eq('id', user.id)
+          .single() as { data: { company_name: string | null } | null };
         
-        if (data) {
-          setDefaults({ companyName: data.company_name || '', email: data.email || '' });
-        }
-      } else {
-        // Load from localStorage
-        const saved = localStorage.getItem('verification_defaults');
-        if (saved) {
-          setDefaults(JSON.parse(saved));
-        }
+        setDefaults({ 
+          companyName: profile?.company_name || '', 
+          email: user.email || '' 
+        });
       }
     }
     init();
   }, []);
 
   async function saveDefaults() {
-    setSaving(true);
-    
-    if (user) {
-      // Save to database
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          company_name: defaults.companyName,
-          email: defaults.email,
-        }, { onConflict: 'user_id' });
-      
-      if (error) {
-        toast({ title: 'Error', description: 'Failed to save preferences', variant: 'destructive' });
-      } else {
-        toast({ title: 'Saved!', description: 'Your defaults have been saved to your account.' });
-      }
-    } else {
-      // Save to localStorage
-      localStorage.setItem('verification_defaults', JSON.stringify(defaults));
-      toast({ title: 'Saved!', description: 'Your defaults have been saved locally.' });
-    }
-    
-    setSaving(false);
-  }
-
-  // Migrate localStorage verifications to user account
-  async function migrateLocalData() {
-    if (!user) return;
-    
-    setSaving(true);
-    const sessionId = localStorage.getItem('landlord_session_id');
-    
-    if (!sessionId) {
-      toast({ title: 'No data to migrate', description: 'No local verifications found.' });
-      setSaving(false);
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be signed in to save defaults', variant: 'destructive' });
       return;
     }
-
-    // Update all verifications with this session_id to the user's account
-    const { data, error } = await supabase
-      .from('income_verifications')
-      .update({ user_id: user.id })
-      .eq('session_id', sessionId)
-      .is('user_id', null)
-      .select();
-
+    
+    setSaving(true);
+    
+    // Save to users table
+    const { error } = await supabase
+      .from('users')
+      .update({ company_name: defaults.companyName })
+      .eq('id', user.id);
+    
     if (error) {
-      toast({ title: 'Error', description: 'Failed to migrate verifications', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to save preferences', variant: 'destructive' });
     } else {
-      const count = data?.length || 0;
-      toast({ 
-        title: 'Migration complete!', 
-        description: `${count} verification${count !== 1 ? 's' : ''} linked to your account.` 
-      });
-      // Clear the session ID since data is now in the account
-      localStorage.removeItem('landlord_session_id');
+      toast({ title: 'Saved!', description: 'Your defaults have been saved.' });
     }
     
     setSaving(false);
@@ -120,7 +77,57 @@ export default function SettingsPage() {
     { id: 'defaults' as const, label: 'Verification Defaults', icon: FileText },
     { id: 'subscription' as const, label: 'Manage Subscription', icon: CreditCard, external: true },
     { id: 'integrations' as const, label: 'Integrations', icon: Puzzle },
+    { id: 'privacy' as const, label: 'Privacy & Data', icon: Shield },
   ];
+
+  async function exportData() {
+    setExporting(true);
+    try {
+      const response = await fetch('/api/gdpr/export');
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `data-export-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({ title: 'Export Complete', description: 'Your data has been downloaded.' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to export data', variant: 'destructive' });
+    }
+    setExporting(false);
+  }
+
+  async function deleteAllData() {
+    setDeleting(true);
+    try {
+      const response = await fetch('/api/gdpr/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE_ALL_MY_DATA' }),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({ title: 'Data Deleted', description: 'All your data has been permanently deleted.' });
+        // Sign out and redirect
+        await supabase.auth.signOut();
+        window.location.href = '/';
+      } else {
+        throw new Error(result.error || 'Deletion failed');
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete data', variant: 'destructive' });
+    }
+    setDeleting(false);
+    setShowDeleteConfirm(false);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,30 +198,6 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Migration option */}
-                    {typeof window !== 'undefined' && localStorage.getItem('landlord_session_id') && (
-                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex gap-3">
-                          <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="font-medium text-amber-700">Local data detected</p>
-                            <p className="text-amber-600 text-sm mt-1">
-                              You have verifications stored locally from before you signed in. 
-                              Link them to your account to access them from any device.
-                            </p>
-                            <button
-                              onClick={migrateLocalData}
-                              disabled={saving}
-                              className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white text-sm font-medium rounded-lg transition-colors"
-                            >
-                              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                              Link Local Verifications
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </>
                 ) : (
                   /* Anonymous user */
@@ -237,14 +220,28 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                <div className="mt-6">
-                  <Link
-                    href="/signin"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-                  >
-                    Log in / Sign up
-                  </Link>
-                </div>
+                {user ? (
+                  <div className="mt-6">
+                    <button
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        setUser(null);
+                      }}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-6">
+                    <Link
+                      href="/signin"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
+                    >
+                      Log in / Sign up
+                    </Link>
+                  </div>
+                )}
 
                 <div className="mt-6 pt-6 border-t border-gray-100">
                   <p className="text-gray-600">
@@ -385,6 +382,149 @@ export default function SettingsPage() {
                     Integrations with property management tools are coming soon.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'privacy' && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900">Privacy & Data</h2>
+                <p className="text-gray-500 mt-1">
+                  Manage your data and privacy preferences. We take your privacy seriously.
+                </p>
+
+                {!user ? (
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-gray-600">Sign in to manage your data.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Data Retention Info */}
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex gap-3">
+                        <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-blue-700">Data Retention Policy</p>
+                          <p className="text-blue-600 text-sm mt-1">
+                            Verification data is automatically deleted 2 years after completion. 
+                            Bank account connections are disconnected immediately after fetching data.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Export Data */}
+                    <div className="mt-6 p-6 border border-gray-200 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <Download className="w-5 h-5 text-emerald-600" />
+                            Export Your Data
+                          </h3>
+                          <p className="text-gray-500 text-sm mt-1">
+                            Download all your account data in JSON format. This includes your profile, 
+                            verifications (without raw financial data), and activity logs.
+                          </p>
+                        </div>
+                        <button
+                          onClick={exportData}
+                          disabled={exporting}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-medium rounded-lg transition-colors"
+                        >
+                          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                          Export
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Delete Data */}
+                    <div className="mt-4 p-6 border border-red-200 bg-red-50 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-red-700 flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" />
+                            Delete All Data
+                          </h3>
+                          <p className="text-red-600 text-sm mt-1">
+                            Permanently delete your account and all associated data. 
+                            This action cannot be undone.
+                          </p>
+                        </div>
+                        {!showDeleteConfirm ? (
+                          <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setShowDeleteConfirm(false)}
+                              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={deleteAllData}
+                              disabled={deleting}
+                              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium rounded-lg transition-colors"
+                            >
+                              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                              Confirm Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {showDeleteConfirm && (
+                        <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
+                          <p className="text-red-800 text-sm font-medium flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" />
+                            Are you absolutely sure? This will permanently delete:
+                          </p>
+                          <ul className="text-red-700 text-sm mt-2 ml-6 list-disc">
+                            <li>Your account and profile</li>
+                            <li>All income verifications and reports</li>
+                            <li>All stored financial data</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Privacy Info */}
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                      <h3 className="font-semibold text-gray-900 mb-3">How We Protect Your Data</h3>
+                      <ul className="space-y-2 text-gray-600 text-sm">
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          <span>All data is encrypted at rest and in transit</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          <span>Bank connections are read-only and disconnected immediately after use</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          <span>We never store bank login credentials</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          <span>Account numbers are masked (only last 4 digits stored)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          <span>All access is logged for security auditing</span>
+                        </li>
+                      </ul>
+                      <p className="mt-4 text-sm text-gray-500">
+                        Read our full{' '}
+                        <a href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</a>
+                        {' '}and{' '}
+                        <a href="/security" className="text-emerald-600 hover:underline">Security Documentation</a>.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

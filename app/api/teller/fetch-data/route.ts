@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 import https from 'https';
 
 const TELLER_API_URL = 'https://api.teller.io';
@@ -132,8 +132,9 @@ export async function POST(request: NextRequest) {
       provider: 'teller',
     };
 
-    const supabase = await createClient();
-    const { error: updateError } = await supabase
+    // Use admin client to bypass RLS - this is a server-side operation
+    // triggered by the applicant, but needs to update the landlord's verification
+    const { error: updateError } = await supabaseAdmin
       .from('income_verifications')
       .update({
         raw_plaid_data: rawTellerData, // Reusing the same column for Teller data
