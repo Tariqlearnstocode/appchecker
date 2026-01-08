@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Eye, Trash2, FileCheck, Crown } from 'lucide-react';
+import { Copy, Eye, Trash2, FileCheck, Crown, CheckCircle, Link2 } from 'lucide-react';
 import { Verification } from './VerificationsTable';
 
 interface ActionsSidebarProps {
@@ -14,6 +14,8 @@ export function ActionsSidebar({
   onCopyLink,
   onDelete,
 }: ActionsSidebarProps) {
+  const isCompleted = selectedVerification?.status === 'completed';
+  
   return (
     <div className="space-y-4">
       {/* Actions Card */}
@@ -28,22 +30,40 @@ export function ActionsSidebar({
               <p className="text-sm text-gray-500">{selectedVerification.applicant_email}</p>
             </div>
             <div className="space-y-2">
-              <button
-                onClick={() => onCopyLink(selectedVerification.verification_token)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-              >
-                <Copy className="w-4 h-4" />
-                Copy Link
-              </button>
-              {selectedVerification.status === 'completed' && (
+              {/* Copy Verification Link */}
+              {isCompleted ? (
+                <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 font-medium rounded-lg cursor-not-allowed">
+                  <CheckCircle className="w-4 h-4" />
+                  User Verified
+                </div>
+              ) : (
+                <button
+                  onClick={() => onCopyLink(selectedVerification.verification_token)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
+                >
+                  <Link2 className="w-4 h-4" />
+                  Copy Verification Link
+                </button>
+              )}
+              
+              {/* View Verification Report */}
+              {isCompleted ? (
                 <a
                   href={`/report/${selectedVerification.verification_token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                 >
                   <Eye className="w-4 h-4" />
-                  View Report
+                  View Verification Report
                 </a>
+              ) : (
+                <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 font-medium rounded-lg cursor-not-allowed text-sm">
+                  <Eye className="w-4 h-4" />
+                  Report available upon verification
+                </div>
               )}
+              
               <button
                 onClick={() => onDelete(selectedVerification.id)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"

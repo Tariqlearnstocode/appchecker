@@ -53,7 +53,7 @@ export default function HomePage() {
         fetchVerifications(user);
       } else {
         setLoading(false);
-      }
+        }
     }
     init();
 
@@ -95,6 +95,7 @@ export default function HomePage() {
             setVerifications((prev) => [data, ...prev]);
             setFormData({ name: '', email: '' });
             setSelectedVerification(data);
+            setActiveTab('all'); // Switch to all verifications tab
             toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
           }
         }
@@ -157,6 +158,7 @@ export default function HomePage() {
       setVerifications([data, ...verifications]);
       setFormData({ name: '', email: '' });
       setSelectedVerification(data);
+      setActiveTab('all'); // Switch to all verifications tab
       toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
     }
     setCreating(false);
@@ -164,6 +166,8 @@ export default function HomePage() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    setUser(null);
+    setVerifications([]);
     toast({ title: 'Signed out', description: 'You have been signed out' });
   }
 
@@ -192,6 +196,8 @@ export default function HomePage() {
           password: authPassword,
         });
         if (error) throw error;
+        // Close modal immediately on successful sign-in
+        closeAuthModal();
       }
     } catch (error: any) {
       setAuthError(error.message || 'Authentication failed');
@@ -272,6 +278,7 @@ export default function HomePage() {
                   onChange={(e) => setAuthEmail(e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="you@example.com"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -287,6 +294,7 @@ export default function HomePage() {
                   onChange={(e) => setAuthPassword(e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder={authMode === 'signup' ? 'Create a password' : 'Your password'}
+                  autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
                   required
                   minLength={6}
                 />
@@ -355,22 +363,22 @@ export default function HomePage() {
                   >
                     <LogOut className="w-4 h-4" />
                     Sign Out
-                  </button>
+              </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/signin/password_signin"
+                  <button
+                    onClick={() => { setAuthMode('signin'); setShowAuthModal(true); }}
                     className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
                   >
                     Sign In
-                  </Link>
-                  <Link
-                    href="/signin/signup"
+                  </button>
+                  <button
+                    onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }}
                     className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
                   >
                     Get Started
-                  </Link>
+                  </button>
                 </>
               )}
               <Link href="/settings" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
@@ -383,74 +391,63 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Tab Bar */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => setActiveTab('new')}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-              activeTab === 'new'
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                : 'border-dashed border-gray-300 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50'
-            }`}
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">New Verification</span>
-          </button>
-
-          {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
-            const labels = {
-              all: 'All Verifications',
-              pending: 'Pending',
-              completed: 'Completed',
-              expired: 'Expired',
-            };
-            const colors = {
-              all: 'emerald',
-              pending: 'amber',
-              completed: 'emerald',
-              expired: 'gray',
-            };
-            const isActive = activeTab === tab;
-            const color = colors[tab];
-
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg border min-w-[120px] text-left transition-all ${
-                  isActive
-                    ? `border-${color}-500 ring-2 ring-${color}-100 bg-white`
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-xs ${
-                      isActive ? `text-${color}-600 font-medium` : tab === 'pending' ? 'text-amber-500' : 'text-gray-500'
-                    }`}
-                  >
-                    {labels[tab]}
-                  </span>
-                  <span className="text-xs text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">
-                    +0%
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900">{stats[tab]}</div>
-                <div className="text-xs text-gray-400">{stats[tab]} verifications</div>
-              </button>
-            );
-          })}
-        </div>
-
         {/* Content Grid */}
         <div className="grid grid-cols-12 gap-6">
+          {/* Tab Bar - spans main content width */}
+          <div className="col-span-8 flex items-stretch gap-3 mb-2">
+            <button
+              onClick={() => setActiveTab('new')}
+              className={`flex items-center gap-2 px-5 py-4 rounded-lg border transition-all ${
+                activeTab === 'new'
+                  ? 'border-emerald-500 bg-white text-emerald-600'
+                  : 'border-dashed border-gray-300 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-600'
+              }`}
+            >
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">New Verification</span>
+            </button>
+
+            {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
+              const labels = {
+                all: 'All Verifications',
+                pending: 'Pending',
+                completed: 'Completed',
+                expired: 'Expired',
+              };
+              const isActive = activeTab === tab;
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 px-4 py-3 rounded-lg border bg-white text-left transition-all ${
+                    isActive
+                      ? 'border-emerald-500 ring-1 ring-emerald-100'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs ${
+                      tab === 'pending' ? 'text-amber-500' : 
+                      tab === 'completed' ? 'text-emerald-500' : 
+                      'text-gray-500'
+                    }`}>
+                      {labels[tab]}
+                    </span>
+                  </div>
+                  <div className="text-xl font-semibold text-gray-900">{stats[tab]}</div>
+                  <div className="text-xs text-gray-400">{stats[tab] === 1 ? '1 verification' : `${stats[tab]} verifications`}</div>
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Empty space for sidebar alignment */}
+          <div className="col-span-4"></div>
           {/* Main Content */}
           <div className="col-span-8">
             {activeTab === 'new' ? (
               <NewVerificationTab
-                verifications={verifications}
-                selectedVerification={selectedVerification}
-                onSelect={setSelectedVerification}
                 landlordInfo={landlordInfo}
                 setLandlordInfo={setLandlordInfo}
                 formData={formData}
@@ -463,6 +460,11 @@ export default function HomePage() {
                 verifications={verifications}
                 selectedVerification={selectedVerification}
                 onSelect={setSelectedVerification}
+                onCopyLink={copyLink}
+                onDelete={(id) => {
+                  deleteVerification(id);
+                  setSelectedVerification(null);
+                }}
                 loading={loading}
                 filter={activeTab}
               />

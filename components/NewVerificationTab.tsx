@@ -1,7 +1,6 @@
 'use client';
 
 import { Plus, Loader2 } from 'lucide-react';
-import { VerificationsTable, Verification } from './VerificationsTable';
 
 interface LandlordInfo {
   name: string;
@@ -14,9 +13,6 @@ interface FormData {
 }
 
 interface NewVerificationTabProps {
-  verifications: Verification[];
-  selectedVerification: Verification | null;
-  onSelect: (verification: Verification) => void;
   landlordInfo: LandlordInfo;
   setLandlordInfo: (info: LandlordInfo) => void;
   formData: FormData;
@@ -26,9 +22,6 @@ interface NewVerificationTabProps {
 }
 
 export function NewVerificationTab({
-  verifications,
-  selectedVerification,
-  onSelect,
   landlordInfo,
   setLandlordInfo,
   formData,
@@ -114,28 +107,6 @@ export function NewVerificationTab({
             </div>
           </div>
 
-          {/* Data to Collect */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <h3 className="font-medium text-gray-900 mb-3">Data to Collect</h3>
-            <div className="flex flex-wrap gap-3">
-              {['Income History', 'Bank Balances', 'Transaction History', 'Employment'].map(
-                (item) => (
-                  <label
-                    key={item}
-                    className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="rounded text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-emerald-700">{item}</span>
-                  </label>
-                )
-              )}
-            </div>
-          </div>
-
           {/* Submit */}
           <div className="mt-6 pt-6 border-t border-gray-100 flex justify-end">
             <button
@@ -154,19 +125,6 @@ export function NewVerificationTab({
         </form>
       </div>
 
-      {/* Recent Verifications */}
-      {verifications.length > 0 && (
-        <div className="mt-6">
-          <VerificationsTable
-            verifications={verifications}
-            selectedVerification={selectedVerification}
-            onSelect={onSelect}
-            title="Recent Verifications"
-            showPagination={false}
-            maxRows={5}
-          />
-        </div>
-      )}
     </>
   );
 }

@@ -8,6 +8,8 @@ interface VerificationsListTabProps {
   verifications: Verification[];
   selectedVerification: Verification | null;
   onSelect: (verification: Verification) => void;
+  onCopyLink?: (token: string) => void;
+  onDelete?: (id: string) => void;
   loading: boolean;
   filter: FilterType;
 }
@@ -23,6 +25,8 @@ export function VerificationsListTab({
   verifications,
   selectedVerification,
   onSelect,
+  onCopyLink,
+  onDelete,
   loading,
   filter,
 }: VerificationsListTabProps) {
@@ -37,6 +41,8 @@ export function VerificationsListTab({
       verifications={filteredVerifications}
       selectedVerification={selectedVerification}
       onSelect={onSelect}
+      onCopyLink={onCopyLink}
+      onDelete={onDelete}
       loading={loading}
       title={filterTitles[filter]}
       showPagination={true}

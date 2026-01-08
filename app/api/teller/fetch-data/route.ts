@@ -157,9 +157,9 @@ export async function POST(request: NextRequest) {
     
     const disconnectResults = await Promise.all(
       accounts.map(async (account: any) => {
-        try {
+      try {
           const deleteRes = await tellerFetch(`${TELLER_API_URL}/accounts/${account.id}`, {
-            method: 'DELETE',
+          method: 'DELETE',
             headers,
           });
           if (deleteRes.ok) {
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         } catch (err: any) {
           console.error(`Error disconnecting account ${account.id}:`, err?.message);
           return { id: account.id, success: false, error: err?.message };
-        }
+      }
       })
     );
     

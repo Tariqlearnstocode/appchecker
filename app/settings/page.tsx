@@ -56,13 +56,13 @@ export default function SettingsPage() {
     }
     
     setSaving(true);
-    
+
     // Save to users table
     const { error } = await supabase
       .from('users')
       .update({ company_name: defaults.companyName })
       .eq('id', user.id);
-    
+
     if (error) {
       toast({ title: 'Error', description: 'Failed to save preferences', variant: 'destructive' });
     } else {
@@ -233,14 +233,14 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-6">
-                    <Link
-                      href="/signin"
-                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-                    >
-                      Log in / Sign up
-                    </Link>
-                  </div>
+                <div className="mt-6">
+                  <Link
+                    href="/signin"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Log in / Sign up
+                  </Link>
+                </div>
                 )}
 
                 <div className="mt-6 pt-6 border-t border-gray-100">

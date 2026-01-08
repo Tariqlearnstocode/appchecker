@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Eye, Trash2, Loader2 } from 'lucide-react';
+import { Copy, Eye, Trash2, Loader2, Link2 } from 'lucide-react';
 
 export type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed';
 
@@ -31,6 +31,9 @@ interface VerificationsTableProps {
   verifications: Verification[];
   selectedVerification: Verification | null;
   onSelect: (verification: Verification) => void;
+  onCopyLink?: (token: string) => void;
+  onViewReport?: (token: string) => void;
+  onDelete?: (id: string) => void;
   loading?: boolean;
   title?: string;
   showPagination?: boolean;
@@ -41,6 +44,9 @@ export function VerificationsTable({
   verifications,
   selectedVerification,
   onSelect,
+  onCopyLink,
+  onViewReport,
+  onDelete,
   loading = false,
   title,
   showPagination = true,
@@ -66,23 +72,24 @@ export function VerificationsTable({
       <table className="w-full">
         <thead>
           <tr className="bg-emerald-500 text-white text-left text-sm">
-            <th className="px-6 py-3 font-medium w-16">No.</th>
-            <th className="px-6 py-3 font-medium">Applicant</th>
-            <th className="px-6 py-3 font-medium w-28">Created</th>
-            <th className="px-6 py-3 font-medium w-28">Status</th>
+            <th className="px-4 py-3 font-medium w-14">No.</th>
+            <th className="px-4 py-3 font-medium">Applicant</th>
+            <th className="px-4 py-3 font-medium w-24">Created</th>
+            <th className="px-4 py-3 font-medium w-24">Status</th>
+            <th className="px-4 py-3 font-medium w-32 text-center">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {loading ? (
             <tr>
-              <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+              <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                 Loading...
               </td>
             </tr>
           ) : displayVerifications.length === 0 ? (
             <tr>
-              <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+              <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                 No verifications found.
               </td>
             </tr>
@@ -90,6 +97,7 @@ export function VerificationsTable({
             displayVerifications.map((v, i) => {
               const status = statusConfig[v.status];
               const isSelected = selectedVerification?.id === v.id;
+              const isCompleted = v.status === 'completed';
               return (
                 <tr
                   key={v.id}
@@ -98,10 +106,10 @@ export function VerificationsTable({
                     isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <td className="px-6 py-4 text-gray-500 text-sm">
+                  <td className="px-4 py-3 text-gray-500 text-sm">
                     {String(i + 1).padStart(3, '0')}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -116,15 +124,64 @@ export function VerificationsTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600">
                     {new Date(v.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${status.bgColor} ${status.color}`}
                     >
                       {status.label}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      {/* Copy Link */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCopyLink?.(v.verification_token);
+                        }}
+                        disabled={isCompleted}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isCompleted
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-500 hover:bg-gray-100 hover:text-emerald-600'
+                        }`}
+                        title={isCompleted ? 'User verified' : 'Copy verification link'}
+                      >
+                        <Link2 className="w-4 h-4" />
+                      </button>
+                      {/* View Report */}
+                      <a
+                        href={isCompleted ? `/report/${v.verification_token}` : undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isCompleted) e.preventDefault();
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isCompleted
+                            ? 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
+                            : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                        title={isCompleted ? 'View verification report' : 'Report available upon verification'}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                      {/* Delete */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete?.(v.id);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-600 transition-colors"
+                        title="Delete verification"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
