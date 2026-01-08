@@ -150,20 +150,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Delete the account connection (disconnect)
-    // Teller doesn't charge monthly, but good practice to clean up
-    for (const account of accounts) {
-      try {
-        await tellerFetch(`${TELLER_API_URL}/accounts/${account.id}`, {
-          method: 'DELETE',
-          headers,
-        });
-      } catch {
-        // Log but don't fail
-      }
-    }
+    // 5. Delete all account connections to stop recurring charges
+    // Teller charges per active enrollment, so we must disconnect after fetching
+    console.log(`Disconnecting ${accounts.length} account(s) from Teller...`);
+    
+    const disconnectResults = await Promise.all(
+      accounts.map(async (account: any) => {
+        try {
+          const deleteRes = await tellerFetch(`${TELLER_API_URL}/accounts/${account.id}`, {
+            method: 'DELETE',
+            headers,
+          });
+          if (deleteRes.ok) {
+            console.log(`Successfully disconnected account ${account.id}`);
+            return { id: account.id, success: true };
+          } else {
+            const errText = await deleteRes.text().catch(() => 'Unknown error');
+            console.error(`Failed to disconnect account ${account.id}: ${errText}`);
+            return { id: account.id, success: false, error: errText };
+          }
+        } catch (err: any) {
+          console.error(`Error disconnecting account ${account.id}:`, err?.message);
+          return { id: account.id, success: false, error: err?.message };
+        }
+      })
+    );
+    
+    const disconnectedCount = disconnectResults.filter(r => r.success).length;
+    console.log(`Disconnected ${disconnectedCount}/${accounts.length} accounts from Teller`);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      disconnected: disconnectedCount,
+      total_accounts: accounts.length
+    });
   } catch (error: any) {
     console.error('Error fetching Teller data:', error);
     return NextResponse.json(
