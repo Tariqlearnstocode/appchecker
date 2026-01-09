@@ -154,7 +154,7 @@ export function VerificationsTable({
                       </button>
                       {/* View Report */}
                       <a
-                        href={isCompleted ? `/report/${v.verification_token}` : undefined}
+                        href={isCompleted ? `/report-premium/${v.verification_token}` : undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => {

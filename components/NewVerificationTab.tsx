@@ -36,13 +36,13 @@ export function NewVerificationTab({
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900">New Verification Request</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Create a verification link to send to your applicant
+            Create a verification link to send to the individual
           </p>
         </div>
         <form onSubmit={onSubmit} className="p-6">
           {/* From / Request To Layout */}
           <div className="grid grid-cols-2 gap-6 mb-6">
-            {/* From (Landlord) */}
+            {/* From */}
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-medium text-gray-900 mb-4">From *</h3>
               <div className="space-y-3">
@@ -63,7 +63,7 @@ export function NewVerificationTab({
               </div>
             </div>
 
-            {/* Request To (Applicant) */}
+            {/* Request To */}
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-medium text-gray-900 mb-4">Request To *</h3>
               <div className="space-y-3">
@@ -72,7 +72,7 @@ export function NewVerificationTab({
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                  placeholder="Applicant Name *"
+                  placeholder="Individual Name *"
                   required
                 />
                 <input
@@ -87,14 +87,14 @@ export function NewVerificationTab({
             </div>
           </div>
 
-          {/* Property & Settings */}
+          {/* Purpose & Settings */}
           <div className="grid grid-cols-2 gap-6">
             <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Property</h3>
+              <h3 className="font-medium text-gray-900 mb-4">Purpose</h3>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                placeholder="Property / Unit (optional)"
+                placeholder="Purpose (optional)"
               />
             </div>
             <div className="border border-gray-200 rounded-lg p-4">

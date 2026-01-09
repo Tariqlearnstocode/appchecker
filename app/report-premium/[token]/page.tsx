@@ -69,7 +69,7 @@ export default async function ReportPremiumPage({ params }: PageProps) {
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Report Not Ready</h1>
           <p className="text-gray-600">
-            The applicant hasn't completed their verification yet.
+            The individual hasn't completed their verification yet.
           </p>
         </div>
       </div>

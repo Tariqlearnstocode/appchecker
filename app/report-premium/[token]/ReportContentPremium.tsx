@@ -430,6 +430,19 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
   const primarySourceTotal90Days = payrollTotalAmount;
   const primarySourceOccurrences = payrollDepositCount;
 
+  // Calculate months of data and earliest transaction date
+  const transactionDates = transactions
+    .map(t => new Date(t.date))
+    .filter(d => !isNaN(d.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+  
+  const earliestTransactionDate = transactionDates.length > 0 ? transactionDates[0] : null;
+  const latestTransactionDate = transactionDates.length > 0 ? transactionDates[transactionDates.length - 1] : null;
+  
+  const monthsOfData = earliestTransactionDate && latestTransactionDate
+    ? Math.max(1, Math.ceil((latestTransactionDate.getTime() - earliestTransactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30)))
+    : 0;
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] print:bg-white">
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -448,21 +461,21 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
         {/* Report Header */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex-1 h-[2px] bg-emerald-600"></div>
-          <h1 className="text-emerald-600 text-xl font-semibold tracking-wide">INCOME REPORT</h1>
+          <h1 className="text-emerald-600 text-xl font-semibold tracking-wide">INCOME VERIFICATION REPORT</h1>
           <div className="flex-1 h-[2px] bg-emerald-600"></div>
         </div>
         
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
           <div className="flex gap-2">
-            <span className="text-gray-500">Applicant Name</span>
+            <span className="text-gray-500">Individual Name</span>
             <span className="font-medium text-gray-900">{verification.applicant_name}</span>
           </div>
           <div className="flex gap-2">
-            <span className="text-gray-500">Ordered By</span>
+            <span className="text-gray-500">Requested By</span>
             <span className="font-medium text-gray-900">{verification.landlord_name || 'N/A'}</span>
           </div>
           <div className="flex gap-2">
-            <span className="text-gray-500">Applying For</span>
+            <span className="text-gray-500">Purpose</span>
             <span className="font-medium text-gray-900">{verification.property_unit || 'N/A'}</span>
           </div>
           <div className="flex gap-2">
@@ -478,7 +491,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
 
         {/* Disclaimer Box */}
         <div className="bg-[#FFF8E7] border border-[#E8DFC7] rounded p-4 mb-6 text-sm text-gray-700 leading-relaxed">
-          <strong>Disclaimer:</strong> This report is provided for informational purposes only and is based on bank account data voluntarily authorized by the applicant. We do not make rental decisions, recommendations, approvals, or denials. All decisions are the sole responsibility of the requesting party.
+          <strong>Disclaimer:</strong> This Income Verification Report is provided for informational purposes only. It presents income-related data derived from bank account information voluntarily authorized by the individual. This report does not constitute a recommendation, approval, denial, or eligibility determination for any purpose. Any interpretation or use of this information is the sole responsibility of the recipient.
         </div>
 
         {/* Income Summary Section */}
@@ -490,7 +503,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
 
           <div className="p-5">
             {/* Bank Account Owner */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <span className="text-gray-700">Bank Account Owner Name(s): <strong>{verification.applicant_name}</strong></span>
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-black text-white text-xs font-medium rounded-full">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -499,14 +512,44 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
                 Verified
               </span>
             </div>
+            <div className="text-sm text-gray-500 mb-1">
+              {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data available
+            </div>
+            {earliestTransactionDate && (
+              <div className="text-sm text-gray-500 mb-4">
+                First transaction: {earliestTransactionDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
             
             <p className="text-sm text-gray-600 mb-6">
-              Historical income values are estimated using the applicant's income from the past twelve (12) complete calendar months.<br/>
-              Projected income values are estimated using the applicant's income from the past three (3) complete calendar months.
+              Historical income values are estimated using the individual's income from the past twelve (12) complete calendar months.<br/>
+              Projected income values are estimated using the individual's income from the past three (3) complete calendar months.
             </p>
 
-            {/* Historical & Projected Cards - Side by Side */}
+            {/* Projected & Historical Cards - Side by Side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Projected Card */}
+              <div className="bg-white border-4 border-emerald-200 rounded p-6">
+                <div className="mb-4">
+                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
+                  <div className="text-gray-600 mt-1">
+                    <span className="text-sm font-medium">Projected</span><br/>
+                    <span className="text-sm text-gray-500">Estimated Annual</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Annual</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(projectedAnnual)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimated Monthly</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(projectedMonthly)}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Historical Card */}
               <div className="bg-white border-2 border-emerald-200 rounded p-6">
                 <div className="mb-4">
@@ -528,42 +571,31 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
                   </div>
                 </div>
               </div>
-
-              {/* Projected Card */}
-              <div className="bg-white border-2 border-emerald-200 rounded p-6">
-                <div className="mb-4">
-                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
-                  <div className="text-gray-600 mt-1">
-                    <span className="text-sm font-medium">Projected</span><br/>
-                    <span className="text-sm text-gray-500">Estimated Annual</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Annual</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(projectedAnnual)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Monthly</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(projectedMonthly)}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Rent Affordability & Primary Income Source - Side by Side */}
+        {/* Illustrative Monthly Capacity & Primary Income Source - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Rent Affordability */}
+          {/* Illustrative Monthly Capacity - Split into 2 columns */}
           <div className="bg-white border border-gray-200 rounded p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Rent Affordability</h3>
-            <div className="text-emerald-600 text-3xl font-light mb-2">
-              {formatCurrency(projectedMonthly / 3)}
+            <h3 className="font-semibold text-gray-900 mb-4">Illustrative Monthly Capacity</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left: ÷3 */}
+              <div className="text-center pr-4 border-r border-gray-200">
+                <div className="text-emerald-600 text-3xl font-light mb-2">
+                  {formatCurrency(projectedMonthly / 3)}
+                </div>
+                <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 3)</p>
+              </div>
+              {/* Right: ÷10 */}
+              <div className="text-center pl-4">
+                <div className="text-emerald-600 text-3xl font-light mb-2">
+                  {formatCurrency(projectedMonthly / 10)}
+                </div>
+                <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 10)</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mb-3">Maximum Affordable Rent</p>
-            <p className="text-xs text-gray-500">(Based on 3x income rule: {formatCurrency(projectedMonthly)} ÷ 3)</p>
           </div>
 
           {/* Primary Income Source */}
@@ -571,10 +603,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
             <h3 className="font-semibold text-gray-900 mb-3">Primary Income Source</h3>
             {primarySourceOccurrences > 0 ? (
               <>
-                <div className="text-emerald-600 text-xl font-medium">{primaryIncomeSource}</div>
-                <div className="text-xs text-gray-500 mb-4">
-                  Payroll • {summary.incomeConfidence === 'high' ? 'High' : summary.incomeConfidence === 'medium' ? 'Medium' : 'Low'} confidence
-                </div>
+                <div className="text-emerald-600 text-xl font-medium mb-4">{primaryIncomeSource}</div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total (Last 90 Days)</span>
@@ -664,7 +693,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
             This report is confidential and is not to be discussed except for persons who have permissible purposes as defined in the Fair Credit Reporting Act and other applicable Federal and State regulations.
           </p>
           <p className="mb-2">
-            Report generated {formatDate(data.generatedAt)} • Verification for {verification.applicant_email}
+            Report generated {formatDate(data.generatedAt)} • Verification for {verification.landlord_name || verification.applicant_email}
           </p>
           <p>
             <a href="/disclaimers" className="text-emerald-600 hover:underline">See full disclaimers and limitations</a>

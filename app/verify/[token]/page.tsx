@@ -139,7 +139,7 @@ export default function ApplicantVerificationPage() {
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Verification Complete!</h1>
           <p className="text-gray-600 mb-6">
             Your income verification has been submitted successfully. 
-            {verification?.landlord_name && ` ${verification.landlord_name} can now`} view your financial report.
+            {verification?.landlord_name && ` ${verification.landlord_name} can now`} view your income verification report.
           </p>
           <div className="p-4 bg-gray-50 rounded-xl">
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
@@ -173,7 +173,7 @@ export default function ApplicantVerificationPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-gray-900">
-                {verification?.landlord_name || 'Property Manager'}
+                {verification?.landlord_name || 'Requesting Party'}
               </h2>
               {verification?.landlord_email && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
@@ -191,9 +191,9 @@ export default function ApplicantVerificationPage() {
           </div>
         </div>
 
-        {/* Applicant Info */}
+        {/* Individual Info */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Verifying income for</p>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Income verification for</p>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
               <span className="text-lg font-medium text-gray-600">
