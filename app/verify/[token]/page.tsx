@@ -10,13 +10,13 @@ type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 
 
 interface Verification {
   id: string;
-  applicant_name: string;
-  applicant_email: string;
+  individual_name: string;
+  individual_email: string;
   status: VerificationStatus;
   expires_at: string;
-  landlord_name: string | null;
-  landlord_email: string | null;
-  property_unit: string | null;
+  requested_by_name: string | null;
+  requested_by_email: string | null;
+  purpose: string | null;
 }
 
 export default function ApplicantVerificationPage() {
@@ -38,7 +38,7 @@ export default function ApplicantVerificationPage() {
   async function fetchVerification() {
     const { data, error } = await supabase
       .from('income_verifications')
-      .select('id, applicant_name, applicant_email, status, expires_at, landlord_name, landlord_email, property_unit')
+      .select('id, individual_name, individual_email, status, expires_at, requested_by_name, requested_by_email, purpose')
       .eq('verification_token', token)
       .single();
 
@@ -139,7 +139,7 @@ export default function ApplicantVerificationPage() {
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Verification Complete!</h1>
           <p className="text-gray-600 mb-6">
             Your income verification has been submitted successfully. 
-            {verification?.landlord_name && ` ${verification.landlord_name} can now`} view your income verification report.
+            {verification?.requested_by_name && ` ${verification.requested_by_name} can now`} view your income verification report.
           </p>
           <div className="p-4 bg-gray-50 rounded-xl">
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
@@ -173,18 +173,18 @@ export default function ApplicantVerificationPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-gray-900">
-                {verification?.landlord_name || 'Requesting Party'}
+                {verification?.requested_by_name || 'Requesting Party'}
               </h2>
-              {verification?.landlord_email && (
+              {verification?.requested_by_email && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                   <Mail className="w-4 h-4" />
-                  {verification.landlord_email}
+                  {verification.requested_by_email}
                 </div>
               )}
-              {verification?.property_unit && (
+              {verification?.purpose && (
                 <div className="flex items-center gap-2 text-sm text-emerald-600 mt-1">
                   <MapPin className="w-4 h-4" />
-                  {verification.property_unit}
+                  {verification.purpose}
                 </div>
               )}
             </div>
@@ -197,12 +197,12 @@ export default function ApplicantVerificationPage() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
               <span className="text-lg font-medium text-gray-600">
-                {verification?.applicant_name?.charAt(0).toUpperCase()}
+                {verification?.individual_name?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <p className="font-medium text-gray-900">{verification?.applicant_name}</p>
-              <p className="text-sm text-gray-500">{verification?.applicant_email}</p>
+              <p className="font-medium text-gray-900">{verification?.individual_name}</p>
+              <p className="text-sm text-gray-500">{verification?.individual_email}</p>
             </div>
           </div>
         </div>

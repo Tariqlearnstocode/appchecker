@@ -86,11 +86,11 @@ NEXT_PUBLIC_TELLER_ENV=sandbox  # or 'development' or 'production'
 | `id` | uuid | Primary key |
 | `session_id` | text | For anonymous users (localStorage) |
 | `user_id` | uuid | For logged-in users |
-| `applicant_name` | text | Applicant's name |
-| `applicant_email` | text | Applicant's email |
-| `landlord_name` | text | Requesting landlord/company |
-| `landlord_email` | text | Landlord contact email |
-| `property_unit` | text | Property being applied for |
+| `individual_name` | text | Individual's name being verified |
+| `individual_email` | text | Individual's email |
+| `requested_by_name` | text | Requesting party/company name |
+| `requested_by_email` | text | Requesting party contact email |
+| `purpose` | text | Purpose of verification (optional) |
 | `verification_token` | uuid | Unique link token |
 | `status` | enum | pending, in_progress, completed, expired, failed |
 | `raw_plaid_data` | jsonb | Raw Teller API response (named for backwards compat) |

@@ -83,7 +83,7 @@ export default async function ReportPremiumPage({ params }: PageProps) {
     resourceId: token,
     metadata: {
       verification_id: verification.id,
-      applicant_name: verification.applicant_name,
+      individual_name: verification.individual_name,
       report_type: 'premium',
     },
   });

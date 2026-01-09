@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     // Fetch all verifications (without raw financial data for security)
     const { data: verifications } = await supabase
       .from('income_verifications')
-      .select('id, created_at, applicant_name, applicant_email, landlord_name, landlord_email, status, completed_at, property_address, monthly_rent')
+      .select('id, created_at, individual_name, individual_email, requested_by_name, requested_by_email, status, completed_at, purpose, monthly_rent')
       .eq('user_id', user.id);
 
     // Fetch audit logs

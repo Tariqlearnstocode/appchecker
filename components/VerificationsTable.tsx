@@ -6,17 +6,17 @@ export type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expi
 
 export interface Verification {
   id: string;
-  applicant_name: string;
-  applicant_email: string;
+  individual_name: string;
+  individual_email: string;
   verification_token: string;
   status: VerificationStatus;
   created_at: string;
   expires_at: string;
   completed_at: string | null;
-  // Landlord info
-  landlord_name: string | null;
-  landlord_email: string | null;
-  property_unit: string | null;
+  // Requesting party info
+  requested_by_name: string | null;
+  requested_by_email: string | null;
+  purpose: string | null;
 }
 
 export const statusConfig: Record<VerificationStatus, { color: string; bgColor: string; label: string }> = {
@@ -116,11 +116,11 @@ export function VerificationsTable({
                           isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
                         }`}
                       >
-                        {v.applicant_name.charAt(0).toUpperCase()}
+                        {v.individual_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{v.applicant_name}</p>
-                        <p className="text-sm text-gray-500">{v.applicant_email}</p>
+                        <p className="font-medium text-gray-900">{v.individual_name}</p>
+                        <p className="text-sm text-gray-500">{v.individual_email}</p>
                       </div>
                     </div>
                   </td>

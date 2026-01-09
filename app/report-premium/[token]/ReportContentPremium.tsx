@@ -59,10 +59,10 @@ interface LegacyReportData {
 
 interface Props {
   verification: {
-    applicant_name: string;
-    applicant_email: string;
-    landlord_name?: string | null;
-    property_unit?: string | null;
+    individual_name: string;
+    individual_email: string;
+    requested_by_name?: string | null;
+    purpose?: string | null;
     monthly_rent?: number | null;
     created_at: string;
     completed_at: string;
@@ -468,15 +468,15 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
           <div className="flex gap-2">
             <span className="text-gray-500">Individual Name</span>
-            <span className="font-medium text-gray-900">{verification.applicant_name}</span>
+            <span className="font-medium text-gray-900">{verification.individual_name}</span>
           </div>
           <div className="flex gap-2">
             <span className="text-gray-500">Requested By</span>
-            <span className="font-medium text-gray-900">{verification.landlord_name || 'N/A'}</span>
+            <span className="font-medium text-gray-900">{verification.requested_by_name || 'N/A'}</span>
           </div>
           <div className="flex gap-2">
             <span className="text-gray-500">Purpose</span>
-            <span className="font-medium text-gray-900">{verification.property_unit || 'N/A'}</span>
+            <span className="font-medium text-gray-900">{verification.purpose || 'N/A'}</span>
           </div>
           <div className="flex gap-2">
             <span className="text-gray-500">Report Date</span>
@@ -504,7 +504,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
           <div className="p-5">
             {/* Bank Account Owner */}
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-gray-700">Bank Account Owner Name(s): <strong>{verification.applicant_name}</strong></span>
+              <span className="text-gray-700">Bank Account Owner Name(s): <strong>{verification.individual_name}</strong></span>
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-black text-white text-xs font-medium rounded-full">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -693,7 +693,7 @@ export default function ReportContentPremium({ verification, reportData, isCalcu
             This report is confidential and is not to be discussed except for persons who have permissible purposes as defined in the Fair Credit Reporting Act and other applicable Federal and State regulations.
           </p>
           <p className="mb-2">
-            Report generated {formatDate(data.generatedAt)} • Verification for {verification.landlord_name || verification.applicant_email}
+            Report generated {formatDate(data.generatedAt)} • Verification for {verification.requested_by_name || verification.individual_email}
           </p>
           <p>
             <a href="/disclaimers" className="text-emerald-600 hover:underline">See full disclaimers and limitations</a>

@@ -109,10 +109,10 @@ export default function HomePageClient({
           const { data, error } = await supabase
             .from('income_verifications')
             .insert({
-              applicant_name: formDataRef.current.name,
-              applicant_email: formDataRef.current.email,
-              landlord_name: landlordInfoRef.current.name || null,
-              landlord_email: landlordInfoRef.current.email || session.user.email || null,
+              individual_name: formDataRef.current.name,
+              individual_email: formDataRef.current.email,
+              requested_by_name: landlordInfoRef.current.name || null,
+              requested_by_email: landlordInfoRef.current.email || session.user.email || null,
               user_id: session.user.id,
             })
             .select()
@@ -149,10 +149,10 @@ export default function HomePageClient({
     const { data, error } = await supabase
       .from('income_verifications')
       .insert({
-        applicant_name: formData.name,
-        applicant_email: formData.email,
-        landlord_name: landlordInfo.name || null,
-        landlord_email: landlordInfo.email || null,
+        individual_name: formData.name,
+        individual_email: formData.email,
+        requested_by_name: landlordInfo.name || null,
+        requested_by_email: landlordInfo.email || null,
         user_id: user.id,
       })
       .select()

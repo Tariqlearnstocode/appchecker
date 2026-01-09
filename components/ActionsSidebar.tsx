@@ -25,9 +25,9 @@ export function ActionsSidebar({
             <div className="pb-3 border-b border-gray-100 mb-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Selected</p>
               <p className="font-medium text-gray-900 mt-1">
-                {selectedVerification.applicant_name}
+                {selectedVerification.individual_name}
               </p>
-              <p className="text-sm text-gray-500">{selectedVerification.applicant_email}</p>
+              <p className="text-sm text-gray-500">{selectedVerification.individual_email}</p>
             </div>
             <div className="space-y-2">
               {/* Copy Verification Link */}
