@@ -34,83 +34,123 @@ export function NewVerificationTab({
       {/* Form */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">New Verification Request</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Create a verification link to send to the individual
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Create Income Verification Request</h2>
+          <p className="text-sm text-gray-600">
+            Stop chasing PDF bank statements. Get verified income data directly from the source in minutes.
           </p>
         </div>
         <form onSubmit={onSubmit} className="p-6">
-          {/* From / Request To Layout */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            {/* From */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">From *</h3>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={landlordInfo.name}
-                  onChange={(e) => setLandlordInfo({ ...landlordInfo, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                  placeholder="Your / Company Name *"
-                />
-                <input
-                  type="email"
-                  value={landlordInfo.email}
-                  onChange={(e) => setLandlordInfo({ ...landlordInfo, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                  placeholder="E-Mail"
-                />
+          <div className="space-y-6">
+            {/* From Section */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3">From</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="from-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Your / Company Name *
+                  </label>
+                  <input
+                    id="from-name"
+                    type="text"
+                    value={landlordInfo.name}
+                    onChange={(e) => setLandlordInfo({ ...landlordInfo, name: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                    placeholder="Enter name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="from-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    id="from-email"
+                    type="email"
+                    value={landlordInfo.email}
+                    onChange={(e) => setLandlordInfo({ ...landlordInfo, email: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                    placeholder="Enter email"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Request To */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Request To *</h3>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                  placeholder="Individual Name *"
-                  required
-                />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                  placeholder="E-Mail *"
-                  required
-                />
+            {/* Recipient Section */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Recipient</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Full Name */}
+                  <div>
+                    <label htmlFor="individual-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Full Name of Individual *
+                    </label>
+                    <input
+                      id="individual-name"
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                      placeholder="Enter name"
+                      required
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label htmlFor="individual-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Email Address *
+                    </label>
+                    <input
+                      id="individual-email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                      placeholder="Enter email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Custom Reference */}
+                <div>
+                  <label htmlFor="custom-reference" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Custom Reference <span className="text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    id="custom-reference"
+                    type="text"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                    placeholder="e.g., Unit 4B"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Purpose */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-medium text-gray-900 mb-4">Purpose</h3>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-              placeholder="Purpose (optional)"
-            />
           </div>
 
           {/* Submit */}
-          <div className="mt-6 pt-6 border-t border-gray-100 flex justify-end">
+          <div className="mt-6 pt-6 border-t border-gray-100">
             <button
               type="submit"
               disabled={creating || !formData.name || !formData.email}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors"
             >
               {creating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Sending...</span>
+                </>
               ) : (
-                <Plus className="w-4 h-4" />
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Send Verification Link</span>
+                </>
               )}
-              Create Verification
             </button>
+            <p className="text-xs text-gray-500 text-center mt-3">
+              You will only be charged upon a successful connection.
+            </p>
           </div>
         </form>
       </div>

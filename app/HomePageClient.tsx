@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, FileCheck, Settings, LogOut, User, Loader2, X } from 'lucide-react';
+import { Plus, FileCheck, Settings, LogOut, User, Loader2, X, Check, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
 import { Verification } from '@/components/VerificationsTable';
 import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
@@ -389,9 +389,11 @@ export default function HomePageClient({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Tab Bar */}
-          <div className="col-span-8 flex items-stretch gap-3 mb-2">
+        <div className="flex gap-6">
+          {/* Left Column - Tabs + Content */}
+          <div className="flex-1 min-w-0">
+            {/* Tab Bar */}
+            <div className="flex items-stretch gap-3 mb-6">
             <button
               onClick={() => setActiveTab('new')}
               className={`flex items-center gap-2 px-5 py-4 rounded-lg border transition-all ${
@@ -423,61 +425,163 @@ export default function HomePageClient({
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs ${
-                      tab === 'pending' ? 'text-amber-500' : 
-                      tab === 'completed' ? 'text-emerald-500' : 
-                      'text-gray-500'
-                    }`}>
-                      {labels[tab]}
-                    </span>
+                  <div className={`text-xs mb-1 ${
+                    tab === 'pending' ? 'text-amber-500' : 
+                    tab === 'completed' ? 'text-emerald-500' : 
+                    'text-gray-500'
+                  }`}>
+                    {labels[tab]}
                   </div>
                   <div className="text-xl font-semibold text-gray-900">{stats[tab]}</div>
-                  <div className="text-xs text-gray-400">{stats[tab] === 1 ? '1 verification' : `${stats[tab]} verifications`}</div>
                 </button>
               );
             })}
+            </div>
+            
+            {/* Main Content */}
+            <div>
+              {activeTab === 'new' ? (
+                <NewVerificationTab
+                  landlordInfo={landlordInfo}
+                  setLandlordInfo={setLandlordInfo}
+                  formData={formData}
+                  setFormData={setFormData}
+                  creating={creating}
+                  onSubmit={createVerification}
+                />
+              ) : (
+                <VerificationsListTab
+                  verifications={verifications}
+                  selectedVerification={selectedVerification}
+                  onSelect={setSelectedVerification}
+                  onCopyLink={copyLink}
+                  onDelete={(id) => {
+                    deleteVerification(id);
+                    setSelectedVerification(null);
+                  }}
+                  loading={loading}
+                  filter={activeTab}
+                />
+              )}
+            </div>
           </div>
           
-          <div className="col-span-4"></div>
-          
-          {/* Main Content */}
-          <div className="col-span-8">
-            {activeTab === 'new' ? (
-              <NewVerificationTab
-                landlordInfo={landlordInfo}
-                setLandlordInfo={setLandlordInfo}
-                formData={formData}
-                setFormData={setFormData}
-                creating={creating}
-                onSubmit={createVerification}
-              />
-            ) : (
-              <VerificationsListTab
-                verifications={verifications}
-                selectedVerification={selectedVerification}
-                onSelect={setSelectedVerification}
-                onCopyLink={copyLink}
-                onDelete={(id) => {
-                  deleteVerification(id);
-                  setSelectedVerification(null);
-                }}
-                loading={loading}
-                filter={activeTab}
-              />
-            )}
-          </div>
-
           {/* Sidebar */}
-          <div className="col-span-4">
-            <ActionsSidebar
-              selectedVerification={selectedVerification}
-              onCopyLink={copyLink}
-              onDelete={(id) => {
-                deleteVerification(id);
-                setSelectedVerification(null);
-              }}
-            />
+          <div className="w-[340px] flex-shrink-0">
+            <div className={user ? '' : 'sticky top-6'}>
+              {user ? (
+                <ActionsSidebar
+                  selectedVerification={selectedVerification}
+                  onCopyLink={copyLink}
+                  onDelete={(id) => {
+                    deleteVerification(id);
+                    setSelectedVerification(null);
+                  }}
+                />
+              ) : (
+              <div className="space-y-8 bg-slate-50 rounded-xl p-6 border border-slate-200 flex flex-col">
+                {/* What you get */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">What you get</h3>
+                  <ul className="space-y-5">
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Bank-Verified Income</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Income is verified directly from connected financial accounts.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Fraud Prevention</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Eliminate the risk of doctored or forged PDF documents.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
+                        <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
+                          See example report →
+                        </Link>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* How it works */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">How it works</h3>
+                  <div className="space-y-6 relative">
+                    {/* Vertical line connector */}
+                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200" />
+                    
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        1
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Invite</span>
+                        <span className="text-sm text-gray-600">Send a secure link to the individual.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        2
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Connect</span>
+                        <span className="text-sm text-gray-600">Recipient securely links their bank account.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        3
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Analyze</span>
+                        <span className="text-sm text-gray-600">View the complete income verification report in your dashboard.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div className="mt-auto pt-6 border-t border-gray-200 relative">
+                  {/* Decorative sparkle */}
+                  <div className="absolute right-0 bottom-8 text-gray-300/50 text-5xl">✦</div>
+                  
+                  <h3 className="text-sm font-semibold text-gray-500 mb-3">Pricing</h3>
+                  <div className="mb-2">
+                    <span className="text-4xl font-bold text-gray-900">$18.99</span>
+                    <span className="text-gray-600 text-sm ml-1">per successful<br />verification</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Pay as you go. No subscription required.
+                  </p>
+                  
+                  <p className="text-sm text-gray-600 mb-6">
+                    <span className="font-semibold text-gray-900">Need volume?</span> Save with{' '}
+                    <Link href="/settings" className="underline hover:text-gray-900">monthly plans</Link>
+                    <br />(starting at just $4/verification).
+                  </p>
+                  
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span className="text-xs">256-bit encryption</span>
+                  </div>
+                </div>
+              </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -73,7 +73,7 @@ export function VerificationsTable({
         <thead>
           <tr className="bg-emerald-500 text-white text-left text-sm">
             <th className="px-4 py-3 font-medium w-14">No.</th>
-            <th className="px-4 py-3 font-medium">Applicant</th>
+            <th className="px-4 py-3 font-medium">Individual</th>
             <th className="px-4 py-3 font-medium w-24">Created</th>
             <th className="px-4 py-3 font-medium w-24">Status</th>
             <th className="px-4 py-3 font-medium w-32 text-center">Actions</th>

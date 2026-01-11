@@ -91,7 +91,7 @@ export function ActionsSidebar({
         </div>
         <div className="space-y-2">
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg opacity-60 cursor-not-allowed">
-            <span>📧</span> Email to Applicant
+            <span>📧</span> Email to Individual
           </button>
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-500 rounded-lg opacity-60 cursor-not-allowed">
             <span>🔔</span> Send Reminder

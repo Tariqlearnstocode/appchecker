@@ -652,26 +652,26 @@ export default function ReportContent({ verification, reportData, isCalculated }
             }).reverse();
             
             return depositsWithTotal.map((deposit, i) => (
-              <div 
-                key={i} 
-                className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
-              >
-                <div className="col-span-2 text-emerald-600">
-                  {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-                </div>
-                <div className="col-span-4 text-gray-900 truncate cursor-help" title={deposit.name}>
-                  {deposit.name}
-                </div>
-                <div className="col-span-2">
-                  <IncomeTypeBadge type="payroll" />
-                </div>
-                <div className="col-span-2 text-right text-gray-900 font-medium">
-                  {formatCurrency(deposit.amount)}
-                </div>
-                <div className="col-span-2 text-right text-gray-500">
-                  {formatCurrency(deposit.runningTotal)}
-                </div>
-              </div>
+                  <div 
+                    key={i} 
+                    className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
+                  >
+                    <div className="col-span-2 text-emerald-600">
+                      {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                    </div>
+                    <div className="col-span-4 text-gray-900 truncate cursor-help" title={deposit.name}>
+                      {deposit.name}
+                    </div>
+                    <div className="col-span-2">
+                      <IncomeTypeBadge type="payroll" />
+                    </div>
+                    <div className="col-span-2 text-right text-gray-900 font-medium">
+                      {formatCurrency(deposit.amount)}
+                    </div>
+                    <div className="col-span-2 text-right text-gray-500">
+                      {formatCurrency(deposit.runningTotal)}
+                    </div>
+                  </div>
             ));
           })()}
         </div>
