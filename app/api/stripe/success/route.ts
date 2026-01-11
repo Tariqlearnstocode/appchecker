@@ -5,10 +5,10 @@ export async function GET(request: NextRequest) {
   const sessionId = searchParams.get('session_id');
   const verificationId = searchParams.get('verification_id');
   
-  // Redirect to the full report (premium version)
+  // Redirect to the full report
   if (verificationId) {
     return NextResponse.redirect(
-      new URL(`/report-premium/${verificationId}?unlocked=true`, request.url)
+      new URL(`/report/${verificationId}?unlocked=true`, request.url)
     );
   }
   

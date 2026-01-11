@@ -14,42 +14,45 @@
 
 ## Pricing Structure
 
-| Tier | Price | Reports | Best For |
-|------|-------|---------|----------|
-| **Free** | $0 | 1/week | Trying the product |
-| **Per Report** | $20 | Pay as you go | Occasional landlords |
-| **Pro** | $34.99/mo | Up to 100/month | Property managers |
-| **Enterprise** | Contact us | 100+ | Large portfolios |
+| Plan | Price | Included Verifications | Cost per Verification | Overage (per verification) | Best For |
+|------|-------|------------------------|----------------------|---------------------------|----------|
+| **Per Verification** | $18.99 | Pay as you go | $18.99 | — | Occasional use |
+| **Starter** ⭐ | $79.99/mo | 20 | $4.00 | $8.99 | Small landlords |
+| **Pro** | $200/mo | 75 | $2.67 | $4.99 | Property managers |
+| **Enterprise** | Custom | Custom | Custom | Custom | Large portfolios |
 
 ---
 
 ## Feature Breakdown
 
-### Free Tier
-- 1 report per week
-- 3 months transaction data (locked)
+### Per Verification ($18.99)
+- Bank-connected income verification
 - Basic income summary
-- Manual link sharing
+- One-time verification
 
-### Per Report ($20)
+### Starter ($79.99/month) ⭐
+Everything in Per Verification, plus:
+- 20 verifications/month included
 - Full 12-month transaction history
 - PDF export
 - Email verification link to applicant
-- Report stored for 1 year
-
-### Pro ($34.99/month)
-Everything in Per Report, plus:
-- Up to 100 reports/month
-- Multi-user team access
-- Custom branding (logo on reports)
 - Send invitation reminders
 - Completion notifications
+- Verification stored for 1 year
+- Multi-user team access
+- Custom branding (logo on verifications)
 - Analytics dashboard
 - Priority support
+- Overage: $8.99 per additional verification
+
+### Pro ($200/month)
+Everything in Starter, plus:
+- 75 verifications/month included
+- Overage: $4.99 per additional verification
 
 ### Enterprise (Contact Us)
 Everything in Pro, plus:
-- Unlimited reports
+- Custom verification limits
 - API access
 - White-label solution
 - Dedicated account manager
@@ -76,7 +79,7 @@ Everything in Pro, plus:
 - [ ] PDF export
 - [ ] Multi-user team access
 - [ ] Custom branding
-- [ ] Report archive (1 year)
+- [ ] Verification archive (1 year)
 - [ ] Analytics dashboard
 - [ ] Co-applicant verification
 - [ ] Bulk verification (CSV upload)
@@ -93,18 +96,18 @@ Everything in Pro, plus:
 ## Implementation Priority
 
 ### Phase 1 - Monetization MVP
-1. Rate limiting (1 free report/week)
-2. Payment integration (Stripe)
-3. Per-report purchase flow
-4. Full report unlock (12-month data)
-5. PDF export
+1. Payment integration (Stripe)
+2. Per-verification purchase flow ($18.99)
+3. Full verification unlock (12-month data) - subscription only
+4. PDF export - subscription only
 
-### Phase 2 - Pro Tier
-1. Monthly subscription
-2. Email to applicant
-3. Reminder system
-4. Multi-user accounts
-5. Custom branding upload
+### Phase 2 - Subscription Tiers
+1. Monthly subscription plans (Starter, Pro)
+2. Credit-based system with overage billing
+3. Email to applicant
+4. Reminder system
+5. Multi-user accounts
+6. Custom branding upload
 
 ### Phase 3 - Growth
 1. Analytics dashboard
@@ -124,7 +127,7 @@ Everything in Pro, plus:
 
 | Us | Traditional Screening |
 |----|-----------------------|
-| $20/report or $34.99/mo | $30-50/report |
+| $18.99/verification or $79.99+/mo | $30-50/report |
 | Instant results | 1-3 days |
 | Bank-verified data | Self-reported pay stubs |
 | No credit pull | Hard credit inquiry |

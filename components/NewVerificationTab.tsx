@@ -87,24 +87,14 @@ export function NewVerificationTab({
             </div>
           </div>
 
-          {/* Purpose & Settings */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Purpose</h3>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
-                placeholder="Purpose (optional)"
-              />
-            </div>
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Expires In</h3>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900">
-                <option>7 days</option>
-                <option>14 days</option>
-                <option>30 days</option>
-              </select>
-            </div>
+          {/* Purpose */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <h3 className="font-medium text-gray-900 mb-4">Purpose</h3>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400"
+              placeholder="Purpose (optional)"
+            />
           </div>
 
           {/* Submit */}

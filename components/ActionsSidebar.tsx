@@ -49,7 +49,7 @@ export function ActionsSidebar({
               {/* View Verification Report */}
               {isCompleted ? (
                 <a
-                  href={`/report-premium/${selectedVerification.verification_token}`}
+                  href={`/report/${selectedVerification.verification_token}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
