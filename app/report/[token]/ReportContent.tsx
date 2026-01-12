@@ -206,16 +206,27 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   }, [transactions]);
 
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const [filter, setFilter] = useState<'all' | 'debits' | 'credits'>('all');
   
   const selectedMonth = monthlyData.sortedMonths[selectedMonthIndex];
-  const selectedTransactions = monthlyData.grouped[selectedMonth] || [];
+  const allTransactionsForMonth = monthlyData.grouped[selectedMonth] || [];
   
-  // Calculate month totals
+  // Apply filter
+  const selectedTransactions = useMemo(() => {
+    if (filter === 'debits') {
+      return allTransactionsForMonth.filter(t => !t.isIncome);
+    } else if (filter === 'credits') {
+      return allTransactionsForMonth.filter(t => t.isIncome);
+    }
+    return allTransactionsForMonth;
+  }, [allTransactionsForMonth, filter]);
+  
+  // Calculate month totals (always from all transactions, not filtered)
   const monthTotals = useMemo(() => {
-    const credits = selectedTransactions.filter(t => t.isIncome).reduce((sum, t) => sum + t.amount, 0);
-    const debits = selectedTransactions.filter(t => !t.isIncome).reduce((sum, t) => sum + t.amount, 0);
+    const credits = allTransactionsForMonth.filter(t => t.isIncome).reduce((sum, t) => sum + t.amount, 0);
+    const debits = allTransactionsForMonth.filter(t => !t.isIncome).reduce((sum, t) => sum + t.amount, 0);
     return { credits, debits };
-  }, [selectedTransactions]);
+  }, [allTransactionsForMonth]);
 
   const formatMonthLabel = (monthKey: string) => {
     const [year, month] = monthKey.split('-');
@@ -273,6 +284,41 @@ function TransactionHistory({ transactions }: { transactions: Array<{
             {new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
           </button>
         ))}
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex gap-2">
+        <span className="text-sm text-gray-600 mr-2 self-center">Show:</span>
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            filter === 'all'
+              ? 'bg-black text-white'
+              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilter('debits')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            filter === 'debits'
+              ? 'bg-black text-white'
+              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Debits Only
+        </button>
+        <button
+          onClick={() => setFilter('credits')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            filter === 'credits'
+              ? 'bg-black text-white'
+              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Credits Only
+        </button>
       </div>
       
       {/* Table Header */}
@@ -370,7 +416,7 @@ function IncomeTypeBadge({ type }: { type: string }) {
 
 export default function ReportContent({ verification, reportData, isCalculated }: Props) {
   const data = normalizeReportData(reportData);
-  const { summary, income, transactions } = data;
+  const { summary, income, transactions, accounts } = data;
   
   // Payroll filter keywords
   const PAYROLL_KEYWORDS = [
@@ -482,7 +528,18 @@ export default function ReportContent({ verification, reportData, isCalculated }
             <span className="text-gray-500">Report Date</span>
             <span className="font-medium text-gray-900">{formatDate(verification.completed_at)}</span>
           </div>
-          <div></div>
+          <div className="flex gap-2">
+            <span className="text-gray-500">Bank Account(s)</span>
+            <span className="font-medium text-gray-900">
+              {accounts.map((acc, idx) => (
+                <span key={idx}>
+                  {('institution' in acc && acc.institution) || acc.name}
+                  {acc.mask && ` •••${acc.mask}`}
+                  {idx < accounts.length - 1 && ', '}
+                </span>
+              ))}
+            </span>
+          </div>
           <div className="flex gap-2">
             <span className="text-gray-500">Report ID</span>
             <span className="font-medium text-gray-900">0-{Date.parse(verification.completed_at).toString().slice(-8)}</span>
