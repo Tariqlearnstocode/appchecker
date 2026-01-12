@@ -141,6 +141,10 @@ export default function HomePageClient({
     // Require auth to create verifications
     if (!user) {
       setPendingVerification(true);
+      // Pre-fill email from landlord info
+      if (landlordInfo.email && !authEmail) {
+        setAuthEmail(landlordInfo.email);
+      }
       setShowAuthModal(true);
       return;
     }
@@ -285,6 +289,23 @@ export default function HomePageClient({
               {authError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
                   {authError}
+                </div>
+              )}
+              
+              {authMode === 'signup' && (
+                <div>
+                  <label htmlFor="auth-company-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Your Name / Company Name
+                  </label>
+                  <input
+                    id="auth-company-name"
+                    type="text"
+                    value={landlordInfo.name}
+                    onChange={(e) => setLandlordInfo({ ...landlordInfo, name: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="John Doe or ABC Properties"
+                    required
+                  />
                 </div>
               )}
               

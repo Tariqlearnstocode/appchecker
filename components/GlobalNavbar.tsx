@@ -22,12 +22,13 @@ export default function GlobalNavbar() {
     
     setSigningOut(true);
     try {
-      await supabase.auth.signOut();
-      router.push('/');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Force reload to clear all state
+      window.location.href = '/';
     } catch (err) {
-      // Ignore errors - signOut is idempotent
       console.error('[Navbar] Sign out error:', err);
-    } finally {
       setSigningOut(false);
     }
   }
