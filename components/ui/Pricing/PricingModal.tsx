@@ -7,53 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fromPaymentFlow?: boolean; // If true, buttons route to checkout instead of home
 }
 
-export function PricingModal({ isOpen, onClose, fromPaymentFlow = false }: PricingModalProps) {
-  const { user } = useAuth();
+export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
   const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
-    console.log('handleCheckout called with:', priceType);
-    console.log('User from context:', user?.id);
-    
-    try {
-      if (!user) {
-        console.log('No user, redirecting to signin');
-        window.location.href = '/signin?redirect=' + encodeURIComponent(window.location.pathname);
-        return;
-      }
-
-      // Get pending verification data from sessionStorage if exists
-      const pendingDataStr = sessionStorage.getItem('pendingVerification');
-      const verificationData = pendingDataStr ? JSON.parse(pendingDataStr) : null;
-
-      console.log('Calling checkout API...');
-      // User is signed in, proceed with checkout
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          priceType,
-          verificationData, // Pass verification data if available
-        }),
-      });
-      
-      console.log('Checkout response status:', response.status);
-      const result = await response.json();
-      console.log('Checkout result:', result);
-      
-      if (result.url) {
-        console.log('Redirecting to:', result.url);
-        window.location.href = result.url;
-      } else {
-        console.error('No URL in checkout response:', result);
-        alert('Failed to create checkout session. Please try again.');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('An error occurred. Please try again.');
-    }
+    // Payment integration to be implemented by user
+    alert(`You selected: ${priceType}. Payment integration needs to be implemented.`);
   };
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);

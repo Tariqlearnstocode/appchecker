@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/Toasts/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 
-type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations' | 'privacy';
+type SettingsTab = 'account' | 'defaults' | 'integrations' | 'privacy';
 
 interface VerificationDefaults {
   companyName: string;
@@ -23,12 +23,6 @@ interface CreditInfo {
   periodEnd: string | null;
 }
 
-interface SubscriptionInfo {
-  tier: string | null;
-  status: string | null;
-  creditsIncluded: number | null;
-  currentPeriodEnd: string | null;
-}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -40,7 +34,6 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const { toast } = useToast();
 
@@ -99,27 +92,6 @@ export default function SettingsPage() {
         });
       }
       
-      // Load subscription
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('tier, status, credits_included, current_period_end')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .single() as { data: {
-          tier: string | null;
-          status: string | null;
-          credits_included: number | null;
-          current_period_end: string | null;
-        } | null };
-      
-      if (subscription) {
-        setSubscriptionInfo({
-          tier: subscription.tier,
-          status: subscription.status,
-          creditsIncluded: subscription.credits_included,
-          currentPeriodEnd: subscription.current_period_end,
-        });
-      }
     } catch (error) {
       console.error('Error loading credit info:', error);
     } finally {
@@ -153,7 +125,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'account' as const, label: 'Account Details', icon: User },
     { id: 'defaults' as const, label: 'Verification Defaults', icon: FileText },
-    { id: 'subscription' as const, label: 'Manage Subscription', icon: CreditCard, external: true },
     { id: 'integrations' as const, label: 'Integrations', icon: Puzzle },
     { id: 'privacy' as const, label: 'Privacy & Data', icon: Shield },
   ];
@@ -375,181 +346,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {activeTab === 'subscription' && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-                {loadingCredits ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                  </div>
-                ) : (
-                  <>
-                    {/* Credit Balance Section */}
-                    <div className="mb-8 p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Coins className="w-5 h-5 text-emerald-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Credit Balance</h3>
-                          </div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold text-emerald-600">
-                              {creditInfo?.creditsRemaining ?? 0}
-                            </span>
-                            <span className="text-gray-600">credits remaining</span>
-                          </div>
-                          {subscriptionInfo && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              {subscriptionInfo.creditsIncluded ? (
-                                <>
-                                  {creditInfo?.creditsUsedThisPeriod ?? 0} of {subscriptionInfo.creditsIncluded} used this period
-                                  {creditInfo?.periodEnd && (
-                                    <span className="ml-2">
-                                      • Resets {new Date(creditInfo.periodEnd).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                </>
-                              ) : (
-                                'Pay-as-you-go plan'
-                              )}
-                            </p>
-                          )}
-                        </div>
-                        {!subscriptionInfo && (
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600 mb-1">Current Plan</p>
-                            <p className="text-lg font-semibold text-gray-900">Pay-as-you-go</p>
-                            <p className="text-xs text-gray-500">$14.99 per verification</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Subscription Info */}
-                    {subscriptionInfo && (
-                      <div className="mb-8 p-6 border border-gray-200 rounded-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Subscription</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-gray-600">Plan</p>
-                            <p className="text-lg font-semibold text-gray-900 capitalize">
-                              {subscriptionInfo.tier === 'starter' ? 'Starter' : subscriptionInfo.tier === 'pro' ? 'Pro' : subscriptionInfo.tier}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Status</p>
-                            <p className="text-lg font-semibold text-emerald-600 capitalize">
-                              {subscriptionInfo.status}
-                            </p>
-                          </div>
-                          {subscriptionInfo.currentPeriodEnd && (
-                            <div className="col-span-2">
-                              <p className="text-sm text-gray-600">Next Billing Date</p>
-                              <p className="text-lg font-semibold text-gray-900">
-                                {new Date(subscriptionInfo.currentPeriodEnd).toLocaleDateString()}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Pricing Cards */}
-                    <div className="text-center max-w-2xl mx-auto">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                        {subscriptionInfo ? 'Upgrade Your Plan' : 'Choose Your Plan'}
-                      </h2>
-                      <p className="text-gray-500 mb-8">
-                        {subscriptionInfo ? 'Switch to a plan that better fits your needs.' : 'Unlock more features and verify with ease by upgrading your plan.'}
-                      </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Pay-as-you-go */}
-                        <div className={`border-2 rounded-xl p-6 text-left ${!subscriptionInfo ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
-                          <p className="font-medium text-gray-900">Pay-as-you-go</p>
-                          <div className="mt-2">
-                            <span className="text-3xl font-bold text-gray-900">$14.99</span>
-                            <span className="text-gray-500 text-sm"> / verification</span>
-                          </div>
-                          <p className="text-sm text-gray-500 mt-2">No subscription required</p>
-                          {!subscriptionInfo && (
-                            <span className="inline-block mt-3 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                              Current Plan
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Starter */}
-                        <div className={`border-2 rounded-xl p-6 text-left ${subscriptionInfo?.tier === 'starter' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
-                          {subscriptionInfo?.tier === 'starter' && (
-                            <span className="absolute top-3 right-3 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                              Current
-                            </span>
-                          )}
-                          <p className="font-medium text-gray-900">Starter</p>
-                          <div className="mt-2">
-                            <span className="text-3xl font-bold text-gray-900">$59</span>
-                            <span className="text-gray-500 text-sm"> / month</span>
-                          </div>
-                          <p className="text-sm text-gray-500 mt-2">10 verifications included</p>
-                          <p className="text-xs text-gray-400 mt-1">$8.99 overage per verification</p>
-                          <button
-                            onClick={async () => {
-                              const response = await fetch('/api/stripe/checkout', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ priceType: 'starter' }),
-                              });
-                              const result = await response.json();
-                              if (result.url) {
-                                window.location.href = result.url;
-                              }
-                            }}
-                            className="mt-4 w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-                          >
-                            {subscriptionInfo?.tier === 'starter' ? 'Manage' : 'Subscribe'}
-                          </button>
-                        </div>
-
-                        {/* Pro */}
-                        <div className={`border-2 rounded-xl p-6 text-left relative ${subscriptionInfo?.tier === 'pro' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
-                          {subscriptionInfo?.tier === 'pro' && (
-                            <span className="absolute top-3 right-3 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                              Current
-                            </span>
-                          )}
-                          <span className="absolute top-3 left-3 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded">
-                            Popular
-                          </span>
-                          <p className="font-medium text-gray-900 mt-6">Pro</p>
-                          <div className="mt-2">
-                            <span className="text-3xl font-bold text-gray-900">$199</span>
-                            <span className="text-gray-500 text-sm"> / month</span>
-                          </div>
-                          <p className="text-sm text-gray-500 mt-2">50 verifications included</p>
-                          <p className="text-xs text-gray-400 mt-1">$4.99 overage per verification</p>
-                          <button
-                            onClick={async () => {
-                              const response = await fetch('/api/stripe/checkout', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ priceType: 'pro' }),
-                              });
-                              const result = await response.json();
-                              if (result.url) {
-                                window.location.href = result.url;
-                              }
-                            }}
-                            className="mt-4 w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-                          >
-                            {subscriptionInfo?.tier === 'pro' ? 'Manage' : 'Subscribe'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
 
             {activeTab === 'integrations' && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">

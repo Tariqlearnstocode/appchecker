@@ -43,7 +43,6 @@ export default function HomePageClient({
   const [authError, setAuthError] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [pricingModalFromPayment, setPricingModalFromPayment] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -164,50 +163,13 @@ export default function HomePageClient({
       const result = await response.json();
 
       if (response.status === 402) {
-        // Payment required - show pricing modal with payment flow enabled
-        const paymentType = result.paymentType === 'overage' ? 'overage' : 'per_verification';
-        
-        // Store form data in sessionStorage for checkout
-        sessionStorage.setItem('pendingVerification', JSON.stringify({
-          individual_name: formData.name,
-          individual_email: formData.email,
-          requested_by_name: landlordInfo.name || null,
-          requested_by_email: landlordInfo.email || null,
-        }));
-        
-        // If overage, go directly to checkout (no choice needed - they're already subscribed)
-        if (paymentType === 'overage') {
-          const checkoutResponse = await fetch('/api/stripe/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              priceType: 'overage',
-              amountCents: result.amountCents,
-              verificationData: {
-                individual_name: formData.name,
-                individual_email: formData.email,
-                requested_by_name: landlordInfo.name || null,
-                requested_by_email: landlordInfo.email || null,
-              },
-            }),
-          });
-          
-          const checkoutResult = await checkoutResponse.json();
-          
-          if (checkoutResponse.ok && checkoutResult.url) {
-            window.location.href = checkoutResult.url;
-          } else {
-            toast({
-              title: 'Payment Error',
-              description: 'Failed to initiate payment. Please try again.',
-              variant: 'destructive',
-            });
-          }
-        } else {
-          // For per_verification, show pricing modal with payment flow enabled
-          setPricingModalFromPayment(true);
-          setShowPricingModal(true);
-        }
+        // No credits - show pricing modal
+        toast({
+          title: 'No Credits',
+          description: result.message || 'You need credits to create a verification.',
+          variant: 'destructive',
+        });
+        setShowPricingModal(true);
       } else if (!response.ok) {
         toast({ 
           title: 'Error', 
@@ -490,7 +452,6 @@ export default function HomePageClient({
                   }}
                   onUpgradeClick={() => {
                     setShowPricingModal(true);
-                    setPricingModalFromPayment(false);
                   }}
                   onEmailSent={async () => {
                     // Refresh verifications to get updated last_email_sent_at
@@ -630,9 +591,7 @@ export default function HomePageClient({
         isOpen={showPricingModal} 
         onClose={() => {
           setShowPricingModal(false);
-          setPricingModalFromPayment(false);
         }}
-        fromPaymentFlow={pricingModalFromPayment}
       />
     </div>
   );
