@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle, Coins } from 'lucide-react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations' | 'privacy';
 
@@ -29,7 +30,7 @@ interface SubscriptionInfo {
   currentPeriodEnd: string | null;
 }
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const router = useRouter();
   const { user, loading: loadingUser, supabase } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');

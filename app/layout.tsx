@@ -4,7 +4,6 @@ import { PropsWithChildren, Suspense } from 'react';
 import { getURL } from '@/utils/helpers';
 import Footer from '@/components/Footer';
 import GlobalNavbar from '@/components/GlobalNavbar';
-import { AuthProvider } from '@/contexts/AuthContext';
 import 'styles/main.css';
 
 const title = 'Income Verification';
@@ -24,16 +23,14 @@ export default async function RootLayout({ children }: PropsWithChildren) {
   return (
     <html lang="en">
       <body className="bg-gray-50 min-h-screen flex flex-col">
-        <AuthProvider>
-          <GlobalNavbar />
-          <main id="skip" className="flex-1">
-            {children}
-          </main>
-          <Footer />
-          <Suspense>
-            <Toaster />
-          </Suspense>
-        </AuthProvider>
+        <GlobalNavbar />
+        <main id="skip" className="flex-1">
+          {children}
+        </main>
+        <Footer />
+        <Suspense>
+          <Toaster />
+        </Suspense>
       </body>
     </html>
   );

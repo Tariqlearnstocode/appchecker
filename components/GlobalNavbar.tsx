@@ -6,9 +6,48 @@ import { FileCheck, Settings, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function GlobalNavbar() {
-  const { user, loading, supabase } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Don't show navbar on signin/verify/auth pages
+  if (pathname?.startsWith('/signin') || pathname?.startsWith('/verify/') || pathname?.startsWith('/auth/')) {
+    return null;
+  }
+  
+  // For pages without auth (like /pricing), show minimal navbar
+  const isPublicPage = pathname?.startsWith('/pricing') || pathname?.startsWith('/security') || pathname?.startsWith('/disclaimers');
+  
+  if (isPublicPage) {
+    return (
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2">
+              <FileCheck className="w-6 h-6 text-gray-900" />
+              <span className="text-xl font-bold text-gray-900">Income Verifier</span>
+            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/signin"
+                className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signin"
+                className="px-4 py-1.5 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+  
+  // For authenticated pages, use auth context
+  const { user, loading, supabase } = useAuth();
 
   async function handleSignOut() {
     console.log('[Navbar] Signing out...');
@@ -23,11 +62,6 @@ export default function GlobalNavbar() {
     } catch (err) {
       console.error('[Navbar] Sign out exception:', err);
     }
-  }
-
-  // Don't show navbar on signin/verify pages
-  if (pathname?.startsWith('/signin') || pathname?.startsWith('/verify/') || pathname?.startsWith('/auth/')) {
-    return null;
   }
 
   return (

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTellerConnect } from 'teller-connect-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/utils/supabase/client';
 import { useParams } from 'next/navigation';
 import { CheckCircle, Loader2, AlertCircle, Lock, Building, Mail, MapPin, ShieldCheck } from 'lucide-react';
 
@@ -22,13 +22,15 @@ interface Verification {
 export default function ApplicantVerificationPage() {
   const params = useParams();
   const token = params.token as string;
-  const { supabase } = useAuth();
 
   const [verification, setVerification] = useState<Verification | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  // Create client once for this public page
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     fetchVerification();
