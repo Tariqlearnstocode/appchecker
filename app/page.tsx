@@ -1,6 +1,10 @@
 import { createClient } from '@/utils/supabase/server';
 import HomePageClient from './HomePageClient';
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function HomePage() {
   const supabase = await createClient();
   
