@@ -17,6 +17,10 @@ export interface Verification {
   requested_by_name: string | null;
   requested_by_email: string | null;
   purpose: string | null;
+  // Email tracking
+  last_email_sent_at?: string | null;
+  last_reminder_sent_at?: string | null;
+  reminder_count?: number | null;
 }
 
 export const statusConfig: Record<VerificationStatus, { color: string; bgColor: string; label: string }> = {

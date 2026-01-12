@@ -3,12 +3,12 @@
 ## Positioning
 
 ### Simple & Affordable
-> "Income verification without the complexity. Just the bank data landlords need."
+> "Income verification without the complexity. Just the bank data you need."
 
 ### Modern Alternative
 > "Bank-verified income in minutes. No pay stubs. No employer calls."
 
-**Target Market:** Individual landlords, small property managers, and tech-forward property management companies looking for a faster, more affordable alternative to traditional tenant screening.
+**Target Market:** Small teams, growing organizations, and tech-forward companies looking for a faster, more affordable alternative to traditional income verification.
 
 ---
 
@@ -16,38 +16,38 @@
 
 | Plan | Price | Included Verifications | Cost per Verification | Overage (per verification) | Best For |
 |------|-------|------------------------|----------------------|---------------------------|----------|
-| **Per Verification** | $18.99 | Pay as you go | $18.99 | — | Occasional use |
-| **Starter** ⭐ | $79.99/mo | 20 | $4.00 | $8.99 | Small landlords |
-| **Pro** | $200/mo | 75 | $2.67 | $4.99 | Property managers |
-| **Enterprise** | Custom | Custom | Custom | Custom | Large portfolios |
+| **Per Verification** | $14.99 | Pay as you go | $14.99 | — | Occasional use |
+| **Starter** | $59/mo | 10 | $5.90 | $8.99 | Small teams |
+| **Pro** ⭐ | $199/mo | 50 | $3.98 | $4.99 | Growing teams |
+| **Enterprise** | Custom | Custom | Custom | Custom | Large organizations |
 
 ---
 
 ## Feature Breakdown
 
-### Per Verification ($18.99)
+### Per Verification ($14.99)
 - Bank-connected income verification
 - Basic income summary
-- One-time verification
-
-### Starter ($79.99/month) ⭐
-Everything in Per Verification, plus:
-- 20 verifications/month included
-- Full 12-month transaction history
+- 3-month transaction history
 - PDF export
+- One-time verification
+- No monthly commitment
+
+### Starter ($59/month)
+Everything in Per Verification, plus:
+- 10 verifications/month included
+- Full 12-month transaction history
 - Email verification link to applicant
 - Send invitation reminders
 - Completion notifications
 - Verification stored for 1 year
 - Multi-user team access
-- Custom branding (logo on verifications)
-- Analytics dashboard
 - Priority support
 - Overage: $8.99 per additional verification
 
-### Pro ($200/month)
+### Pro ($199/month) ⭐
 Everything in Starter, plus:
-- 75 verifications/month included
+- 50 verifications/month included
 - Overage: $4.99 per additional verification
 
 ### Enterprise (Contact Us)
@@ -68,20 +68,20 @@ Everything in Pro, plus:
 - [x] Primary income source detection
 - [x] Payroll vs P2P classification
 - [x] Confidence scoring
-- [x] Rent affordability calculation (3x rule)
 - [x] Secure data handling (encrypted, auto-deleted)
+- [x] PDF export
+- [x] Transaction history (3 months for Per Verification, 12 months for subscriptions)
 
-### Pro Features
-- [ ] Email verification link to applicant
-- [ ] Send invitation reminders
-- [ ] Completion notifications (email/SMS)
-- [ ] Full 12-month transaction history
-- [ ] PDF export
-- [ ] Multi-user team access
+### Subscription Features (Starter & Pro)
+- [x] Email verification link to applicant
+- [x] Send invitation reminders
+- [x] Completion notifications (email)
+- [x] Multi-user team access
+- [x] Verification archive (1 year)
+- [x] Priority support
 - [ ] Custom branding
-- [ ] Verification archive (1 year)
-- [ ] Analytics dashboard
-- [ ] Co-applicant verification
+- [ ] Analytics dashboard (coming soon)
+- [ ] Co-applicant verification (coming soon)
 - [ ] Bulk verification (CSV upload)
 
 ### Enterprise Features
@@ -96,18 +96,19 @@ Everything in Pro, plus:
 ## Implementation Priority
 
 ### Phase 1 - Monetization MVP
-1. Payment integration (Stripe)
-2. Per-verification purchase flow ($18.99)
-3. Full verification unlock (12-month data) - subscription only
-4. PDF export - subscription only
+1. Payment integration (Stripe) ✅
+2. Per-verification purchase flow ($14.99) ✅
+3. Subscription tiers (Starter $59.99, Pro $129) ✅
+4. Credit-based system with overage billing ✅
+5. PDF export (all tiers) ✅
+6. Transaction history (3 months per-verification, 12 months subscriptions) ✅
 
-### Phase 2 - Subscription Tiers
-1. Monthly subscription plans (Starter, Pro)
-2. Credit-based system with overage billing
-3. Email to applicant
-4. Reminder system
-5. Multi-user accounts
-6. Custom branding upload
+### Phase 2 - Subscription Features
+1. Email to applicant ✅
+2. Reminder system ✅
+3. Multi-user accounts ✅
+4. Custom branding upload
+5. Analytics dashboard
 
 ### Phase 3 - Growth
 1. Analytics dashboard
@@ -127,7 +128,7 @@ Everything in Pro, plus:
 
 | Us | Traditional Screening |
 |----|-----------------------|
-| $18.99/verification or $79.99+/mo | $30-50/report |
+| $14.99/verification or $59+/mo | $30-50/report |
 | Instant results | 1-3 days |
 | Bank-verified data | Self-reported pay stubs |
 | No credit pull | Hard credit inquiry |
@@ -139,9 +140,9 @@ Everything in Pro, plus:
 ## Competitive Landscape
 
 - **AppFolio Income Verification** - Bundled with their PMS, not standalone
-- **Plaid-based solutions** - Developer-focused, not landlord-friendly
+- **Plaid-based solutions** - Developer-focused, not user-friendly
 - **Traditional screening** (TransUnion, Experian) - Expensive, slow, overkill
 - **Pay stub verification** - Manual, easy to fake
 
-**Our edge:** Purpose-built for landlords, affordable, instant, privacy-respecting.
+**Our edge:** Purpose-built for teams, affordable, instant, privacy-respecting.
 

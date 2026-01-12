@@ -10,6 +10,7 @@ import { Verification } from '@/components/VerificationsTable';
 import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
 import { ActionsSidebar } from '@/components/ActionsSidebar';
+import { PricingModal } from '@/components/ui/Pricing';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'expired';
@@ -41,6 +42,7 @@ export default function HomePageClient({
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
   const router = useRouter();
@@ -78,7 +80,7 @@ export default function HomePageClient({
       .single();
     
     setLandlordInfo({
-      name: profile?.company_name || '',
+      name: (profile as { company_name?: string | null } | null)?.company_name || '',
       email: currentUser.email || ''
     });
   }
@@ -106,24 +108,43 @@ export default function HomePageClient({
         // If there was a pending verification, create it now
         if (pendingVerificationRef.current && formDataRef.current.name && formDataRef.current.email) {
           setPendingVerification(false);
-          const { data, error } = await supabase
-            .from('income_verifications')
-            .insert({
-              individual_name: formDataRef.current.name,
-              individual_email: formDataRef.current.email,
-              requested_by_name: landlordInfoRef.current.name || null,
-              requested_by_email: landlordInfoRef.current.email || session.user.email || null,
-              user_id: session.user.id,
-            })
-            .select()
-            .single();
+          try {
+            const response = await fetch('/api/verifications/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                individual_name: formDataRef.current.name,
+                individual_email: formDataRef.current.email,
+                requested_by_name: landlordInfoRef.current.name || null,
+                requested_by_email: landlordInfoRef.current.email || session.user.email || null,
+                purpose: null,
+              }),
+            });
 
-          if (!error && data) {
-            setVerifications((prev) => [data, ...prev]);
-            setFormData({ name: '', email: '' });
-            setSelectedVerification(data);
-            setActiveTab('all');
-            toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
+            const result = await response.json();
+
+            if (!response.ok) {
+              toast({ 
+                title: 'Error', 
+                description: result.error || 'Failed to create verification', 
+                variant: 'destructive' 
+              });
+            } else {
+              setVerifications((prev) => [result.verification, ...prev]);
+              setFormData({ name: '', email: '' });
+              setSelectedVerification(result.verification);
+              setActiveTab('all');
+              toast({ 
+                title: 'Created!', 
+                description: 'Verification created successfully. Click "Send Email" to notify the recipient.' 
+              });
+            }
+          } catch (error) {
+            toast({ 
+              title: 'Error', 
+              description: 'Failed to create verification', 
+              variant: 'destructive' 
+            });
           }
         }
       }
@@ -146,28 +167,67 @@ export default function HomePageClient({
 
     setCreating(true);
 
-    const { data, error } = await supabase
-      .from('income_verifications')
-      .insert({
-        individual_name: formData.name,
-        individual_email: formData.email,
-        requested_by_name: landlordInfo.name || null,
-        requested_by_email: landlordInfo.email || null,
-        user_id: user.id,
-      })
-      .select()
-      .single();
+    try {
+      const response = await fetch('/api/verifications/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          individual_name: formData.name,
+          individual_email: formData.email,
+          requested_by_name: landlordInfo.name || null,
+          requested_by_email: landlordInfo.email || null,
+          purpose: null,
+        }),
+      });
 
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to create verification', variant: 'destructive' });
-    } else if (data) {
-      setVerifications([data, ...verifications]);
-      setFormData({ name: '', email: '' });
-      setSelectedVerification(data);
-      setActiveTab('all');
-      toast({ title: 'Created!', description: 'Verification request created. Copy the link to send!' });
+      const result = await response.json();
+
+      if (response.status === 402) {
+        // Payment required - redirect to Stripe checkout
+        const checkoutResponse = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priceType: result.paymentType === 'overage' ? 'overage' : 'per_verification',
+          }),
+        });
+        
+        const checkoutResult = await checkoutResponse.json();
+        
+        if (checkoutResponse.ok && checkoutResult.url) {
+          window.location.href = checkoutResult.url;
+        } else {
+          toast({
+            title: 'Payment Error',
+            description: 'Failed to initiate payment. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      } else if (!response.ok) {
+        toast({ 
+          title: 'Error', 
+          description: result.error || 'Failed to create verification', 
+          variant: 'destructive' 
+        });
+      } else {
+        setVerifications([result.verification, ...verifications]);
+        setFormData({ name: '', email: '' });
+        setSelectedVerification(result.verification);
+        setActiveTab('all');
+        toast({ 
+          title: 'Created!', 
+          description: 'Verification created successfully. Click "Send Email" to notify the recipient.' 
+        });
+      }
+    } catch (error) {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to create verification', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setCreating(false);
     }
-    setCreating(false);
   }
 
   async function handleSignOut() {
@@ -477,6 +537,25 @@ export default function HomePageClient({
                     deleteVerification(id);
                     setSelectedVerification(null);
                   }}
+                  onEmailSent={async () => {
+                    // Refresh verifications to get updated last_email_sent_at
+                    if (user) {
+                      const { data: verificationsData } = await supabase
+                        .from('income_verifications')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .order('created_at', { ascending: false });
+                      
+                      if (verificationsData) {
+                        setVerifications(verificationsData as Verification[]);
+                        // Update selected verification if it's the one we just sent email for
+                        if (selectedVerification) {
+                          const updated = (verificationsData as Verification[]).find(v => v.id === selectedVerification.id);
+                          if (updated) setSelectedVerification(updated);
+                        }
+                      }
+                    }
+                  }}
                 />
               ) : (
               <div className="space-y-8 bg-slate-50 rounded-xl p-6 border border-slate-200 flex flex-col">
@@ -561,7 +640,7 @@ export default function HomePageClient({
                   
                   <h3 className="text-sm font-semibold text-gray-500 mb-3">Pricing</h3>
                   <div className="mb-2">
-                    <span className="text-4xl font-bold text-gray-900">$18.99</span>
+                    <span className="text-4xl font-bold text-gray-900">$14.99</span>
                     <span className="text-gray-600 text-sm ml-1">per successful<br />verification</span>
                   </div>
                   <p className="text-sm text-gray-600 mb-6">
@@ -570,7 +649,12 @@ export default function HomePageClient({
                   
                   <p className="text-sm text-gray-600 mb-6">
                     <span className="font-semibold text-gray-900">Need volume?</span> Save with{' '}
-                    <Link href="/settings" className="underline hover:text-gray-900">monthly plans</Link>
+                    <button
+                      onClick={() => setShowPricingModal(true)}
+                      className="underline hover:text-gray-900 cursor-pointer"
+                    >
+                      monthly plans
+                    </button>
                     <br />(starting at just $4/verification).
                   </p>
                   
@@ -585,6 +669,9 @@ export default function HomePageClient({
           </div>
         </div>
       </div>
+
+      {/* Pricing Modal */}
+      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
     </div>
   );
 }

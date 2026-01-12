@@ -16,17 +16,30 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { priceType, verificationId } = body;
+    const { priceType } = body;
     
     // Get or create Stripe customer
-    const { data: subscription } = await supabase
-      .from('subscriptions')
+    // First check customers table
+    const { data: customerRecord } = await supabase
+      .from('customers')
       .select('stripe_customer_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
     
-    let customerId = subscription?.stripe_customer_id;
+    let customerId = customerRecord?.stripe_customer_id;
     
+    // If not in customers table, check subscriptions
+    if (!customerId) {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('stripe_customer_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      customerId = subscription?.stripe_customer_id;
+    }
+    
+    // Create customer if doesn't exist
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -36,19 +49,21 @@ export async function POST(request: NextRequest) {
       });
       customerId = customer.id;
       
-      // Save customer ID
+      // Save customer ID in customers table
       await supabase
-        .from('subscriptions')
-        .update({ stripe_customer_id: customerId })
-        .eq('user_id', user.id);
+        .from('customers')
+        .upsert({
+          id: user.id,
+          stripe_customer_id: customerId,
+        });
     }
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || 'http://localhost:3000';
     
     let sessionParams: Stripe.Checkout.SessionCreateParams;
     
-    if (priceType === 'per_report') {
-      // One-time payment for a single report
+    if (priceType === 'per_verification') {
+      // One-time payment for a single verification ($14.99)
       sessionParams = {
         customer: customerId,
         mode: 'payment',
@@ -58,24 +73,52 @@ export async function POST(request: NextRequest) {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'Income Verification Report',
-                description: 'Full 12-month transaction history with PDF export',
+                name: 'Income Verification',
+                description: 'One-time income verification credit',
               },
-              unit_amount: 1000, // $10.00
+              unit_amount: 1499, // $14.99
             },
             quantity: 1,
           },
         ],
-        success_url: `${baseUrl}/api/stripe/success?session_id={CHECKOUT_SESSION_ID}&verification_id=${verificationId}`,
-        cancel_url: `${baseUrl}/report/${verificationId}?canceled=true`,
+        success_url: `${baseUrl}/api/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}?payment=canceled`,
         metadata: {
           user_id: user.id,
-          verification_id: verificationId,
-          type: 'per_report',
+          type: 'per_verification',
+        },
+      };
+    } else if (priceType === 'starter') {
+      // Starter subscription ($59/mo, 10 credits)
+      sessionParams = {
+        customer: customerId,
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Income Verifier Starter',
+                description: '10 verifications/month, $8.99 overage',
+              },
+              unit_amount: 5900, // $59.00
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${baseUrl}/settings?subscription=success`,
+        cancel_url: `${baseUrl}/settings?subscription=canceled`,
+        metadata: {
+          user_id: user.id,
+          type: 'starter_subscription',
         },
       };
     } else if (priceType === 'pro') {
-      // Monthly subscription
+      // Pro subscription ($199/mo, 50 credits)
       sessionParams = {
         customer: customerId,
         mode: 'subscription',
@@ -86,9 +129,9 @@ export async function POST(request: NextRequest) {
               currency: 'usd',
               product_data: {
                 name: 'Income Verifier Pro',
-                description: 'Up to 100 reports/month, multi-user, custom branding',
+                description: '50 verifications/month, $4.99 overage',
               },
-              unit_amount: 3499, // $34.99
+              unit_amount: 19900, // $199.00
               recurring: {
                 interval: 'month',
               },

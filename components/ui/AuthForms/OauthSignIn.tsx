@@ -3,7 +3,6 @@
 import Button from '@/components/ui/Button';
 import { signInWithOAuth } from '@/utils/auth-helpers/client';
 import { type Provider } from '@supabase/supabase-js';
-import { Github } from 'lucide-react';
 import { useState } from 'react';
 
 type OAuthProviders = {
@@ -14,12 +13,14 @@ type OAuthProviders = {
 
 export default function OauthSignIn() {
   const oAuthProviders: OAuthProviders[] = [
-    {
-      name: 'github',
-      displayName: 'GitHub',
-      icon: <Github className="h-5 w-5" />
-    }
     /* Add desired OAuth providers here */
+    /* Example:
+    {
+      name: 'google',
+      displayName: 'Google',
+      icon: <Google className="h-5 w-5" />
+    }
+    */
   ];
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,6 +29,11 @@ export default function OauthSignIn() {
     await signInWithOAuth(e);
     setIsSubmitting(false);
   };
+
+  // Don't render anything if there are no providers configured
+  if (oAuthProviders.length === 0) {
+    return null;
+  }
 
   return (
     <div className="mt-8">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
+import { sendCompletionEmail } from '@/utils/email';
 import https from 'https';
 
 const TELLER_API_URL = 'https://api.teller.io';
@@ -132,6 +133,13 @@ export async function POST(request: NextRequest) {
       provider: 'teller',
     };
 
+    // Get verification details before updating (for email)
+    const { data: verificationBefore } = await supabaseAdmin
+      .from('income_verifications')
+      .select('id, individual_name, requested_by_name, requested_by_email, user_id')
+      .eq('verification_token', verification_token)
+      .single();
+
     // Use admin client to bypass RLS - this is a server-side operation
     // triggered by the applicant, but needs to update the landlord's verification
     const { error: updateError } = await supabaseAdmin
@@ -149,6 +157,24 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to save report data' },
         { status: 500 }
       );
+    }
+
+    // Send completion email to landlord
+    if (verificationBefore?.requested_by_email) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const reportLink = `${baseUrl}/report/${verification_token}`;
+        
+        await sendCompletionEmail({
+          to: verificationBefore.requested_by_email,
+          individualName: verificationBefore.individual_name,
+          requestedByName: verificationBefore.requested_by_name || 'Requesting Party',
+          verificationLink: reportLink,
+        });
+      } catch (emailError) {
+        console.error('Failed to send completion email:', emailError);
+        // Don't fail the request if email fails
+      }
     }
 
     // 5. Delete all account connections to stop recurring charges
