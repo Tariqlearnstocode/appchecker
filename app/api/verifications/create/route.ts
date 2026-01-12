@@ -10,9 +10,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('[Create Verification] Auth check:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      authError: authError?.message 
+    });
     
     if (!user) {
+      console.error('[Create Verification] No user found, authError:', authError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     

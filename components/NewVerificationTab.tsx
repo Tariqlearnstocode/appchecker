@@ -139,18 +139,15 @@ export function NewVerificationTab({
               {creating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending...</span>
+                  <span>Creating...</span>
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  <span>Send Verification Link</span>
+                  <span>Create Verification Link</span>
                 </>
               )}
             </button>
-            <p className="text-xs text-gray-500 text-center mt-3">
-              You will only be charged upon a successful connection.
-            </p>
           </div>
         </form>
       </div>
