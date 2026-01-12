@@ -11,6 +11,7 @@ import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
 import { ActionsSidebar } from '@/components/ActionsSidebar';
 import { PricingModal } from '@/components/ui/Pricing';
+import { useAuth } from '@/contexts/AuthContext';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'expired';
@@ -34,7 +35,7 @@ export default function HomePageClient({
   const [formData, setFormData] = useState({ name: '', email: '' });
   const [landlordInfo, setLandlordInfo] = useState(initialLandlordInfo);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
-  const [user, setUser] = useState<SupabaseUser | null>(initialUser);
+  const { user } = useAuth(); // Use global auth context
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [authEmail, setAuthEmail] = useState('');
@@ -101,18 +102,16 @@ export default function HomePageClient({
     });
   }
 
-  // Only listen for auth CHANGES (sign in/out), not initial load
+  // Listen for auth CHANGES to update page-specific data
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        setUser(null);
         setVerifications([]);
         setLandlordInfo({ name: '', email: '' });
         return;
       }
       
       if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
         setShowAuthModal(false);
         setAuthError('');
         setAuthEmail('');

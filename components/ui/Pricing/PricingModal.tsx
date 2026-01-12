@@ -1,9 +1,8 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -12,30 +11,15 @@ interface PricingModalProps {
 }
 
 export function PricingModal({ isOpen, onClose, fromPaymentFlow = false }: PricingModalProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const supabase = createClient();
-
-  // Check auth status
-  useEffect(() => {
-    async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    }
-    if (isOpen) {
-      checkAuth();
-    }
-  }, [isOpen, supabase]);
+  const { user } = useAuth();
 
   const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
     console.log('handleCheckout called with:', priceType);
+    console.log('User from context:', user?.id);
     
     try {
-      // Use the existing user state instead of fetching again
-      console.log('Current user:', user?.id);
-      
       if (!user) {
         console.log('No user, redirecting to signin');
-        // Redirect to sign in page
         window.location.href = '/signin?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }

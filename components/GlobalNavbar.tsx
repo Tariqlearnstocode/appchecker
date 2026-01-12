@@ -1,69 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { FileCheck, Settings, LogOut, User } from 'lucide-react';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GlobalNavbar() {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = useMemo(() => createClient(), []);
+  const { user, loading } = useAuth();
+  const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
-
-  // Load initial user
-  useEffect(() => {
-    console.log('[Navbar] Mounting - fetching initial user...');
-    supabase.auth.getUser()
-      .then(({ data: { user }, error }) => {
-        console.log('[Navbar] User fetch completed:', { 
-          hasUser: !!user, 
-          userEmail: user?.email,
-          error: error?.message 
-        });
-        setUser(user);
-        setLoading(false);
-        console.log('[Navbar] Loading state set to false');
-      })
-      .catch((err) => {
-        console.error('[Navbar] Error fetching user:', err);
-        setLoading(false);
-      });
-  }, [supabase]);
-
-  // Listen for auth changes
-  useEffect(() => {
-    console.log('[Navbar] Setting up auth state listener');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Navbar] Auth state change:', { 
-        event, 
-        hasUser: !!session?.user,
-        userEmail: session?.user?.email 
-      });
-      setUser(session?.user ?? null);
-      
-      // Set loading to false on INITIAL_SESSION to handle case where getUser() hangs
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        console.log('[Navbar] Auth listener setting loading to false');
-        setLoading(false);
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        // Redirect to home if on a protected page
-        if (pathname?.startsWith('/settings')) {
-          router.push('/');
-        }
-      }
-    });
-
-    return () => {
-      console.log('[Navbar] Cleaning up auth listener');
-      subscription.unsubscribe();
-    };
-  }, [supabase, pathname, router]);
 
   async function handleSignOut() {
     console.log('[Navbar] Signing out...');

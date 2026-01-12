@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle, Coins } from 'lucide-react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import { createClient } from '@/utils/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations' | 'privacy';
 
@@ -31,10 +32,9 @@ interface SubscriptionInfo {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { user, loading: loadingUser } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [defaults, setDefaults] = useState<VerificationDefaults>({ companyName: '', email: '' });
-  const [user, setUser] = useState<any>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -45,19 +45,16 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const supabase = createClient();
 
-  // Check auth and load defaults from users table
+  // Load user data when user is available
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
+      if (loadingUser) return; // Wait for auth to load
       
       if (!user) {
         // Redirect to sign in if not logged in
         router.push('/signin?redirect=/settings');
         return;
       }
-      
-      setUser(user);
-      setLoadingUser(false);
 
       // Load from users table
       const { data: profile } = await supabase
@@ -75,7 +72,7 @@ export default function SettingsPage() {
       loadCreditInfo(user.id);
     }
     init();
-  }, [router, supabase]);
+  }, [user, loadingUser, router, supabase]);
 
   async function loadCreditInfo(userId: string) {
     setLoadingCredits(true);
