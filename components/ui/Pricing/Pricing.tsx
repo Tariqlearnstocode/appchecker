@@ -3,9 +3,6 @@
 import Button from '@/components/ui/Button';
 import LogoCloud from '@/components/ui/LogoCloud';
 import type { Tables } from '@/types_db';
-import { getStripe } from '@/utils/stripe/client';
-import { checkoutWithStripe } from '@/utils/stripe/server';
-import { getErrorRedirect } from '@/utils/helpers';
 import { User } from '@supabase/supabase-js';
 import cn from 'classnames';
 import { useRouter, usePathname } from 'next/navigation';
@@ -47,38 +44,8 @@ export default function Pricing({ user, products, subscription }: Props) {
   const currentPath = usePathname();
 
   const handleStripeCheckout = async (price: Price) => {
-    setPriceIdLoading(price.id);
-
-    if (!user) {
-      setPriceIdLoading(undefined);
-      return router.push('/signin/signup');
-    }
-
-    const { errorRedirect, sessionId } = await checkoutWithStripe(
-      price,
-      currentPath
-    );
-
-    if (errorRedirect) {
-      setPriceIdLoading(undefined);
-      return router.push(errorRedirect);
-    }
-
-    if (!sessionId) {
-      setPriceIdLoading(undefined);
-      return router.push(
-        getErrorRedirect(
-          currentPath,
-          'An unknown error occurred.',
-          'Please try again later or contact a system administrator.'
-        )
-      );
-    }
-
-    const stripe = await getStripe();
-    stripe?.redirectToCheckout({ sessionId });
-
-    setPriceIdLoading(undefined);
+    // Payment integration to be implemented
+    alert('Payment integration needs to be implemented.');
   };
 
   if (!products.length) {

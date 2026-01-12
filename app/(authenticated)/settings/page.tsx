@@ -203,7 +203,6 @@ export default function SettingsPage() {
                   >
                     <Icon className="w-5 h-5" />
                     <span className="font-medium">{tab.label}</span>
-                    {tab.external && <ExternalLink className="w-4 h-4 ml-auto" />}
                   </button>
                 );
               })}
@@ -278,18 +277,6 @@ export default function SettingsPage() {
                 </div>
                 )}
 
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-gray-600">
-                    Need more features? Unlock <span className="font-semibold">PRO</span> for email sending, 
-                    reminders, and more.{' '}
-                    <button
-                      onClick={() => setActiveTab('subscription')}
-                      className="text-emerald-600 font-medium hover:underline"
-                    >
-                      See PRO offer.
-                    </button>
-                  </p>
-                </div>
               </div>
             )}
 
