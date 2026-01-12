@@ -20,6 +20,9 @@ export default function Footer() {
           
           {/* Links */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+            <Link href="/pricing" className="text-gray-500 hover:text-gray-900 transition-colors">
+              Pricing
+            </Link>
             <Link href="/security" className="text-gray-500 hover:text-gray-900 transition-colors">
               Privacy Policy
             </Link>

@@ -10,6 +10,7 @@ interface ActionsSidebarProps {
   onCopyLink: (token: string) => void;
   onDelete: (id: string) => void;
   onEmailSent?: () => void;
+  onUpgradeClick?: () => void;
 }
 
 function formatTimeAgo(dateString: string | null): string {
@@ -36,11 +37,16 @@ export function ActionsSidebar({
   onCopyLink,
   onDelete,
   onEmailSent,
+  onUpgradeClick,
 }: ActionsSidebarProps) {
   const isCompleted = selectedVerification?.status === 'completed';
   const isExpired = selectedVerification?.status === 'expired';
   const isActive = selectedVerification && !isCompleted && !isExpired;
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [updatingEmail, setUpdatingEmail] = useState(false);
   const { toast } = useToast();
   
   async function handleSendEmail() {
@@ -77,6 +83,85 @@ export function ActionsSidebar({
       });
     } finally {
       setSendingEmail(false);
+    }
+  }
+
+  async function handleSendReminder() {
+    if (!selectedVerification) return;
+    
+    setSendingReminder(true);
+    try {
+      const response = await fetch('/api/verifications/send-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_id: selectedVerification.id }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to send reminder',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Reminder sent!',
+          description: `Reminder email sent to ${selectedVerification.individual_email}`,
+        });
+        onEmailSent?.();
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send reminder',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingReminder(false);
+    }
+  }
+
+  async function handleUpdateEmail() {
+    if (!selectedVerification || !newEmail) return;
+    
+    setUpdatingEmail(true);
+    try {
+      const response = await fetch('/api/verifications/update-email', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          verification_id: selectedVerification.id,
+          individual_email: newEmail,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to update email',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Email updated!',
+          description: `Applicant email updated to ${newEmail}`,
+        });
+        setEditingEmail(false);
+        setNewEmail('');
+        onEmailSent?.(); // Refresh the verification data
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update email',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingEmail(false);
     }
   }
   
@@ -123,7 +208,52 @@ export function ActionsSidebar({
               <p className="font-semibold text-gray-900 text-base">
                 {selectedVerification.individual_name.toUpperCase()}
               </p>
-              <p className="text-sm text-gray-600 mt-1">{selectedVerification.individual_email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-gray-600">{selectedVerification.individual_email}</p>
+                {isActive && (
+                  <button
+                    onClick={() => {
+                      setEditingEmail(true);
+                      setNewEmail(selectedVerification.individual_email);
+                    }}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline"
+                    title="Edit email"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              {editingEmail && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="New email address"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    disabled={updatingEmail}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={handleUpdateEmail}
+                      disabled={updatingEmail || !newEmail}
+                      className="flex-1 px-3 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded transition-colors"
+                    >
+                      {updatingEmail ? 'Updating...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingEmail(false);
+                        setNewEmail('');
+                      }}
+                      disabled={updatingEmail}
+                      className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="mt-3">
                 {getStatusBadge()}
               </div>
@@ -202,11 +332,21 @@ export function ActionsSidebar({
         </div>
         <div className="space-y-2">
           <button
-            disabled={!selectedVerification || !isActive}
+            onClick={handleSendReminder}
+            disabled={!selectedVerification || !isActive || sendingReminder}
             className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Bell className="w-4 h-4 text-gray-600" />
-            <span className="text-sm text-gray-700">Email reminder to applicant</span>
+            {sendingReminder ? (
+              <>
+                <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
+                <span className="text-sm text-gray-700">Sending...</span>
+              </>
+            ) : (
+              <>
+                <Bell className="w-4 h-4 text-gray-600" />
+                <span className="text-sm text-gray-700">Email reminder to applicant</span>
+              </>
+            )}
           </button>
           
           <button
@@ -244,8 +384,11 @@ export function ActionsSidebar({
         </div>
         <button
           onClick={() => {
-            // TODO: Open pricing modal or navigate to pricing
-            window.location.href = '/settings?tab=subscription';
+            if (onUpgradeClick) {
+              onUpgradeClick();
+            } else {
+              window.location.href = '/settings?tab=subscription';
+            }
           }}
           className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
         >

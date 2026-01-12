@@ -1,14 +1,52 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  fromPaymentFlow?: boolean; // If true, buttons route to checkout instead of home
 }
 
-export function PricingModal({ isOpen, onClose }: PricingModalProps) {
+export function PricingModal({ isOpen, onClose, fromPaymentFlow = false }: PricingModalProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const supabase = createClient();
+
+  // Check auth status
+  useEffect(() => {
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    }
+    if (isOpen) {
+      checkAuth();
+    }
+  }, [isOpen, supabase]);
+
+  const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
+    // Check if user is signed in
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    
+    if (!currentUser) {
+      // Redirect to sign in page
+      window.location.href = '/signin?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
+    // User is signed in, proceed with checkout
+    const response = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceType }),
+    });
+    const result = await response.json();
+    if (result.url) {
+      window.location.href = result.url;
+    }
+  };
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -17,10 +55,27 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
   const handleEnterpriseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    // TODO: Implement enterprise contact form submission
-    console.log('Enterprise inquiry:', email);
-    setSubmitting(false);
-    // Could show success toast here
+    try {
+      const response = await fetch('/api/enterprise/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        alert(result.error || 'Failed to submit inquiry');
+      } else {
+        alert('Thank you! We\'ve received your inquiry and will contact you shortly. Check your email for a confirmation and demo scheduling link.');
+        setEmail('');
+        onClose();
+      }
+    } catch (error) {
+      alert('Failed to submit inquiry. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -61,6 +116,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                   <span className="text-3xl font-bold text-gray-900">$14.99</span>
                   <span className="text-gray-600 text-sm ml-1">per verification</span>
                 </div>
+                <div className="text-xs text-gray-500 mt-1">$14.99 per verification</div>
               </div>
               <div className="space-y-2 text-sm text-gray-600 mb-6">
                 <div className="flex items-center gap-2">
@@ -74,10 +130,8 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               </div>
               <button
                 onClick={async () => {
-                  // For per-verification, user will pay when creating verification
-                  // Just close modal and redirect to home
-                  onClose();
-                  window.location.href = '/';
+                  // Always check auth and route to checkout
+                  await handleCheckout('per_verification');
                 }}
                 className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors"
               >
@@ -106,17 +160,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 </div>
               </div>
               <button
-                onClick={async () => {
-                  const response = await fetch('/api/stripe/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceType: 'starter' }),
-                  });
-                  const result = await response.json();
-                  if (result.url) {
-                    window.location.href = result.url;
-                  }
-                }}
+                onClick={() => handleCheckout('starter')}
                 className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
               >
                 Get Started
@@ -149,17 +193,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 </div>
               </div>
               <button
-                onClick={async () => {
-                  const response = await fetch('/api/stripe/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceType: 'pro' }),
-                  });
-                  const result = await response.json();
-                  if (result.url) {
-                    window.location.href = result.url;
-                  }
-                }}
+                onClick={() => handleCheckout('pro')}
                 className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors"
               >
                 Get Started
@@ -230,11 +264,9 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                   </button>
                   <div className="text-center">
                     <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // TODO: Open calendar/scheduling link
-                      }}
+                      href={process.env.NEXT_PUBLIC_CALENDLY_LINK || 'https://calendly.com/your-calendly-link'}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
                     >
                       Schedule a demo

@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-02-24.acacia',
 });
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { priceType } = body;
+    const { priceType, amountCents } = body;
     
     // Get or create Stripe customer
     // First check customers table
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       .from('customers')
       .select('stripe_customer_id')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { stripe_customer_id: string | null } | null };
     
     let customerId = customerRecord?.stripe_customer_id;
     
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         .from('subscriptions')
         .select('stripe_customer_id')
         .eq('user_id', user.id)
-        .single();
+        .single() as { data: { stripe_customer_id: string | null } | null };
       
       customerId = subscription?.stripe_customer_id;
     }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         .upsert({
           id: user.id,
           stripe_customer_id: customerId,
-        });
+        } as any);
     }
     
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || 'http://localhost:3000';
@@ -144,6 +144,33 @@ export async function POST(request: NextRequest) {
         metadata: {
           user_id: user.id,
           type: 'pro_subscription',
+        },
+      };
+    } else if (priceType === 'overage') {
+      // Overage payment for subscription users (dynamic amount based on tier)
+      const overageAmount = amountCents || 899; // Default to $8.99 if not provided
+      sessionParams = {
+        customer: customerId,
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Income Verification Overage',
+                description: 'Additional verification beyond subscription limit',
+              },
+              unit_amount: overageAmount,
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${baseUrl}/api/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}?payment=canceled`,
+        metadata: {
+          user_id: user.id,
+          type: 'overage',
         },
       };
     } else {

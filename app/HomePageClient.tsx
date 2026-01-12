@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, FileCheck, Settings, LogOut, User, Loader2, X, Check, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { Plus, Loader2, X, Check, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
 import { Verification } from '@/components/VerificationsTable';
 import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
@@ -43,6 +43,7 @@ export default function HomePageClient({
   const [authError, setAuthError] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pricingModalFromPayment, setPricingModalFromPayment] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
   const router = useRouter();
@@ -58,6 +59,21 @@ export default function HomePageClient({
     formDataRef.current = formData;
     landlordInfoRef.current = landlordInfo;
   }, [pendingVerification, formData, landlordInfo]);
+
+  // Listen for auth modal events from navbar
+  useEffect(() => {
+    const handleOpenAuthModal = (event: CustomEvent) => {
+      const mode = (event.detail as { mode?: 'signin' | 'signup' })?.mode || 'signup';
+      setAuthMode(mode);
+      setShowAuthModal(true);
+      setAuthError('');
+    };
+
+    window.addEventListener('openAuthModal', handleOpenAuthModal as EventListener);
+    return () => {
+      window.removeEventListener('openAuthModal', handleOpenAuthModal as EventListener);
+    };
+  }, []);
 
   // Fetch user data after sign in
   async function loadUserData(currentUser: SupabaseUser) {
@@ -105,47 +121,15 @@ export default function HomePageClient({
         // Fetch user's data client-side
         await loadUserData(session.user);
         
-        // If there was a pending verification, create it now
+        // If there was a pending verification, show success message and keep form pre-filled
         if (pendingVerificationRef.current && formDataRef.current.name && formDataRef.current.email) {
           setPendingVerification(false);
-          try {
-            const response = await fetch('/api/verifications/create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                individual_name: formDataRef.current.name,
-                individual_email: formDataRef.current.email,
-                requested_by_name: landlordInfoRef.current.name || null,
-                requested_by_email: landlordInfoRef.current.email || session.user.email || null,
-                purpose: null,
-              }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-              toast({ 
-                title: 'Error', 
-                description: result.error || 'Failed to create verification', 
-                variant: 'destructive' 
-              });
-            } else {
-              setVerifications((prev) => [result.verification, ...prev]);
-              setFormData({ name: '', email: '' });
-              setSelectedVerification(result.verification);
-              setActiveTab('all');
-              toast({ 
-                title: 'Created!', 
-                description: 'Verification created successfully. Click "Send Email" to notify the recipient.' 
-              });
-            }
-          } catch (error) {
-            toast({ 
-              title: 'Error', 
-              description: 'Failed to create verification', 
-              variant: 'destructive' 
-            });
-          }
+          // Switch to new tab to show the form
+          setActiveTab('new');
+          toast({ 
+            title: 'Account created!', 
+            description: 'Your form is ready. Click "Create Verification" to continue.' 
+          });
         }
       }
     });
@@ -183,25 +167,35 @@ export default function HomePageClient({
       const result = await response.json();
 
       if (response.status === 402) {
-        // Payment required - redirect to Stripe checkout
-        const checkoutResponse = await fetch('/api/stripe/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            priceType: result.paymentType === 'overage' ? 'overage' : 'per_verification',
-          }),
-        });
+        // Payment required - show pricing modal with payment flow enabled
+        const paymentType = result.paymentType === 'overage' ? 'overage' : 'per_verification';
         
-        const checkoutResult = await checkoutResponse.json();
-        
-        if (checkoutResponse.ok && checkoutResult.url) {
-          window.location.href = checkoutResult.url;
-        } else {
-          toast({
-            title: 'Payment Error',
-            description: 'Failed to initiate payment. Please try again.',
-            variant: 'destructive',
+        // If overage, go directly to checkout (no choice needed - they're already subscribed)
+        if (paymentType === 'overage') {
+          const checkoutResponse = await fetch('/api/stripe/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              priceType: 'overage',
+              amountCents: result.amountCents,
+            }),
           });
+          
+          const checkoutResult = await checkoutResponse.json();
+          
+          if (checkoutResponse.ok && checkoutResult.url) {
+            window.location.href = checkoutResult.url;
+          } else {
+            toast({
+              title: 'Payment Error',
+              description: 'Failed to initiate payment. Please try again.',
+              variant: 'destructive',
+            });
+          }
+        } else {
+          // For per_verification, show pricing modal with payment flow enabled
+          setPricingModalFromPayment(true);
+          setShowPricingModal(true);
         }
       } else if (!response.ok) {
         toast({ 
@@ -228,11 +222,6 @@ export default function HomePageClient({
     } finally {
       setCreating(false);
     }
-  }
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    toast({ title: 'Signed out', description: 'You have been signed out' });
   }
 
   async function handleAuthSubmit(e: React.FormEvent) {
@@ -398,55 +387,6 @@ export default function HomePageClient({
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-semibold text-gray-900">Income Verifier</span>
-            </div>
-            <div className="flex items-center gap-3">
-              {user ? (
-                <>
-                  <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
-                    <User className="w-4 h-4" />
-                    <span>{user.email}</span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setAuthMode('signin'); setShowAuthModal(true); }}
-                    className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }}
-                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
-                  >
-                    Get Started
-                  </button>
-                </>
-              )}
-              <Link href="/settings" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
-                <Settings className="w-5 h-5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex gap-6">
@@ -536,6 +476,10 @@ export default function HomePageClient({
                   onDelete={(id) => {
                     deleteVerification(id);
                     setSelectedVerification(null);
+                  }}
+                  onUpgradeClick={() => {
+                    setShowPricingModal(true);
+                    setPricingModalFromPayment(false);
                   }}
                   onEmailSent={async () => {
                     // Refresh verifications to get updated last_email_sent_at
@@ -671,7 +615,14 @@ export default function HomePageClient({
       </div>
 
       {/* Pricing Modal */}
-      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
+      <PricingModal 
+        isOpen={showPricingModal} 
+        onClose={() => {
+          setShowPricingModal(false);
+          setPricingModalFromPayment(false);
+        }}
+        fromPaymentFlow={pricingModalFromPayment}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileCheck, User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle, Coins } from 'lucide-react';
+import { User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle, Coins } from 'lucide-react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import { createClient } from '@/utils/supabase/client';
 
@@ -85,7 +85,13 @@ export default function SettingsPage() {
         .from('user_credits')
         .select('credits_remaining, credits_used_this_period, subscription_tier, period_start, period_end')
         .eq('user_id', userId)
-        .single();
+        .single() as { data: {
+          credits_remaining: number;
+          credits_used_this_period: number;
+          subscription_tier: string | null;
+          period_start: string | null;
+          period_end: string | null;
+        } | null };
       
       if (credits) {
         setCreditInfo({
@@ -103,7 +109,12 @@ export default function SettingsPage() {
         .select('tier, status, credits_included, current_period_end')
         .eq('user_id', userId)
         .eq('status', 'active')
-        .single();
+        .single() as { data: {
+          tier: string | null;
+          status: string | null;
+          credits_included: number | null;
+          current_period_end: string | null;
+        } | null };
       
       if (subscription) {
         setSubscriptionInfo({
@@ -131,6 +142,7 @@ export default function SettingsPage() {
     // Save to users table
     const { error } = await supabase
       .from('users')
+      // @ts-expect-error - Type inference issue with Supabase types
       .update({ company_name: defaults.companyName })
       .eq('id', user.id);
 
@@ -202,20 +214,6 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-semibold text-gray-900">Income Verifier</span>
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
