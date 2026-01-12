@@ -27,24 +27,41 @@ export function PricingModal({ isOpen, onClose, fromPaymentFlow = false }: Prici
   }, [isOpen, supabase]);
 
   const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
-    // Check if user is signed in
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    console.log('handleCheckout called with:', priceType);
     
-    if (!currentUser) {
-      // Redirect to sign in page
-      window.location.href = '/signin?redirect=' + encodeURIComponent(window.location.pathname);
-      return;
-    }
+    try {
+      // Use the existing user state instead of fetching again
+      console.log('Current user:', user?.id);
+      
+      if (!user) {
+        console.log('No user, redirecting to signin');
+        // Redirect to sign in page
+        window.location.href = '/signin?redirect=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
 
-    // User is signed in, proceed with checkout
-    const response = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceType }),
-    });
-    const result = await response.json();
-    if (result.url) {
-      window.location.href = result.url;
+      console.log('Calling checkout API...');
+      // User is signed in, proceed with checkout
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceType }),
+      });
+      
+      console.log('Checkout response status:', response.status);
+      const result = await response.json();
+      console.log('Checkout result:', result);
+      
+      if (result.url) {
+        console.log('Redirecting to:', result.url);
+        window.location.href = result.url;
+      } else {
+        console.error('No URL in checkout response:', result);
+        alert('Failed to create checkout session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('An error occurred. Please try again.');
     }
   };
   const [email, setEmail] = useState('');
