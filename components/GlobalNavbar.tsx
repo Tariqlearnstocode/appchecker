@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -10,23 +10,39 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 export default function GlobalNavbar() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
 
   // Load initial user
   useEffect(() => {
-    async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
-    }
-    loadUser();
-  }, []);
+    console.log('[Navbar] Mounting - fetching initial user...');
+    supabase.auth.getUser()
+      .then(({ data: { user }, error }) => {
+        console.log('[Navbar] User fetch completed:', { 
+          hasUser: !!user, 
+          userEmail: user?.email,
+          error: error?.message 
+        });
+        setUser(user);
+        setLoading(false);
+        console.log('[Navbar] Loading state set to false');
+      })
+      .catch((err) => {
+        console.error('[Navbar] Error fetching user:', err);
+        setLoading(false);
+      });
+  }, [supabase]);
 
   // Listen for auth changes
   useEffect(() => {
+    console.log('[Navbar] Setting up auth state listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Navbar] Auth state change:', { 
+        event, 
+        hasUser: !!session?.user,
+        userEmail: session?.user?.email 
+      });
       setUser(session?.user ?? null);
       if (event === 'SIGNED_OUT') {
         // Redirect to home if on a protected page
@@ -36,10 +52,14 @@ export default function GlobalNavbar() {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [pathname, router]);
+    return () => {
+      console.log('[Navbar] Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
+  }, [supabase, pathname, router]);
 
   async function handleSignOut() {
+    console.log('[Navbar] Signing out...');
     await supabase.auth.signOut();
     router.push('/');
   }
