@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
 
@@ -21,6 +22,7 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [loading, setLoading] = useState(false); // No loading needed - we have initialUser
+  const router = useRouter();
   // Create client once and reuse it
   const supabase = useMemo(() => createClient(), []);
 
@@ -28,10 +30,13 @@ export function AuthProvider({
     // Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      
+      // Refresh server components to get fresh data
+      router.refresh();
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, [supabase, router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, supabase }}>

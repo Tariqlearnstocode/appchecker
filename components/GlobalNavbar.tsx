@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { FileCheck, Settings, LogOut, User } from 'lucide-react';
@@ -9,6 +10,7 @@ export default function GlobalNavbar() {
   const { user, loading, supabase } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [signingOut, setSigningOut] = useState(false);
   
   // Don't show navbar on signin/verify/auth pages
   if (pathname?.startsWith('/signin') || pathname?.startsWith('/verify/') || pathname?.startsWith('/auth/')) {
@@ -16,17 +18,17 @@ export default function GlobalNavbar() {
   }
 
   async function handleSignOut() {
-    console.log('[Navbar] Signing out...');
+    if (signingOut) return; // Prevent multiple calls
+    
+    setSigningOut(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('[Navbar] Sign out error:', error);
-        return;
-      }
-      console.log('[Navbar] Sign out successful, redirecting...');
+      await supabase.auth.signOut();
       router.push('/');
     } catch (err) {
-      console.error('[Navbar] Sign out exception:', err);
+      // Ignore errors - signOut is idempotent
+      console.error('[Navbar] Sign out error:', err);
+    } finally {
+      setSigningOut(false);
     }
   }
 
@@ -51,10 +53,11 @@ export default function GlobalNavbar() {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                  disabled={signingOut}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sign Out
+                  {signingOut ? 'Signing out...' : 'Sign Out'}
                 </button>
                 <Link href="/settings" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
                   <Settings className="w-5 h-5" />
