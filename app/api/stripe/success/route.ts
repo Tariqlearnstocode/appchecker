@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const sessionId = searchParams.get('session_id');
   
   if (!sessionId) {
-    redirect('/?error=missing_session');
+    return NextResponse.redirect(new URL('/?error=missing_session', request.url));
   }
   
   try {
@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
     
     if (session.payment_status === 'paid') {
       // Payment succeeded - credits will be granted via webhook
-      // Just redirect to success page
-      redirect('/?payment=success');
+      // Clear sessionStorage data and redirect
+      return NextResponse.redirect(new URL('/?payment=success', request.url));
     } else {
-      redirect('/?payment=failed');
+      return NextResponse.redirect(new URL('/?payment=failed', request.url));
     }
   } catch (error) {
     console.error('Error processing success:', error);
-    redirect('/?payment=error');
+    return NextResponse.redirect(new URL('/?payment=error', request.url));
   }
 }
