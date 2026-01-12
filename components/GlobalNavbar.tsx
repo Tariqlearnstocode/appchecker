@@ -44,6 +44,13 @@ export default function GlobalNavbar() {
         userEmail: session?.user?.email 
       });
       setUser(session?.user ?? null);
+      
+      // Set loading to false on INITIAL_SESSION to handle case where getUser() hangs
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        console.log('[Navbar] Auth listener setting loading to false');
+        setLoading(false);
+      }
+      
       if (event === 'SIGNED_OUT') {
         // Redirect to home if on a protected page
         if (pathname?.startsWith('/settings')) {
