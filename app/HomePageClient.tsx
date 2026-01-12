@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,7 +34,7 @@ export default function HomePageClient({
   const [formData, setFormData] = useState({ name: '', email: '' });
   const [landlordInfo, setLandlordInfo] = useState(initialLandlordInfo);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
-  const { user } = useAuth(); // Use global auth context
+  const { user, supabase } = useAuth(); // Use global auth context
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [authEmail, setAuthEmail] = useState('');
@@ -46,7 +45,6 @@ export default function HomePageClient({
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pricingModalFromPayment, setPricingModalFromPayment] = useState(false);
   const { toast } = useToast();
-  const supabase = createClient();
   const router = useRouter();
 
   // Store refs for pending verification data to avoid stale closures

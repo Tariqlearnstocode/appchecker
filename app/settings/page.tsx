@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, FileText, CreditCard, Puzzle, ExternalLink, Loader2, Info, Shield, Download, Trash2, AlertTriangle, Coins } from 'lucide-react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
-import { createClient } from '@/utils/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 type SettingsTab = 'account' | 'defaults' | 'subscription' | 'integrations' | 'privacy';
@@ -32,7 +31,7 @@ interface SubscriptionInfo {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, loading: loadingUser } = useAuth();
+  const { user, loading: loadingUser, supabase } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [defaults, setDefaults] = useState<VerificationDefaults>({ companyName: '', email: '' });
   const [saving, setSaving] = useState(false);
@@ -43,7 +42,6 @@ export default function SettingsPage() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const { toast } = useToast();
-  const supabase = createClient();
 
   // Load user data when user is available
   useEffect(() => {
