@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 import { sendVerificationEmail } from '@/utils/email';
 
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('income_verifications')
       .select('id, individual_name, individual_email, requested_by_name, requested_by_email, purpose, verification_token, user_id')
       .eq('id', verification_id)
-      .single();
+      .single() as { data: { id: string; individual_name: string; individual_email: string; requested_by_name: string | null; requested_by_email: string | null; purpose: string | null; verification_token: string; user_id: string | null } | null; error: any };
     
     if (fetchError || !verification) {
       return NextResponse.json(
@@ -59,9 +60,9 @@ export async function POST(request: NextRequest) {
       });
       
       // Update last_email_sent_at
-      await supabase
+      await supabaseAdmin
         .from('income_verifications')
-        .update({ last_email_sent_at: new Date().toISOString() })
+        .update({ last_email_sent_at: new Date().toISOString() } as any)
         .eq('id', verification_id);
       
       return NextResponse.json({ 

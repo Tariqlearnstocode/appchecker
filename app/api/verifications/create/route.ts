@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/utils/supabase/admin';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-02-24.acacia',
 });
 
 export async function POST(request: NextRequest) {
@@ -31,14 +31,14 @@ export async function POST(request: NextRequest) {
       .from('user_credits')
       .select('credits_remaining, subscription_tier')
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: { credits_remaining: number; subscription_tier: string | null } | null };
     
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .single();
+      .single() as { data: { tier: string | null; status: string | null } | null };
     
     const hasCredits = (credits?.credits_remaining || 0) > 0;
     const isSubscribed = !!subscription;
@@ -71,11 +71,11 @@ export async function POST(request: NextRequest) {
     // Use a credit
     const { data: creditResult, error: creditError } = await supabaseAdmin.rpc('use_credit', {
       target_user_id: user.id,
-      verification_id: null, // Will be set after creation
+      verification_id: '' as any, // Will be set after creation
       charge_overage: false,
     });
     
-    if (creditError || !creditResult?.success) {
+    if (creditError || !(creditResult as { success?: boolean })?.success) {
       console.error('Error using credit:', creditError);
       return NextResponse.json(
         { error: 'Failed to process credit', details: creditError?.message },
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('company_name')
       .eq('id', user.id)
-      .single();
+      .single() as any;
     
     const finalRequestedByName = requested_by_name || (userProfile as { company_name?: string | null } | null)?.company_name || user.email || 'Requesting Party';
     const finalRequestedByEmail = requested_by_email || user.email;
@@ -103,9 +103,9 @@ export async function POST(request: NextRequest) {
         requested_by_email: finalRequestedByEmail,
         purpose: purpose || null,
         user_id: user.id,
-      })
+      } as any)
       .select()
-      .single();
+      .single() as { data: { id: string } | null; error: any };
     
     if (createError) {
       console.error('Error creating verification:', createError);
@@ -123,27 +123,29 @@ export async function POST(request: NextRequest) {
     }
     
     // Update credit transaction with verification_id
-    await supabaseAdmin
-      .from('credit_transactions')
-      .update({ verification_id: verification.id })
-      .eq('user_id', user.id)
-      .eq('transaction_type', 'use')
-      .is('verification_id', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    
-    // Record payment (for tracking)
-    const paymentType = isSubscribed ? 'subscription_credit' : 'one_time';
-    await supabaseAdmin
-      .from('verification_payments')
-      .insert({
-        verification_id: verification.id,
-        user_id: user.id,
-        payment_type: paymentType,
-        amount_cents: isSubscribed ? 0 : 1499, // Free for subscription credits
-        status: 'succeeded',
-        paid_at: new Date().toISOString(),
-      });
+    if (verification) {
+      await supabaseAdmin
+        .from('credit_transactions')
+        .update({ verification_id: verification.id } as any)
+        .eq('user_id', user.id)
+        .eq('transaction_type', 'use')
+        .is('verification_id', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      // Record payment (for tracking)
+      const paymentType = isSubscribed ? 'subscription_credit' : 'one_time';
+      await supabaseAdmin
+        .from('verification_payments')
+        .insert({
+          verification_id: verification.id,
+          user_id: user.id,
+          payment_type: paymentType,
+          amount_cents: isSubscribed ? 0 : 1499, // Free for subscription credits
+          status: 'succeeded',
+          paid_at: new Date().toISOString(),
+        });
+    }
     
     return NextResponse.json({ 
       success: true, 

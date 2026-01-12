@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function PATCH(request: NextRequest) {
       .from('income_verifications')
       .select('id, user_id, status, individual_email')
       .eq('id', verification_id)
-      .single();
+      .single() as { data: { id: string; user_id: string | null; status: string; individual_email: string } | null; error: any };
     
     if (fetchError || !verification) {
       return NextResponse.json(
@@ -56,12 +57,12 @@ export async function PATCH(request: NextRequest) {
     // For now, allow one change - you can add a field to track email_changes_count if needed
     
     // Update email
-    const { data: updatedVerification, error: updateError } = await supabase
+    const { data: updatedVerification, error: updateError } = await supabaseAdmin
       .from('income_verifications')
-      .update({ individual_email })
+      .update({ individual_email } as any)
       .eq('id', verification_id)
       .select()
-      .single();
+      .single() as any;
     
     if (updateError) {
       console.error('Error updating email:', updateError);

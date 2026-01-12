@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       .from('income_verifications')
       .select('id, individual_name, requested_by_name, requested_by_email, user_id')
       .eq('verification_token', verification_token)
-      .single();
+      .single() as { data: { id: string; individual_name: string; requested_by_name: string | null; requested_by_email: string | null; user_id: string | null } | null };
 
     // Use admin client to bypass RLS - this is a server-side operation
     // triggered by the applicant, but needs to update the landlord's verification
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         raw_plaid_data: rawTellerData, // Reusing the same column for Teller data
         status: 'completed',
         completed_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('verification_token', verification_token);
 
     if (updateError) {

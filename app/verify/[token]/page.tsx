@@ -40,7 +40,7 @@ export default function ApplicantVerificationPage() {
       .from('income_verifications')
       .select('id, individual_name, individual_email, status, expires_at, requested_by_name, requested_by_email, purpose')
       .eq('verification_token', token)
-      .single();
+      .single() as any;
 
     if (error || !data) {
       setError('Verification request not found');

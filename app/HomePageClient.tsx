@@ -93,7 +93,7 @@ export default function HomePageClient({
       .from('users')
       .select('company_name')
       .eq('id', currentUser.id)
-      .single();
+      .single() as any;
     
     setLandlordInfo({
       name: (profile as { company_name?: string | null } | null)?.company_name || '',

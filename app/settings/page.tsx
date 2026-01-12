@@ -143,7 +143,7 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('users')
       // @ts-expect-error - Type inference issue with Supabase types
-      .update({ company_name: defaults.companyName })
+      .update({ company_name: defaults.companyName } as any)
       .eq('id', user.id);
 
     if (error) {

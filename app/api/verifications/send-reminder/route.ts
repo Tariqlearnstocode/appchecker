@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 import { sendReminderEmail } from '@/utils/email';
 
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('income_verifications')
       .select('id, individual_name, individual_email, requested_by_name, verification_token, expires_at, user_id, status, last_reminder_sent_at, reminder_count')
       .eq('id', verification_id)
-      .single();
+      .single() as { data: { id: string; individual_name: string; individual_email: string; requested_by_name: string | null; verification_token: string; expires_at: string; user_id: string | null; status: string; last_reminder_sent_at: string | null; reminder_count: number | null } | null; error: any };
     
     if (fetchError || !verification) {
       return NextResponse.json(
@@ -79,12 +80,12 @@ export async function POST(request: NextRequest) {
       
       // Update last_reminder_sent_at and increment reminder_count
       const newReminderCount = (verification.reminder_count || 0) + 1;
-      await supabase
+      await supabaseAdmin
         .from('income_verifications')
         .update({ 
           last_reminder_sent_at: new Date().toISOString(),
           reminder_count: newReminderCount,
-        })
+        } as any)
         .eq('id', verification_id);
       
       return NextResponse.json({ 

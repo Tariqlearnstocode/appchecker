@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import ReportContent from './ReportContent';
-import { calculateIncomeReport, RawPlaidData } from '@/lib/income-calculations';
+import { calculateIncomeReport } from '@/lib/income-calculations';
 import { logAudit } from '@/lib/audit';
 
 interface PageProps {
@@ -27,7 +27,7 @@ export default async function ReportPage({ params }: PageProps) {
     .select('*')
     .eq('verification_token', token)
     .eq('user_id', user.id)
-    .single();
+    .single() as { data: any; error: any };
 
   if (error || !verification) {
     // Either doesn't exist or user doesn't own it
@@ -55,7 +55,7 @@ export default async function ReportPage({ params }: PageProps) {
   }
 
   // Check if we have data (either new raw_plaid_data or old report_data)
-  const rawData = verification.raw_plaid_data as RawPlaidData | null;
+  const rawData = verification.raw_plaid_data as any;
   const legacyData = verification.report_data;
 
   if (verification.status !== 'completed' || (!rawData && !legacyData)) {

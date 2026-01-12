@@ -27,12 +27,12 @@ export async function GET(request: Request) {
       .from('users')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { company_name?: string | null } | null };
 
     // Fetch all verifications (without raw financial data for security)
     const { data: verifications } = await supabase
       .from('income_verifications')
-      .select('id, created_at, individual_name, individual_email, requested_by_name, requested_by_email, status, completed_at, purpose, monthly_rent')
+      .select('id, created_at, individual_name, individual_email, requested_by_name, requested_by_email, status, completed_at, purpose')
       .eq('user_id', user.id);
 
     // Fetch audit logs

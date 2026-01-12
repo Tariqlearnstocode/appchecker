@@ -25,7 +25,7 @@ export default async function HomePage() {
       .from('users')
       .select('company_name')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { company_name?: string | null } | null };
     
     landlordInfo = {
       name: profile?.company_name || '',

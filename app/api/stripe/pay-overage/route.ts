@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-02-24.acacia',
 });
 
 /**
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       .select('tier, stripe_customer_id')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .single();
+      .single() as { data: { tier: string | null; stripe_customer_id: string | null } | null };
     
     if (!subscription) {
       return NextResponse.json(
@@ -48,9 +49,9 @@ export async function POST(request: NextRequest) {
       });
       customerId = customer.id;
       
-      await supabase
+      await supabaseAdmin
         .from('subscriptions')
-        .update({ stripe_customer_id: customerId })
+        .update({ stripe_customer_id: customerId } as any)
         .eq('user_id', user.id);
     }
     

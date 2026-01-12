@@ -105,7 +105,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .single() as { data: { user_id: string } | null };
 
   if (!sub) return;
 
@@ -136,7 +136,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),
       cancel_at_period_end: subscription.cancel_at_period_end,
-    })
+    } as any)
     .eq('user_id', sub.user_id);
 
   // Reset credits for new billing period (if subscription is active)
@@ -151,7 +151,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     // Update user_credits subscription_tier
     await supabaseAdmin
       .from('user_credits')
-      .update({ subscription_tier: tier })
+      .update({ subscription_tier: tier } as any)
       .eq('user_id', sub.user_id);
   }
 }
@@ -163,7 +163,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .single() as { data: { user_id: string } | null };
 
   if (!sub) return;
 
@@ -175,7 +175,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
       status: 'canceled',
       stripe_subscription_id: null,
       stripe_price_id: null,
-    })
+    } as any)
     .eq('user_id', sub.user_id);
 }
 
@@ -191,7 +191,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .single() as { data: { user_id: string } | null };
 
   if (!sub) return;
 
@@ -200,7 +200,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
     .from('subscriptions')
     .update({
       status: 'past_due',
-    })
+    } as any)
     .eq('user_id', sub.user_id);
 }
 

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .from('user_credits')
       .select('credits_remaining, subscription_tier')
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: { credits_remaining: number; subscription_tier: string | null } | null };
     
     // Get active subscription
     const { data: subscription } = await supabase
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .select('tier, status, credits_included')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .single();
+      .single() as { data: { tier: string | null; status: string | null; credits_included: number | null } | null };
     
     const hasCredits = (credits?.credits_remaining || 0) > 0;
     const isSubscribed = !!subscription;

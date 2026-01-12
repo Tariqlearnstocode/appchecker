@@ -45,6 +45,8 @@ const upsertPriceRecord = async (
     product_id: typeof price.product === 'string' ? price.product : '',
     active: price.active,
     currency: price.currency,
+    description: null,
+    metadata: {},
     type: price.type,
     unit_amount: price.unit_amount ?? null,
     interval: price.recurring?.interval ?? null,
