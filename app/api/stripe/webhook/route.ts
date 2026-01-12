@@ -125,7 +125,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const hasVerificationData = session.metadata?.verification_individual_name && 
                                 session.metadata?.verification_individual_email;
   
-  if (hasVerificationData) {
+  if (hasVerificationData && session.metadata) {
     console.log('[Webhook] Creating verification from metadata:', {
       name: session.metadata.verification_individual_name,
       email: session.metadata.verification_individual_email,
