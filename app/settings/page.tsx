@@ -291,7 +291,7 @@ export default function SettingsPage() {
                     <button
                       onClick={async () => {
                         await supabase.auth.signOut();
-                        setUser(null);
+                        router.push('/');
                       }}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
                     >
