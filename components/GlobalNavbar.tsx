@@ -22,15 +22,14 @@ export default function GlobalNavbar() {
     
     setSigningOut(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // Force reload to clear all state
-      window.location.href = '/';
+      await supabase.auth.signOut();
     } catch (err) {
-      console.error('[Navbar] Sign out error:', err);
-      setSigningOut(false);
+      // Ignore errors - user might already be signed out
+      console.log('[Navbar] Sign out (session may already be gone):', err);
     }
+    
+    // Always redirect regardless of error - clears all state
+    window.location.href = '/';
   }
 
   return (
