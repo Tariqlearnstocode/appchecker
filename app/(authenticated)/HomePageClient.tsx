@@ -167,6 +167,14 @@ export default function HomePageClient({
         // Payment required - show pricing modal with payment flow enabled
         const paymentType = result.paymentType === 'overage' ? 'overage' : 'per_verification';
         
+        // Store form data in sessionStorage for checkout
+        sessionStorage.setItem('pendingVerification', JSON.stringify({
+          individual_name: formData.name,
+          individual_email: formData.email,
+          requested_by_name: landlordInfo.name || null,
+          requested_by_email: landlordInfo.email || null,
+        }));
+        
         // If overage, go directly to checkout (no choice needed - they're already subscribed)
         if (paymentType === 'overage') {
           const checkoutResponse = await fetch('/api/stripe/checkout', {
@@ -175,6 +183,12 @@ export default function HomePageClient({
             body: JSON.stringify({
               priceType: 'overage',
               amountCents: result.amountCents,
+              verificationData: {
+                individual_name: formData.name,
+                individual_email: formData.email,
+                requested_by_name: landlordInfo.name || null,
+                requested_by_email: landlordInfo.email || null,
+              },
             }),
           });
           

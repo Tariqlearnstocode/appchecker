@@ -24,12 +24,19 @@ export function PricingModal({ isOpen, onClose, fromPaymentFlow = false }: Prici
         return;
       }
 
+      // Get pending verification data from sessionStorage if exists
+      const pendingDataStr = sessionStorage.getItem('pendingVerification');
+      const verificationData = pendingDataStr ? JSON.parse(pendingDataStr) : null;
+
       console.log('Calling checkout API...');
       // User is signed in, proceed with checkout
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceType }),
+        body: JSON.stringify({ 
+          priceType,
+          verificationData, // Pass verification data if available
+        }),
       });
       
       console.log('Checkout response status:', response.status);

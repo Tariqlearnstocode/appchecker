@@ -77,21 +77,101 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id;
   const type = session.metadata?.type;
+  const customerId = session.customer as string;
 
-  if (!userId) return;
+  console.log('[Webhook] Checkout complete:', { userId, type, customerId, sessionId: session.id });
+
+  if (!userId) {
+    console.error('[Webhook] No user_id in session metadata');
+    return;
+  }
+
+  // Save customer ID if not already saved
+  if (customerId) {
+    await supabaseAdmin
+      .from('customers')
+      .upsert({
+        id: userId,
+        stripe_customer_id: customerId,
+      });
+    console.log('[Webhook] Saved customer ID:', customerId);
+  }
 
   if (type === 'per_verification') {
     // One-time payment - grant 1 credit
     const paymentIntentId = session.payment_intent as string;
 
+    console.log('[Webhook] Granting 1 credit to user:', userId);
+
     // Grant credit using function
-    await supabaseAdmin.rpc('grant_credits', {
+    const { data, error } = await supabaseAdmin.rpc('grant_credits', {
       target_user_id: userId,
       credit_amount: 1,
       transaction_type: 'grant',
       description: 'One-time verification purchase',
       stripe_payment_intent_id: paymentIntentId,
     });
+
+    if (error) {
+      console.error('[Webhook] Error granting credits:', error);
+    } else {
+      console.log('[Webhook] Credits granted successfully:', data);
+    }
+  } else {
+    console.log('[Webhook] Type is not per_verification:', type);
+  }
+
+  // Create verification if form data was passed through metadata
+  const hasVerificationData = session.metadata?.verification_individual_name && 
+                                session.metadata?.verification_individual_email;
+  
+  if (hasVerificationData) {
+    console.log('[Webhook] Creating verification from metadata:', {
+      name: session.metadata.verification_individual_name,
+      email: session.metadata.verification_individual_email,
+    });
+
+    try {
+      // Create verification token
+      const verificationToken = require('crypto').randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+      const { data: verification, error: verificationError } = await supabaseAdmin
+        .from('income_verifications')
+        .insert({
+          individual_name: session.metadata.verification_individual_name,
+          individual_email: session.metadata.verification_individual_email,
+          requested_by_name: session.metadata.verification_requested_by_name || null,
+          requested_by_email: session.metadata.verification_requested_by_email || null,
+          purpose: null,
+          user_id: userId,
+          verification_token: verificationToken,
+          expires_at: expiresAt,
+          status: 'pending',
+        } as any)
+        .select()
+        .single();
+
+      if (verificationError) {
+        console.error('[Webhook] Error creating verification:', verificationError);
+      } else {
+        console.log('[Webhook] Successfully created verification:', verification.id);
+
+        // Deduct credit for the verification
+        const { error: deductError } = await supabaseAdmin.rpc('use_credit', {
+          target_user_id: userId,
+          verification_id: verification.id,
+        });
+
+        if (deductError) {
+          console.error('[Webhook] Error deducting credit:', deductError);
+        } else {
+          console.log('[Webhook] Successfully deducted credit for verification');
+        }
+      }
+    } catch (error) {
+      console.error('[Webhook] Exception creating verification:', error);
+    }
   }
 }
 

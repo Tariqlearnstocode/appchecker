@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { priceType, amountCents } = body;
+    const { priceType, amountCents, verificationData } = body;
     
     // Get or create Stripe customer
     // First check customers table
@@ -86,6 +86,12 @@ export async function POST(request: NextRequest) {
         metadata: {
           user_id: user.id,
           type: 'per_verification',
+          ...(verificationData && {
+            verification_individual_name: verificationData.individual_name || '',
+            verification_individual_email: verificationData.individual_email || '',
+            verification_requested_by_name: verificationData.requested_by_name || '',
+            verification_requested_by_email: verificationData.requested_by_email || '',
+          }),
         },
       };
     } else if (priceType === 'starter') {
@@ -171,6 +177,12 @@ export async function POST(request: NextRequest) {
         metadata: {
           user_id: user.id,
           type: 'overage',
+          ...(verificationData && {
+            verification_individual_name: verificationData.individual_name || '',
+            verification_individual_email: verificationData.individual_email || '',
+            verification_requested_by_name: verificationData.requested_by_name || '',
+            verification_requested_by_email: verificationData.requested_by_email || '',
+          }),
         },
       };
     } else {
