@@ -22,7 +22,7 @@ export default function GlobalNavbar() {
       setLoading(false);
     }
     loadUser();
-  }, [supabase]);
+  }, []);
 
   // Listen for auth changes
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function GlobalNavbar() {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase, pathname, router]);
+  }, [pathname, router]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
