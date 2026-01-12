@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTellerConnect } from 'teller-connect-react';
-import { createClient } from '@/utils/supabase/client';
 import { useParams } from 'next/navigation';
 import { CheckCircle, Loader2, AlertCircle, Lock, Building, Mail, MapPin, ShieldCheck } from 'lucide-react';
 
@@ -28,41 +27,44 @@ export default function ApplicantVerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [success, setSuccess] = useState(false);
-  
-  // Create client once for this public page
-  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     fetchVerification();
   }, [token]);
 
   async function fetchVerification() {
-    const { data, error } = await supabase
-      .from('income_verifications')
-      .select('id, individual_name, individual_email, status, expires_at, requested_by_name, requested_by_email, purpose')
-      .eq('verification_token', token)
-      .single() as any;
+    try {
+      const response = await fetch(`/api/verify/${token}`);
+      const result = await response.json();
 
-    if (error || !data) {
-      setError('Verification request not found');
+      if (!response.ok || result.error) {
+        setError('Verification request not found');
+        setLoading(false);
+        return;
+      }
+
+      const data = result.verification;
+
+      // Check if expired
+      const expiresAt = new Date(data.expires_at);
+      if (expiresAt < new Date()) {
+        setError('This verification link has expired');
+        setLoading(false);
+        return;
+      }
+
+      if (data.status === 'completed') {
+        setSuccess(true);
+        setLoading(false);
+        return;
+      }
+
+      setVerification(data);
       setLoading(false);
-      return;
-    }
-
-    if (new Date(data.expires_at) < new Date()) {
-      setError('This verification link has expired');
+    } catch (err) {
+      setError('Failed to load verification');
       setLoading(false);
-      return;
     }
-
-    if (data.status === 'completed') {
-      setSuccess(true);
-      setLoading(false);
-      return;
-    }
-
-    setVerification(data);
-    setLoading(false);
   }
 
   // Handle Teller Connect success

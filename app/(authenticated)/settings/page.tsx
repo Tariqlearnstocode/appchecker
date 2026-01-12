@@ -30,7 +30,7 @@ interface SubscriptionInfo {
   currentPeriodEnd: string | null;
 }
 
-function SettingsPageContent() {
+export default function SettingsPage() {
   const router = useRouter();
   const { user, loading: loadingUser, supabase } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
@@ -714,4 +714,3 @@ function SettingsPageContent() {
     </div>
   );
 }
-

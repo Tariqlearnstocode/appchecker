@@ -1,6 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
 import HomePageClient from './HomePageClient';
-import { AuthProvider } from '@/contexts/AuthContext';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -39,12 +38,10 @@ export default async function HomePage() {
   }
   
   return (
-    <AuthProvider>
-      <HomePageClient 
-        initialUser={user}
-        initialVerifications={verifications}
-        initialLandlordInfo={landlordInfo}
-      />
-    </AuthProvider>
+    <HomePageClient 
+      initialUser={user}
+      initialVerifications={verifications}
+      initialLandlordInfo={landlordInfo}
+    />
   );
 }

@@ -12,26 +12,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ 
+  children, 
+  initialUser 
+}: { 
+  children: React.ReactNode; 
+  initialUser: User | null;
+}) {
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [loading, setLoading] = useState(false); // No loading needed - we have initialUser
   // Create client once and reuse it
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    // Get initial user
-    console.log('[AuthContext] Initializing...');
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      console.log('[AuthContext] Initial user:', user?.email || 'none');
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
+    // Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthContext] Auth state change:', { event, userEmail: session?.user?.email || 'none' });
       setUser(session?.user ?? null);
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
