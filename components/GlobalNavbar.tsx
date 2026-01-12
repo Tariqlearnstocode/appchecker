@@ -14,8 +14,17 @@ export default function GlobalNavbar() {
 
   async function handleSignOut() {
     console.log('[Navbar] Signing out...');
-    await supabase.auth.signOut();
-    router.push('/');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[Navbar] Sign out error:', error);
+        return;
+      }
+      console.log('[Navbar] Sign out successful, redirecting...');
+      router.push('/');
+    } catch (err) {
+      console.error('[Navbar] Sign out exception:', err);
+    }
   }
 
   // Don't show navbar on signin/verify pages

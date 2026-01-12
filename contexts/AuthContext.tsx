@@ -21,13 +21,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial user
+    console.log('[AuthContext] Initializing...');
     supabase.auth.getUser().then(({ data: { user } }) => {
+      console.log('[AuthContext] Initial user:', user?.email || 'none');
       setUser(user);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthContext] Auth state change:', { event, userEmail: session?.user?.email || 'none' });
       setUser(session?.user ?? null);
       setLoading(false);
     });
