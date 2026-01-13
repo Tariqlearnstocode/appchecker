@@ -1,6 +1,7 @@
 'use client';
 
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Eye, ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface LandlordInfo {
   name: string;
@@ -131,23 +132,52 @@ export function NewVerificationTab({
 
           {/* Submit */}
           <div className="mt-6 pt-6 border-t border-gray-100">
-            <button
-              type="submit"
-              disabled={creating || !formData.name || !formData.email}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors"
-            >
-              {creating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Create Verification Link</span>
-                </>
-              )}
-            </button>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              {/* Primary Action Button */}
+              <button
+                type="submit"
+                disabled={creating || !formData.name || !formData.email}
+                className="flex-1 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-emerald-500/20 group disabled:shadow-none"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                    <span>Create Verification Link — $14.99</span>
+                  </>
+                )}
+              </button>
+
+              {/* Preview Report */}
+              <Link
+                href="/report/example"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 w-full flex items-center gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 p-2 pr-4 rounded-xl transition-all group"
+              >
+                {/* Miniature "Report" Thumbnail Icon */}
+                <div className="relative w-10 h-12 bg-gray-50 border border-gray-200 rounded shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="absolute inset-x-1 top-2 h-1 bg-gray-200 rounded-full" />
+                  <div className="absolute inset-x-1 top-4 h-1 bg-gray-200 rounded-full w-2/3" />
+                  <div className="w-full h-4 bg-emerald-500/10 absolute bottom-0 flex items-center justify-center">
+                    <div className="w-4 h-1 bg-emerald-500 rounded-full opacity-50" />
+                  </div>
+                  <Eye className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                </div>
+
+                <div className="text-left min-w-0">
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Output</span>
+                  <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                    Preview Report
+                    <ArrowUpRight className="w-3 h-3 text-gray-400 group-hover:text-emerald-500 flex-shrink-0" />
+                  </span>
+                </div>
+              </Link>
+            </div>
           </div>
         </form>
       </div>

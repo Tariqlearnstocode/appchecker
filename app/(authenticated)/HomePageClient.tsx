@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 import Link from 'next/link';
-import { Plus, Check, ShieldCheck } from 'lucide-react';
+import { Plus, Check, ShieldCheck, FileCheck, X } from 'lucide-react';
 import { Verification } from '@/components/VerificationsTable';
 import { NewVerificationTab } from '@/components/NewVerificationTab';
 import { VerificationsListTab } from '@/components/VerificationsListTab';
@@ -46,6 +46,7 @@ export default function HomePageClient({
     limit: number;
     plan: 'starter' | 'pro';
   } | null>(null);
+  const [headerDismissed, setHeaderDismissed] = useState(false);
   const { toast } = useToast();
 
   // Listen for auth modal events from navbar
@@ -312,10 +313,47 @@ export default function HomePageClient({
     expired: verifications.filter((v) => v.status === 'expired').length,
   };
 
+  const showHeader = (!user || verifications.length === 0) && !headerDismissed;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        {/* Header Banner */}
+        {showHeader && (
+          <div className="mb-6 bg-emerald-50 rounded-xl border border-emerald-100 p-6 relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 relative z-10">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Direct-source income verification
+                </h2>
+                <p className="text-gray-700 mb-4">
+                  Stop chasing PDF bank history, fraudulent or forged PDF documents. Get verified income data directly from the source in minutes.
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link 
+                    href="/report/example" 
+                    className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                  >
+                    See a sample report →
+                  </Link>
+                  <button
+                    onClick={() => setHeaderDismissed(true)}
+                    className="text-gray-600 hover:text-gray-800 font-medium text-sm"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <div className="hidden md:block flex-shrink-0">
+                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <FileCheck className="w-12 h-12 text-emerald-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Tabs + Content */}
           <div className="flex-1 min-w-0">

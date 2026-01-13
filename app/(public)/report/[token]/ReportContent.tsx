@@ -448,8 +448,12 @@ export default function ReportContent({ verification, reportData, isCalculated }
   // Get payroll deposits from last 3 months (for projected)
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-  const payrollDeposits3Mo = income.allDeposits.filter(d => isPayroll(d.name));
-  const projectedTotal3Mo = payrollDeposits3Mo.reduce((sum, d) => sum + d.amount, 0);
+  const payrollDeposits3Mo = transactions.filter(t => 
+    t.isIncome && 
+    isPayroll(t.name) && 
+    new Date(t.date) >= threeMonthsAgo
+  );
+  const projectedTotal3Mo = payrollDeposits3Mo.reduce((sum, t) => sum + t.amount, 0);
   const projectedMonthly = projectedTotal3Mo / 3;
   const projectedAnnual = projectedMonthly * 12;
   
@@ -459,18 +463,18 @@ export default function ReportContent({ verification, reportData, isCalculated }
   
   // Get primary source name (most common payroll source)
   const sourceNameCounts: Record<string, { count: number; total: number }> = {};
-  payrollDeposits3Mo.forEach(d => {
-    const key = d.name.toLowerCase().slice(0, 30);
+  payrollDeposits3Mo.forEach(t => {
+    const key = t.name.toLowerCase().slice(0, 30);
     if (!sourceNameCounts[key]) sourceNameCounts[key] = { count: 0, total: 0 };
     sourceNameCounts[key].count++;
-    sourceNameCounts[key].total += d.amount;
+    sourceNameCounts[key].total += t.amount;
   });
   
   const topSourceEntry = Object.entries(sourceNameCounts)
     .sort((a, b) => b[1].total - a[1].total)[0];
   
   const primaryIncomeSource = topSourceEntry 
-    ? payrollDeposits3Mo.find(d => d.name.toLowerCase().slice(0, 30) === topSourceEntry[0])?.name || 'Payroll'
+    ? payrollDeposits3Mo.find(t => t.name.toLowerCase().slice(0, 30) === topSourceEntry[0])?.name || 'Payroll'
     : (income.verified?.sources?.[0]?.likelySource || 'Not Detected');
   
   const primarySourceTotal90Days = payrollTotalAmount;
@@ -510,6 +514,13 @@ export default function ReportContent({ verification, reportData, isCalculated }
           <h1 className="text-emerald-600 text-xl font-semibold tracking-wide">INCOME VERIFICATION REPORT</h1>
           <div className="flex-1 h-[2px] bg-emerald-600"></div>
         </div>
+        
+        {/* Data Availability Notice - Example Report Only */}
+        {verification.requested_by_name === 'LLM Income Group' && (
+          <div className="text-center text-sm text-gray-600 mb-4">
+            12 months data available
+          </div>
+        )}
         
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
           <div className="flex gap-2">
