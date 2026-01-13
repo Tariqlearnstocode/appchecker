@@ -48,9 +48,8 @@ export async function GET(request: NextRequest) {
           status: authError.status,
         } : null,
       };
-      console.log('[ServerAuth] Debug endpoint: Server-side getUser() result:', debugInfo.serverSide);
     } catch (serverError: any) {
-      console.error('[ServerAuth] Debug endpoint: Server-side error:', serverError.message);
+      console.error('Debug endpoint: Server-side error:', serverError.message);
       debugInfo.serverSide.error = serverError.message;
     }
 

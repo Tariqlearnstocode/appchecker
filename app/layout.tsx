@@ -43,22 +43,15 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: PropsWithChildren) {
-  console.log('[ServerAuth] RootLayout: Creating Supabase client');
   const supabase = await createClient();
-  
-  console.log('[ServerAuth] RootLayout: Calling getUser()');
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError) {
     // "Auth session missing" is expected when user is logged out - not a real error
-    if (authError.message?.includes('Auth session missing')) {
-      console.log('[ServerAuth] RootLayout: No active session (user logged out)');
-    } else {
-      console.error('[ServerAuth] RootLayout: Auth error:', authError.message, authError);
+    if (!authError.message?.includes('Auth session missing')) {
+      console.error('RootLayout: Auth error:', authError.message, authError);
     }
   }
-  
-  console.log('[ServerAuth] RootLayout: getUser() result - user:', user?.id || 'null', 'email:', user?.email || 'null');
 
   return (
     <html lang="en">

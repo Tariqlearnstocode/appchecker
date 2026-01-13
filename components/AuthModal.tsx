@@ -94,8 +94,6 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     e.preventDefault();
     setError('');
     setLoading(true);
-    
-    console.log('[AuthModal] Starting sign in for:', email);
 
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -103,23 +101,16 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
         password,
       });
 
-      console.log('[AuthModal] Sign in response:', { 
-        error: signInError?.message, 
-        user: data?.user?.id || 'null',
-        session: data?.session ? 'exists' : 'null'
-      });
-
       if (signInError) throw signInError;
 
       // Success - modal will close via onAuthStateChange in AuthContext
-      console.log('[AuthModal] Sign in successful, closing modal');
       onClose();
       // Call onAuthSuccess callback if provided
       if (onAuthSuccess) {
         await onAuthSuccess();
       }
     } catch (err: any) {
-      console.error('[AuthModal] Sign in error:', err);
+      console.error('Sign in error:', err);
       setError(err.message || 'Failed to sign in');
       setLoading(false);
     }
