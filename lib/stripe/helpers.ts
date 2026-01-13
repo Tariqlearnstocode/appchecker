@@ -4,11 +4,35 @@ import { getMeterId } from './meter';
 
 /**
  * Get or create a Stripe customer for a user
+ * Checks subscription table first, then stripe_customers table, then creates new customer
  */
 export async function getOrCreateStripeCustomer(userId: string, email: string) {
   const supabase = await createClient();
 
-  // Check if customer already exists in our database
+  // First, check if user has a subscription (subscription table is source of truth)
+  const { data: subscription } = await supabase
+    .from('stripe_subscriptions' as any)
+    .select('stripe_customer_id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single() as { data: { stripe_customer_id: string } | null };
+
+  if (subscription?.stripe_customer_id) {
+    // Verify customer still exists in Stripe
+    try {
+      const customer = await stripe.customers.retrieve(
+        subscription.stripe_customer_id
+      );
+      if (!customer.deleted) {
+        return subscription.stripe_customer_id;
+      }
+    } catch (error) {
+      // Customer doesn't exist in Stripe, will create new one below
+    }
+  }
+
+  // Fallback: Check stripe_customers table (for pay-as-you-go users)
   const { data: existingCustomer } = await supabase
     .from('stripe_customers' as any)
     .select('stripe_customer_id')
@@ -37,7 +61,7 @@ export async function getOrCreateStripeCustomer(userId: string, email: string) {
     },
   });
 
-  // Store in database
+  // Store in database (for pay-as-you-go users who don't have subscriptions)
   await supabase.from('stripe_customers' as any).upsert({
     id: userId,
     stripe_customer_id: customer.id,
