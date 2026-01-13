@@ -115,10 +115,10 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     status: subscription.status,
     plan_tier: planTier,
     current_period_start: new Date(
-      subscription.current_period_start * 1000
+      (subscription as any).current_period_start * 1000
     ).toISOString(),
     current_period_end: new Date(
-      subscription.current_period_end * 1000
+      (subscription as any).current_period_end * 1000
     ).toISOString(),
     cancel_at_period_end: subscription.cancel_at_period_end,
     updated_at: new Date().toISOString(),
@@ -162,9 +162,9 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const subscriptionId =
-    typeof invoice.subscription === 'string'
-      ? invoice.subscription
-      : invoice.subscription?.id;
+    typeof (invoice as any).subscription === 'string'
+      ? (invoice as any).subscription
+      : (invoice as any).subscription?.id;
 
   if (subscriptionId) {
     // Update subscription status to past_due

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getActiveSubscription, getCurrentPeriodUsage } from '@/lib/stripe/helpers';
 import { stripe } from '@/lib/stripe/client';
+import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get detailed subscription info from Stripe
-    let stripeSubscription;
+    let stripeSubscription: Stripe.Subscription | null = null;
     let currentUsage = 0;
 
     try {
@@ -88,8 +89,8 @@ export async function GET(request: NextRequest) {
         ? {
             id: stripeSubscription.id,
             status: stripeSubscription.status,
-            current_period_start: stripeSubscription.current_period_start,
-            current_period_end: stripeSubscription.current_period_end,
+            current_period_start: (stripeSubscription as any).current_period_start,
+            current_period_end: (stripeSubscription as any).current_period_end,
           }
         : null,
     });

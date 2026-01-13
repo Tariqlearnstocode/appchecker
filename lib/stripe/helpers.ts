@@ -168,8 +168,8 @@ export async function getCurrentPeriodUsage(
     const meterId = await getMeterId();
 
     // Get period dates
-    const periodStart = new Date(subscription.current_period_start * 1000);
-    const periodEnd = new Date(subscription.current_period_end * 1000);
+    const periodStart = new Date((subscription as any).current_period_start * 1000);
+    const periodEnd = new Date((subscription as any).current_period_end * 1000);
 
     // Query meter events for this user in current period
     const { data: events } = await supabase
@@ -193,6 +193,7 @@ export async function getCurrentPeriodUsage(
 
 /**
  * Get subscription usage summary for current period
+ * Note: This function may not be used since we're not using usage-based billing
  */
 export async function getUsageSummary(subscriptionId: string) {
   try {
@@ -200,7 +201,9 @@ export async function getUsageSummary(subscriptionId: string) {
     const meterId = await getMeterId();
 
     // Get usage for current period
-    const usageRecords = await stripe.subscriptionItems.listUsageRecordSummaries(
+    // Note: listUsageRecordSummaries might not be available in current Stripe API version
+    // Using type assertion as workaround
+    const usageRecords = await (stripe.subscriptionItems as any).listUsageRecordSummaries(
       subscription.items.data[0].id,
       {
         limit: 1,
@@ -209,7 +212,7 @@ export async function getUsageSummary(subscriptionId: string) {
 
     return {
       subscription,
-      usageRecords: usageRecords.data,
+      usageRecords: usageRecords?.data || [],
     };
   } catch (error) {
     console.error('Error getting usage summary:', error);

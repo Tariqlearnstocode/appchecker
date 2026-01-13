@@ -1,20 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { SignOut } from '@/utils/auth-helpers/server';
-import { handleRequest } from '@/utils/auth-helpers/client';
 import Logo from '@/components/icons/Logo';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/utils/supabase/client';
 import s from './Navbar.module.css';
-import type { User } from '@supabase/supabase-js';
 
-interface NavlinksProps {
-  user?: User | null;
-}
-
-export default function Navlinks({ user }: NavlinksProps) {
+export default function Navlinks() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  };
 
   return (
     <div className="relative flex flex-row justify-between py-4 align-center md:py-6">
@@ -24,22 +27,19 @@ export default function Navlinks({ user }: NavlinksProps) {
         </Link>
         <nav className="ml-6 space-x-2 lg:block">
           {user && (
-            <Link href="/account" className={s.link}>
-              Account
+            <Link href="/settings" className={s.link}>
+              Settings
             </Link>
           )}
         </nav>
       </div>
       <div className="flex justify-end space-x-8">
         {user ? (
-          <form onSubmit={(e) => handleRequest(e, SignOut, router)}>
-            <input type="hidden" name="pathName" value={pathname} />
-            <button type="submit" className={s.link}>
-              Sign out
-            </button>
-          </form>
+          <button onClick={handleSignOut} className={s.link}>
+            Sign out
+          </button>
         ) : (
-          <Link href="/signin" className={s.link}>
+          <Link href="/" className={s.link}>
             Sign In
           </Link>
         )}

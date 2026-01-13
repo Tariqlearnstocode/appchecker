@@ -7,35 +7,27 @@ import { stripe } from './client';
 export async function setupProductsAndPrices() {
   try {
     // Create or get product
-    let product = await stripe.products.search({
+    const productSearch = await stripe.products.search({
       query: 'name:"Income Verification"',
     });
 
-    if (product.data.length === 0) {
-      product = await stripe.products.create({
+    let productId: string;
+    if (productSearch.data.length === 0) {
+      const newProduct = await stripe.products.create({
         name: 'Income Verification',
         description: 'Bank-verified income verification service',
       });
+      productId = newProduct.id;
     } else {
-      product = { data: [product.data[0]] };
+      productId = productSearch.data[0].id;
     }
-
-    const productId = product.data[0].id;
     console.log('Product ID:', productId);
-
-    // Get meter ID for usage prices
-    const meterId = process.env.STRIPE_METER_ID;
-    if (!meterId) {
-      throw new Error('STRIPE_METER_ID must be set to create usage prices');
-    }
 
     // Create prices
     const prices = {
       payAsYouGo: null as any,
       starterRecurring: null as any,
-      starterUsage: null as any,
       proRecurring: null as any,
-      proUsage: null as any,
     };
 
     // Pay-as-you-go (one-time)
@@ -66,24 +58,6 @@ export async function setupProductsAndPrices() {
     prices.starterRecurring = starterRecurring;
     console.log('Starter recurring price:', starterRecurring.id);
 
-    // Starter usage (overage $8.99)
-    const starterUsage = await stripe.prices.create({
-      product: productId,
-      currency: 'usd',
-      recurring: {
-        interval: 'month',
-      },
-      billing_scheme: 'per_unit',
-      unit_amount: 899, // $8.99
-      meter: meterId,
-      metadata: {
-        type: 'starter_usage',
-        included_quantity: '10',
-      },
-    });
-    prices.starterUsage = starterUsage;
-    console.log('Starter usage price:', starterUsage.id);
-
     // Pro recurring ($199/mo)
     const proRecurring = await stripe.prices.create({
       product: productId,
@@ -99,24 +73,6 @@ export async function setupProductsAndPrices() {
     });
     prices.proRecurring = proRecurring;
     console.log('Pro recurring price:', proRecurring.id);
-
-    // Pro usage (overage $4.99)
-    const proUsage = await stripe.prices.create({
-      product: productId,
-      currency: 'usd',
-      recurring: {
-        interval: 'month',
-      },
-      billing_scheme: 'per_unit',
-      unit_amount: 499, // $4.99
-      meter: meterId,
-      metadata: {
-        type: 'pro_usage',
-        included_quantity: '50',
-      },
-    });
-    prices.proUsage = proUsage;
-    console.log('Pro usage price:', proUsage.id);
 
     return {
       productId,
