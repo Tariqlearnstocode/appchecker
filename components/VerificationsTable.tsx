@@ -78,7 +78,8 @@ export function VerificationsTable({
           <tr className="bg-emerald-500 text-white text-left text-sm">
             <th className="px-4 py-3 font-medium w-14">No.</th>
             <th className="px-4 py-3 font-medium">Individual</th>
-            <th className="px-4 py-3 font-medium w-24">Created</th>
+            <th className="px-4 py-3 font-medium w-32">Link Created</th>
+            <th className="px-4 py-3 font-medium w-32">Link Completed</th>
             <th className="px-4 py-3 font-medium w-24">Status</th>
             <th className="px-4 py-3 font-medium w-32 text-center">Actions</th>
           </tr>
@@ -86,14 +87,14 @@ export function VerificationsTable({
         <tbody className="divide-y divide-gray-100">
           {loading ? (
             <tr>
-              <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+              <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                 Loading...
               </td>
             </tr>
           ) : displayVerifications.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+              <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                 No verifications found.
               </td>
             </tr>
@@ -129,7 +130,20 @@ export function VerificationsTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {new Date(v.created_at).toLocaleDateString()}
+                    <div>
+                      <div>{new Date(v.created_at).toLocaleDateString()}</div>
+                      <div className="text-xs text-gray-400">{new Date(v.created_at).toLocaleTimeString()}</div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {v.completed_at ? (
+                      <div>
+                        <div>{new Date(v.completed_at).toLocaleDateString()}</div>
+                        <div className="text-xs text-gray-400">{new Date(v.completed_at).toLocaleTimeString()}</div>
+                      </div>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
