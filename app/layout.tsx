@@ -22,8 +22,17 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: PropsWithChildren) {
+  console.log('[ServerAuth] RootLayout: Creating Supabase client');
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  
+  console.log('[ServerAuth] RootLayout: Calling getUser()');
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError) {
+    console.error('[ServerAuth] RootLayout: Auth error:', authError.message, authError);
+  }
+  
+  console.log('[ServerAuth] RootLayout: getUser() result - user:', user?.id || 'null', 'email:', user?.email || 'null');
 
   return (
     <html lang="en">

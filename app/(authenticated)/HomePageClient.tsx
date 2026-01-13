@@ -31,6 +31,11 @@ export default function HomePageClient({
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '' });
   const [landlordInfo, setLandlordInfo] = useState(initialLandlordInfo);
+  
+  // Log client-side auth state and initial props
+  console.log('[ClientAuth] HomePageClient: user from useAuth():', user?.id || 'null', 'email:', user?.email || 'null');
+  console.log('[ClientAuth] HomePageClient: initialLandlordInfo prop:', initialLandlordInfo);
+  console.log('[ClientAuth] HomePageClient: initialVerifications count:', initialVerifications.length);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);

@@ -12,8 +12,17 @@ import { validatePriceIds } from '@/lib/stripe/prices';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[ServerAuth] API /verifications/create: Creating Supabase client');
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    
+    console.log('[ServerAuth] API /verifications/create: Calling getUser()');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error('[ServerAuth] API /verifications/create: Auth error:', authError.message, authError);
+    }
+    
+    console.log('[ServerAuth] API /verifications/create: getUser() result - user:', user?.id || 'null', 'email:', user?.email || 'null');
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
