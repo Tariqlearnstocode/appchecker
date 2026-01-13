@@ -61,7 +61,7 @@ export function VerificationsTable({
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {title && (
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h3 className="font-medium text-gray-900">{title}</h3>
           {showPagination && (
             <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-700">
@@ -73,15 +73,16 @@ export function VerificationsTable({
         </div>
       )}
 
-      <table className="w-full">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
         <thead>
           <tr className="bg-emerald-500 text-white text-left text-sm">
-            <th className="px-4 py-3 font-medium w-14">No.</th>
-            <th className="px-4 py-3 font-medium">Individual</th>
-            <th className="px-4 py-3 font-medium w-32">Link Created</th>
-            <th className="px-4 py-3 font-medium w-32">Link Completed</th>
-            <th className="px-4 py-3 font-medium w-24">Status</th>
-            <th className="px-4 py-3 font-medium w-32 text-center">Actions</th>
+            <th className="px-3 sm:px-4 py-3 font-medium w-14">No.</th>
+            <th className="px-3 sm:px-4 py-3 font-medium">Individual</th>
+            <th className="px-3 sm:px-4 py-3 font-medium w-32">Link Created</th>
+            <th className="px-3 sm:px-4 py-3 font-medium w-32">Link Completed</th>
+            <th className="px-3 sm:px-4 py-3 font-medium w-24">Status</th>
+            <th className="px-3 sm:px-4 py-3 font-medium w-32 text-center">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -111,31 +112,31 @@ export function VerificationsTable({
                     isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <td className="px-4 py-3 text-gray-500 text-sm">
+                  <td className="px-3 sm:px-4 py-3 text-gray-500 text-sm">
                     {String(i + 1).padStart(3, '0')}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                  <td className="px-3 sm:px-4 py-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
                           isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
                         }`}
                       >
                         {v.individual_name.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{v.individual_name}</p>
-                        <p className="text-sm text-gray-500">{v.individual_email}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{v.individual_name}</p>
+                        <p className="text-sm text-gray-500 truncate">{v.individual_email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     <div>
                       <div>{new Date(v.created_at).toLocaleDateString()}</div>
                       <div className="text-xs text-gray-400">{new Date(v.created_at).toLocaleTimeString()}</div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {v.completed_at ? (
                       <div>
                         <div>{new Date(v.completed_at).toLocaleDateString()}</div>
@@ -152,7 +153,7 @@ export function VerificationsTable({
                       {status.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       {/* Copy Link */}
                       <button
@@ -207,9 +208,10 @@ export function VerificationsTable({
           )}
         </tbody>
       </table>
+      </div>
 
       {showPagination && displayVerifications.length > 0 && (
-        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 border-t border-gray-100">
           <select className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 bg-white">
             <option>25</option>
             <option>50</option>

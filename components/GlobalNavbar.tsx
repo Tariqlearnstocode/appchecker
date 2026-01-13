@@ -38,24 +38,24 @@ export default function GlobalNavbar() {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900">Income Verifier</span>
+            <span className="font-semibold text-gray-900 hidden sm:inline">Income Verifier</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {user ? (
               <>
-                <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
-                  <User className="w-4 h-4" />
-                  <span>{user.email}</span>
+                <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
+                  <User className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline truncate max-w-[120px] md:max-w-none">{user.email}</span>
                 </div>
                 <Link
                   href="/settings"
-                  className="flex items-center justify-center w-9 h-9 text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                  className="flex items-center justify-center w-9 h-9 text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex-shrink-0"
                   aria-label="Settings"
                 >
                   <Settings className="w-4 h-4" />
@@ -63,26 +63,27 @@ export default function GlobalNavbar() {
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  aria-label={signingOut ? 'Signing out' : 'Sign Out'}
                 >
-                  <LogOut className="w-4 h-4" />
-                  {signingOut ? 'Signing out...' : 'Sign Out'}
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{signingOut ? 'Signing out...' : 'Sign Out'}</span>
                 </button>
               </>
             ) : (
-                  <>
-                    <button
+              <>
+                <button
                   onClick={() => handleOpenAuthModal('signin')}
-                      className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                    >
-                      Sign In
-                    </button>
-                    <button
+                  className="px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                >
+                  Sign In
+                </button>
+                <button
                   onClick={() => handleOpenAuthModal('signup')}
-                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      Get Started
-                    </button>
+                  className="px-3 sm:px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Get Started
+                </button>
               </>
             )}
           </div>

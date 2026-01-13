@@ -315,64 +315,118 @@ export default function HomePageClient({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Tabs + Content */}
           <div className="flex-1 min-w-0">
             {/* Tab Bar */}
-            <div className="flex items-end gap-0 mb-6 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('new')}
-              className={`flex items-center gap-2 px-5 py-3 rounded-t-lg border-t border-x transition-all relative ${
-                activeTab === 'new'
-                  ? 'border-emerald-500 border-b-2 border-b-transparent bg-white text-emerald-600 shadow-sm z-10'
-                  : 'border-gray-200 border-b border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-emerald-600'
-              }`}
-            >
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">New Verification</span>
-              {activeTab === 'new' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
-              )}
-            </button>
-
-            {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
-              const labels = {
-                all: 'All Verifications',
-                pending: 'Pending',
-                completed: 'Completed',
-                expired: 'Expired',
-              };
-              const isActive = activeTab === tab;
-
-              return (
+            <div className="mb-6">
+              {/* Mobile: Stacked layout */}
+              <div className="flex flex-col sm:hidden gap-2 mb-4">
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 px-4 py-3 rounded-t-lg border-t border-x bg-white text-left transition-all relative ${
-                    isActive
-                      ? 'border-emerald-500 border-b-2 border-b-transparent bg-white shadow-sm z-10'
-                      : 'border-gray-200 hover:border-gray-300 border-b border-gray-200'
+                  onClick={() => setActiveTab('new')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                    activeTab === 'new'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-600'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
-                  <div className={`text-xs font-medium mb-1 ${
-                    isActive 
-                      ? 'text-emerald-600' 
-                      : tab === 'pending' ? 'text-amber-500' : 
-                        tab === 'completed' ? 'text-emerald-500' : 
-                        'text-gray-500'
-                  }`}>
-                    {labels[tab]}
-                  </div>
-                  <div className={`text-xl font-semibold ${
-                    isActive ? 'text-gray-900' : 'text-gray-600'
-                  }`}>{stats[tab]}</div>
-                  {isActive && (
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">New Verification</span>
+                </button>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
+                    const labels = {
+                      all: 'All',
+                      pending: 'Pending',
+                      completed: 'Completed',
+                      expired: 'Expired',
+                    };
+                    const isActive = activeTab === tab;
+
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-2 py-2 rounded-lg border-2 bg-white text-center transition-all ${
+                          isActive
+                            ? 'border-emerald-500 bg-emerald-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`text-xs font-medium mb-0.5 ${
+                          isActive 
+                            ? 'text-emerald-600' 
+                            : tab === 'pending' ? 'text-amber-500' : 
+                              tab === 'completed' ? 'text-emerald-500' : 
+                              'text-gray-500'
+                        }`}>
+                          {labels[tab]}
+                        </div>
+                        <div className={`text-base font-semibold ${
+                          isActive ? 'text-gray-900' : 'text-gray-600'
+                        }`}>{stats[tab]}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden sm:flex items-end gap-0 border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab('new')}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-t-lg border-t border-x transition-all relative ${
+                    activeTab === 'new'
+                      ? 'border-emerald-500 border-b-2 border-b-transparent bg-white text-emerald-600 shadow-sm z-10'
+                      : 'border-gray-200 border-b border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-emerald-600'
+                  }`}
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">New Verification</span>
+                  {activeTab === 'new' && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
                   )}
                 </button>
-              );
-            })}
+
+                {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
+                  const labels = {
+                    all: 'All Verifications',
+                    pending: 'Pending',
+                    completed: 'Completed',
+                    expired: 'Expired',
+                  };
+                  const isActive = activeTab === tab;
+
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex-1 px-4 py-3 rounded-t-lg border-t border-x bg-white text-left transition-all relative ${
+                        isActive
+                          ? 'border-emerald-500 border-b-2 border-b-transparent bg-white shadow-sm z-10'
+                          : 'border-gray-200 hover:border-gray-300 border-b border-gray-200'
+                      }`}
+                    >
+                      <div className={`text-xs font-medium mb-1 ${
+                        isActive 
+                          ? 'text-emerald-600' 
+                          : tab === 'pending' ? 'text-amber-500' : 
+                            tab === 'completed' ? 'text-emerald-500' : 
+                            'text-gray-500'
+                      }`}>
+                        {labels[tab]}
+                      </div>
+                      <div className={`text-xl font-semibold ${
+                        isActive ? 'text-gray-900' : 'text-gray-600'
+                      }`}>{stats[tab]}</div>
+                      {isActive && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             
             {/* Main Content */}
@@ -404,8 +458,8 @@ export default function HomePageClient({
           </div>
           
           {/* Sidebar */}
-          <div className="w-[340px] flex-shrink-0">
-            <div className="sticky top-6">
+          <div className="w-full lg:w-[340px] flex-shrink-0">
+            <div className="lg:sticky lg:top-6">
               {user && verifications.length > 0 ? (
                 <ActionsSidebar
                   selectedVerification={selectedVerification}
