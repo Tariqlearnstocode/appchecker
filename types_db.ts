@@ -210,27 +210,6 @@ export type Database = {
           },
         ]
       }
-      stripe_customers: {
-        Row: {
-          created_at: string
-          id: string
-          stripe_customer_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          stripe_customer_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          stripe_customer_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       stripe_subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -323,6 +302,7 @@ export type Database = {
           full_name: string | null
           id: string
           payment_method: Json | null
+          stripe_customer_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -331,6 +311,7 @@ export type Database = {
           full_name?: string | null
           id: string
           payment_method?: Json | null
+          stripe_customer_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -339,6 +320,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           payment_method?: Json | null
+          stripe_customer_id?: string | null
         }
         Relationships: []
       }

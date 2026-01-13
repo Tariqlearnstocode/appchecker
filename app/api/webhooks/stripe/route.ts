@@ -105,14 +105,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       ? recurringItem.price.metadata.type.replace('_recurring', '')
       : subscription.metadata?.plan_tier || 'starter';
 
-  // Save customer ID to stripe_customers table (ensures we have it even if subscription is deleted)
+  // Save customer ID to users table (ensures we have it even if subscription is deleted)
   const { error: customerError } = await supabaseAdmin
-    .from('stripe_customers' as any)
-    .upsert({
-      id: userId,
-      stripe_customer_id: customerId,
-      updated_at: new Date().toISOString(),
-    } as any);
+    .from('users')
+    .update({ stripe_customer_id: customerId } as any)
+    .eq('id', userId);
 
   if (customerError) {
     console.error('Error saving customer ID:', customerError);
@@ -210,15 +207,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       ? session.customer
       : session.customer?.id;
 
-  // Save customer ID to stripe_customers table (if not already saved)
+  // Save customer ID to users table (if not already saved)
   if (customerId) {
     const { error: customerError } = await supabaseAdmin
-      .from('stripe_customers' as any)
-      .upsert({
-        id: userId,
-        stripe_customer_id: customerId,
-        updated_at: new Date().toISOString(),
-      } as any);
+      .from('users')
+      .update({ stripe_customer_id: customerId } as any)
+      .eq('id', userId);
 
     if (customerError) {
       console.error('Error saving customer ID:', customerError);

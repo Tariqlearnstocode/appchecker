@@ -36,8 +36,8 @@ export default function Navlinks() {
       <div className="flex justify-end space-x-8">
         {user ? (
           <button onClick={handleSignOut} className={s.link}>
-            Sign out
-          </button>
+              Sign out
+            </button>
         ) : (
           <Link href="/" className={s.link}>
             Sign In

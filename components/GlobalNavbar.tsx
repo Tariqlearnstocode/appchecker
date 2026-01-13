@@ -29,7 +29,7 @@ export default function GlobalNavbar() {
       console.error('Sign out error:', err);
     } finally {
       setSigningOut(false);
-    }
+      }
   };
 
   const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
@@ -70,19 +70,19 @@ export default function GlobalNavbar() {
                 </button>
               </>
             ) : (
-              <>
-                <button
+                  <>
+                    <button
                   onClick={() => handleOpenAuthModal('signin')}
-                  className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                >
-                  Sign In
-                </button>
-                <button
+                      className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                    >
+                      Sign In
+                    </button>
+                    <button
                   onClick={() => handleOpenAuthModal('signup')}
-                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  Get Started
-                </button>
+                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      Get Started
+                    </button>
               </>
             )}
           </div>

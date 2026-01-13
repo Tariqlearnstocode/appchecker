@@ -126,15 +126,15 @@ export default function HomePageClient({
                       : 'Waiting for payment to process...',
                   });
                 }
-                return;
-              }
-
+        return;
+      }
+      
               // Success - verification created
               setVerifications([result.verification, ...verifications]);
               setFormData({ name: '', email: '' });
               setSelectedVerification(result.verification);
               setActiveTab('all');
-              
+        
               // Clear stored data
               sessionStorage.removeItem('pendingVerificationData');
               
@@ -147,7 +147,7 @@ export default function HomePageClient({
               if (attempt < maxAttempts) {
                 retryWithBackoff(attempt + 1, maxAttempts);
               } else {
-                toast({
+          toast({ 
                   title: 'Error',
                   description: 'Failed to create verification. Please try again.',
                   variant: 'destructive',
@@ -171,7 +171,7 @@ export default function HomePageClient({
       });
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
-    }
+      }
   }, [user]);
 
   async function loadVerifications() {
@@ -197,11 +197,11 @@ export default function HomePageClient({
 
   async function createVerification(e?: React.FormEvent) {
     if (e) {
-      e.preventDefault();
+    e.preventDefault();
     }
     
     if (!formData.name || !formData.email) return;
-
+    
     // Require auth to create verifications
     if (!user) {
       setAuthModalMode('signup');
@@ -240,11 +240,11 @@ export default function HomePageClient({
           };
           sessionStorage.setItem('pendingVerificationData', JSON.stringify(formDataToStore));
           
-          toast({ 
+        toast({
             title: 'Payment Required', 
             description: 'Payment required to create verification. Select a payment option.',
-          });
-          setShowPricingModal(true);
+        });
+        setShowPricingModal(true);
         } else if (response.status === 403 && result.limitReached) {
           // Check if limit was reached
           setLimitInfo({
@@ -254,11 +254,11 @@ export default function HomePageClient({
           });
           setShowLimitModal(true);
         } else {
-          toast({ 
-            title: 'Error', 
-            description: result.error || 'Failed to create verification', 
-            variant: 'destructive' 
-          });
+        toast({ 
+          title: 'Error', 
+          description: result.error || 'Failed to create verification', 
+          variant: 'destructive' 
+        });
         }
       } else {
         // Subscription user - verification created, usage reported to Stripe
@@ -396,7 +396,7 @@ export default function HomePageClient({
           {/* Sidebar */}
           <div className="w-[340px] flex-shrink-0">
             <div className="sticky top-6">
-              {user ? (
+              {user && verifications.length > 0 ? (
                 <ActionsSidebar
                   selectedVerification={selectedVerification}
                   onCopyLink={copyLink}
@@ -428,112 +428,112 @@ export default function HomePageClient({
                   }}
                 />
               ) : (
-                <div className="space-y-8 bg-slate-50 rounded-xl p-6 border border-slate-200 flex flex-col">
-                  {/* What you get */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">What you get</h3>
-                    <ul className="space-y-5">
-                      <li className="flex items-start gap-4">
-                        <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                          <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                        </div>
-                        <div>
-                          <span className="text-gray-900 font-semibold block leading-tight">Bank-Verified Income</span>
-                          <span className="text-sm text-gray-600 leading-relaxed">Income is verified directly from connected financial accounts.</span>
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-4">
-                        <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                          <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                        </div>
-                        <div>
-                          <span className="text-gray-900 font-semibold block leading-tight">Fraud Prevention</span>
-                          <span className="text-sm text-gray-600 leading-relaxed">Eliminate the risk of doctored or forged PDF documents.</span>
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-4">
-                        <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                          <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                        </div>
-                        <div>
-                          <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
-                          <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
-                          <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
-                            See example report →
-                          </Link>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
+              <div className="space-y-8 bg-slate-50 rounded-xl p-6 border border-slate-200 flex flex-col">
+                {/* What you get */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">What you get</h3>
+                  <ul className="space-y-5">
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Bank-Verified Income</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Income is verified directly from connected financial accounts.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Fraud Prevention</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Eliminate the risk of doctored or forged PDF documents.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
+                        <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
+                          See example report →
+                        </Link>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
 
-                  {/* How it works */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">How it works</h3>
-                    <div className="space-y-6 relative">
-                      {/* Vertical line connector */}
-                      <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200" />
-                      
-                      <div className="flex items-start gap-4 relative">
-                        <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
-                          1
-                        </span>
-                        <div>
-                          <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Invite</span>
-                          <span className="text-sm text-gray-600">Send a secure link to the individual.</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4 relative">
-                        <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
-                          2
-                        </span>
-                        <div>
-                          <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Connect</span>
-                          <span className="text-sm text-gray-600">Recipient securely links their bank account.</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4 relative">
-                        <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
-                          3
-                        </span>
-                        <div>
-                          <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Analyze</span>
-                          <span className="text-sm text-gray-600">View the complete income verification report in your dashboard.</span>
-                        </div>
+                {/* How it works */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">How it works</h3>
+                  <div className="space-y-6 relative">
+                    {/* Vertical line connector */}
+                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200" />
+                    
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        1
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Invite</span>
+                        <span className="text-sm text-gray-600">Send a secure link to the individual.</span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="mt-auto pt-6 border-t border-gray-200 relative">
-                    {/* Decorative sparkle */}
-                    <div className="absolute right-0 bottom-8 text-gray-300/50 text-5xl">✦</div>
-                    
-                    <h3 className="text-sm font-semibold text-gray-500 mb-3">Pricing</h3>
-                    <div className="mb-2">
-                      <span className="text-4xl font-bold text-gray-900">$14.99</span>
-                      <span className="text-gray-600 text-sm ml-1">per successful<br />verification</span>
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        2
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Connect</span>
+                        <span className="text-sm text-gray-600">Recipient securely links their bank account.</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-6">
-                      Pay as you go. No subscription required.
-                    </p>
-                    
-                    <p className="text-sm text-gray-600 mb-6">
-                      <span className="font-semibold text-gray-900">Need volume?</span> Save with{' '}
-                      <button
-                        onClick={() => setShowPricingModal(true)}
-                        className="underline hover:text-gray-900 cursor-pointer"
-                      >
-                        monthly plans
-                      </button>
-                      <br />(starting at just $4/verification).
-                    </p>
-                    
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <ShieldCheck className="w-4 h-4" />
-                      <span className="text-xs">256-bit encryption</span>
+                    <div className="flex items-start gap-4 relative">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white border border-gray-300 text-emerald-600 rounded-full flex items-center justify-center text-xs font-bold z-10">
+                        3
+                      </span>
+                      <div>
+                        <span className="text-gray-900 font-medium block text-sm leading-none mb-1">Analyze</span>
+                        <span className="text-sm text-gray-600">View the complete income verification report in your dashboard.</span>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Pricing */}
+                <div className="mt-auto pt-6 border-t border-gray-200 relative">
+                  {/* Decorative sparkle */}
+                  <div className="absolute right-0 bottom-8 text-gray-300/50 text-5xl">✦</div>
+                  
+                  <h3 className="text-sm font-semibold text-gray-500 mb-3">Pricing</h3>
+                  <div className="mb-2">
+                    <span className="text-4xl font-bold text-gray-900">$14.99</span>
+                    <span className="text-gray-600 text-sm ml-1">per successful<br />verification</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Pay as you go. No subscription required.
+                  </p>
+                  
+                  <p className="text-sm text-gray-600 mb-6">
+                    <span className="font-semibold text-gray-900">Need volume?</span> Save with{' '}
+                    <button
+                      onClick={() => setShowPricingModal(true)}
+                      className="underline hover:text-gray-900 cursor-pointer"
+                    >
+                      monthly plans
+                    </button>
+                    <br />(starting at just $4/verification).
+                  </p>
+                  
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span className="text-xs">256-bit encryption</span>
+                  </div>
+                </div>
+              </div>
               )}
             </div>
           </div>

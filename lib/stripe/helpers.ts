@@ -1,22 +1,23 @@
 import { stripe } from './client';
 import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from '@/utils/supabase/admin';
 import { getMeterId } from './meter';
 
 /**
  * Get or create a Stripe customer for a user
- * Checks subscription table first, then stripe_customers table, then creates new customer
+ * Checks subscription table first, then users table, then creates new customer
  */
 export async function getOrCreateStripeCustomer(userId: string, email: string) {
   const supabase = await createClient();
 
   // First, check if user has a subscription (subscription table is source of truth)
-  const { data: subscription } = await supabase
+  const { data: subscription, error: subscriptionError } = await supabase
     .from('stripe_subscriptions' as any)
     .select('stripe_customer_id')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single() as { data: { stripe_customer_id: string } | null };
+    .maybeSingle() as { data: { stripe_customer_id: string } | null; error: any };
 
   if (subscription?.stripe_customer_id) {
     // Verify customer still exists in Stripe
@@ -29,31 +30,40 @@ export async function getOrCreateStripeCustomer(userId: string, email: string) {
       }
     } catch (error) {
       // Customer doesn't exist in Stripe, will create new one below
+      console.error('Error retrieving customer from Stripe:', error);
     }
   }
 
-  // Fallback: Check stripe_customers table (for pay-as-you-go users)
-  const { data: existingCustomer } = await supabase
-    .from('stripe_customers' as any)
+  // Fallback: Check users table for stripe_customer_id (for pay-as-you-go users)
+  const { data: user, error: userError } = await supabase
+    .from('users')
     .select('stripe_customer_id')
     .eq('id', userId)
-    .single() as { data: { stripe_customer_id: string } | null };
+    .maybeSingle() as { data: { stripe_customer_id: string | null } | null; error: any };
 
-  if (existingCustomer) {
+  if (userError && userError.code !== 'PGRST116') {
+    // PGRST116 is "no rows returned" which is expected, log other errors
+    console.error('Error checking users table:', userError);
+  }
+
+  if (user?.stripe_customer_id) {
     // Verify customer still exists in Stripe
     try {
       const customer = await stripe.customers.retrieve(
-        existingCustomer.stripe_customer_id
+        user.stripe_customer_id
       );
       if (!customer.deleted) {
-        return existingCustomer.stripe_customer_id;
+        console.log(`Found existing Stripe customer ${user.stripe_customer_id} for user ${userId}`);
+        return user.stripe_customer_id;
       }
     } catch (error) {
       // Customer doesn't exist in Stripe, create new one
+      console.error('Error retrieving customer from Stripe:', error);
     }
   }
 
-  // Create new Stripe customer
+  // No existing customer found - create new one
+  console.log(`Creating new Stripe customer for user ${userId}`);
   const customer = await stripe.customers.create({
     email,
     metadata: {
@@ -61,12 +71,19 @@ export async function getOrCreateStripeCustomer(userId: string, email: string) {
     },
   });
 
-  // Store in database (for pay-as-you-go users who don't have subscriptions)
-  await supabase.from('stripe_customers' as any).upsert({
-    id: userId,
-    stripe_customer_id: customer.id,
-    updated_at: new Date().toISOString(),
-  } as any);
+  // Store in database (users table)
+  // Use admin client to bypass RLS for updating stripe_customer_id
+  const { error: updateError } = await supabaseAdmin
+    .from('users')
+    .update({ stripe_customer_id: customer.id } as any)
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('Error saving customer to database:', updateError);
+    throw new Error(`Failed to save Stripe customer to database: ${updateError.message}`);
+  } else {
+    console.log(`Saved Stripe customer ${customer.id} to database for user ${userId}`);
+  }
 
   return customer.id;
 }

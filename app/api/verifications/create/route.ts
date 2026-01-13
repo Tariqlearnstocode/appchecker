@@ -224,19 +224,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Get Stripe customer ID for meter reporting
-      const { data: customer } = await supabase
-        .from('stripe_customers' as any)
+      const { data: userProfile } = await supabase
+        .from('users')
         .select('stripe_customer_id')
         .eq('id', user.id)
-        .single() as { data: { stripe_customer_id: string } | null };
+        .single() as { data: { stripe_customer_id: string | null } | null };
 
       // Report usage to meter for analytics (even for pay-as-you-go)
-      if (customer) {
+      if (userProfile?.stripe_customer_id) {
         try {
           await reportVerificationUsage(
             user.id,
             verification.id,
-            customer.stripe_customer_id
+            userProfile.stripe_customer_id
           );
         } catch (usageError) {
           console.error('Error reporting usage:', usageError);
