@@ -314,6 +314,7 @@ export default function HomePageClient({
   };
 
   const showHeader = (!user || verifications.length === 0) && !headerDismissed;
+  const showTabs = user && verifications.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -358,6 +359,7 @@ export default function HomePageClient({
           {/* Left Column - Tabs + Content */}
           <div className="flex-1 min-w-0">
             {/* Tab Bar */}
+            {showTabs && (
             <div className="mb-6">
               {/* Mobile: Stacked layout */}
               <div className="flex flex-col sm:hidden gap-2 mb-4">
@@ -466,10 +468,11 @@ export default function HomePageClient({
                 })}
               </div>
             </div>
+            )}
             
             {/* Main Content */}
             <div>
-              {activeTab === 'new' ? (
+              {!showTabs || activeTab === 'new' ? (
                 <NewVerificationTab
                   landlordInfo={landlordInfo}
                   setLandlordInfo={setLandlordInfo}
@@ -531,43 +534,6 @@ export default function HomePageClient({
                 />
               ) : (
               <div className="space-y-8 bg-slate-50 rounded-xl p-6 border border-slate-200 flex flex-col">
-                {/* What you get */}
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">What you get</h3>
-                  <ul className="space-y-5">
-                    <li className="flex items-start gap-4">
-                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                      </div>
-                      <div>
-                        <span className="text-gray-900 font-semibold block leading-tight">Bank-Verified Income</span>
-                        <span className="text-sm text-gray-600 leading-relaxed">Income is verified directly from connected financial accounts.</span>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-4">
-                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                      </div>
-                      <div>
-                        <span className="text-gray-900 font-semibold block leading-tight">Fraud Prevention</span>
-                        <span className="text-sm text-gray-600 leading-relaxed">Eliminate the risk of doctored or forged PDF documents.</span>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-4">
-                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
-                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                      </div>
-                      <div>
-                        <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
-                        <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
-                        <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
-                          See example report →
-                        </Link>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-
                 {/* How it works */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">How it works</h3>
@@ -603,6 +569,43 @@ export default function HomePageClient({
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* What you get */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">What you get</h3>
+                  <ul className="space-y-5">
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Bank-Verified Income</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Income is verified directly from connected financial accounts.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Fraud Prevention</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Eliminate the risk of doctored or forged PDF documents.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="mt-1 bg-emerald-500/10 p-1 rounded-md flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
+                        <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
+                          See example report →
+                        </Link>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
 
                 {/* Pricing */}

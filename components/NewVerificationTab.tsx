@@ -36,9 +36,7 @@ export function NewVerificationTab({
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Create Income Verification Request</h2>
-          <p className="text-sm text-gray-600">
-            Stop chasing PDF bank statements. Get verified income data directly from the source in minutes.
-          </p>
+       
         </div>
         <form onSubmit={onSubmit} className="p-6">
           <div className="space-y-6">
@@ -157,23 +155,33 @@ export function NewVerificationTab({
                 href="/report/example"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 w-full flex items-center gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 p-2 pr-4 rounded-xl transition-all group"
+                className="flex-1 w-full flex items-center gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 p-3 rounded-xl transition-all group"
               >
-                {/* Miniature "Report" Thumbnail Icon */}
-                <div className="relative w-10 h-12 bg-gray-50 border border-gray-200 rounded shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <div className="absolute inset-x-1 top-2 h-1 bg-gray-200 rounded-full" />
-                  <div className="absolute inset-x-1 top-4 h-1 bg-gray-200 rounded-full w-2/3" />
-                  <div className="w-full h-4 bg-emerald-500/10 absolute bottom-0 flex items-center justify-center">
-                    <div className="w-4 h-1 bg-emerald-500 rounded-full opacity-50" />
+                {/* Document Preview Card */}
+                <div className="relative w-16 h-20 bg-white border border-gray-300 rounded-md shadow-md flex-shrink-0 overflow-hidden">
+                  {/* Document content lines */}
+                  <div className="absolute inset-0 p-2.5 flex flex-col justify-start gap-1.5">
+                    <div className="h-0.5 bg-gray-300 rounded-full w-full" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-full" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-4/5" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-full" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-3/4" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-5/6" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-2/3" />
+                    <div className="h-0.5 bg-gray-300 rounded-full w-full" />
                   </div>
-                  <Eye className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                  
+                  {/* Green "Preview Report" button overlay */}
+                  <div className="absolute bottom-2 right-2 bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-lg z-10">
+                    Preview Report
+                  </div>
                 </div>
 
-                <div className="text-left min-w-0">
+                <div className="text-left min-w-0 flex-1">
                   <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Output</span>
                   <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                     Preview Report
-                    <ArrowUpRight className="w-3 h-3 text-gray-400 group-hover:text-emerald-500 flex-shrink-0" />
+                    <ArrowUpRight className="w-3 h-3 text-gray-400 group-hover:text-emerald-500 flex-shrink-0 transition-colors" />
                   </span>
                 </div>
               </Link>
