@@ -11,14 +11,35 @@ import 'styles/main.css';
 const title = 'Income Verification';
 const description = 'Verify applicant income, bank balances, and transaction history securely via Plaid.';
 
+const siteUrl = getURL();
+const ogImage = `${siteUrl}/opengraph-image.png`;
+
 export const metadata: Metadata = {
-  metadataBase: new URL(getURL()),
+  metadataBase: new URL(siteUrl),
   title: title,
   description: description,
   openGraph: {
     title: title,
-    description: description
-  }
+    description: description,
+    url: siteUrl,
+    siteName: 'Income Verification',
+    images: [
+      {
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: 'Income Verification',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: title,
+    description: description,
+    images: [ogImage],
+  },
 };
 
 export default async function RootLayout({ children }: PropsWithChildren) {

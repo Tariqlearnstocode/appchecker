@@ -320,17 +320,20 @@ export default function HomePageClient({
           {/* Left Column - Tabs + Content */}
           <div className="flex-1 min-w-0">
             {/* Tab Bar */}
-            <div className="flex items-stretch gap-3 mb-6">
+            <div className="flex items-end gap-0 mb-6 border-b border-gray-200">
             <button
               onClick={() => setActiveTab('new')}
-              className={`flex items-center gap-2 px-5 py-4 rounded-lg border transition-all ${
+              className={`flex items-center gap-2 px-5 py-3 rounded-t-lg border-t border-x transition-all relative ${
                 activeTab === 'new'
-                  ? 'border-emerald-500 bg-white text-emerald-600'
-                  : 'border-dashed border-gray-300 bg-white text-gray-600 hover:border-emerald-400 hover:text-emerald-600'
+                  ? 'border-emerald-500 border-b-2 border-b-transparent bg-white text-emerald-600 shadow-sm z-10'
+                  : 'border-gray-200 border-b border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-emerald-600'
               }`}
             >
               <Plus className="w-5 h-5" />
               <span className="font-medium">New Verification</span>
+              {activeTab === 'new' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+              )}
             </button>
 
             {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
@@ -346,20 +349,27 @@ export default function HomePageClient({
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 px-4 py-3 rounded-lg border bg-white text-left transition-all ${
+                  className={`flex-1 px-4 py-3 rounded-t-lg border-t border-x bg-white text-left transition-all relative ${
                     isActive
-                      ? 'border-emerald-500 ring-1 ring-emerald-100'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-emerald-500 border-b-2 border-b-transparent bg-white shadow-sm z-10'
+                      : 'border-gray-200 hover:border-gray-300 border-b border-gray-200'
                   }`}
                 >
-                  <div className={`text-xs mb-1 ${
-                    tab === 'pending' ? 'text-amber-500' : 
-                    tab === 'completed' ? 'text-emerald-500' : 
-                    'text-gray-500'
+                  <div className={`text-xs font-medium mb-1 ${
+                    isActive 
+                      ? 'text-emerald-600' 
+                      : tab === 'pending' ? 'text-amber-500' : 
+                        tab === 'completed' ? 'text-emerald-500' : 
+                        'text-gray-500'
                   }`}>
                     {labels[tab]}
                   </div>
-                  <div className="text-xl font-semibold text-gray-900">{stats[tab]}</div>
+                  <div className={`text-xl font-semibold ${
+                    isActive ? 'text-gray-900' : 'text-gray-600'
+                  }`}>{stats[tab]}</div>
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                  )}
                 </button>
               );
             })}
