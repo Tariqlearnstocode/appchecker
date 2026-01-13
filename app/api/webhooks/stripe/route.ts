@@ -105,6 +105,19 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       ? recurringItem.price.metadata.type.replace('_recurring', '')
       : subscription.metadata?.plan_tier || 'starter';
 
+  // Save customer ID to stripe_customers table (ensures we have it even if subscription is deleted)
+  const { error: customerError } = await supabaseAdmin
+    .from('stripe_customers' as any)
+    .upsert({
+      id: userId,
+      stripe_customer_id: customerId,
+      updated_at: new Date().toISOString(),
+    } as any);
+
+  if (customerError) {
+    console.error('Error saving customer ID:', customerError);
+  }
+
   // Upsert subscription in database
   const { error: upsertError } = await supabaseAdmin.from('stripe_subscriptions' as any).upsert({
     user_id: userId,
@@ -185,15 +198,38 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  // Only handle one-time payments (pay-as-you-go)
-  if (session.mode !== 'payment') {
-    return; // Subscription payments are handled by subscription webhooks
-  }
-
   const userId = session.metadata?.user_id;
   if (!userId) {
     console.error('No user_id in checkout session metadata');
     return;
+  }
+
+  // Get customer ID from session
+  const customerId =
+    typeof session.customer === 'string'
+      ? session.customer
+      : session.customer?.id;
+
+  // Save customer ID to stripe_customers table (if not already saved)
+  if (customerId) {
+    const { error: customerError } = await supabaseAdmin
+      .from('stripe_customers' as any)
+      .upsert({
+        id: userId,
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      } as any);
+
+    if (customerError) {
+      console.error('Error saving customer ID:', customerError);
+    } else {
+      console.log(`Customer ${customerId} saved for user ${userId}`);
+    }
+  }
+
+  // Only handle one-time payments (pay-as-you-go)
+  if (session.mode !== 'payment') {
+    return; // Subscription payments are handled by subscription webhooks
   }
 
   // Get payment intent ID if available

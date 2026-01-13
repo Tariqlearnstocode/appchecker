@@ -40,7 +40,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -51,6 +51,31 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
       });
 
       if (signUpError) throw signUpError;
+
+      // Create Stripe customer for the new user
+      if (signUpData.user) {
+        try {
+          const response = await fetch('/api/stripe/create-customer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: signUpData.user.id,
+              email: signUpData.user.email || email,
+            }),
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to create Stripe customer, but user account was created');
+            // Don't fail sign up if Stripe customer creation fails
+            // Customer will be created lazily on first payment
+          }
+        } catch (stripeError) {
+          console.error('Error creating Stripe customer:', stripeError);
+          // Don't fail sign up if Stripe customer creation fails
+        }
+      }
 
       // Success - modal will close via onAuthStateChange in AuthContext
       onClose();
