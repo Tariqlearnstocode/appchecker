@@ -76,7 +76,7 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
       }
 
       if (data.url) {
-        window.location.href = data.url;
+        window.open(data.url, '_blank');
       }
     } catch (error) {
       toast({
