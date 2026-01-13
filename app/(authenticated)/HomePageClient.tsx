@@ -66,6 +66,109 @@ export default function HomePageClient({
     }
   }, [user]);
 
+  // Handle payment success redirect and auto-retry verification
+  useEffect(() => {
+    if (!user) return; // Only run if user is authenticated
+
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    
+    if (paymentStatus === 'success') {
+      const storedData = sessionStorage.getItem('pendingVerificationData');
+      if (storedData) {
+        // Wait for webhook to process payment, then retry with exponential backoff
+        const retryWithBackoff = async (attempt: number = 1, maxAttempts: number = 3) => {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 1s, 2s, 4s max
+          
+          setTimeout(async () => {
+            try {
+              const formData = JSON.parse(storedData);
+              const response = await fetch('/api/verifications/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  individual_name: formData.individual_name,
+                  individual_email: formData.individual_email,
+                  requested_by_name: formData.requested_by_name,
+                  requested_by_email: formData.requested_by_email,
+                  purpose: formData.purpose,
+                }),
+              });
+
+              const result = await response.json();
+
+              if (!response.ok) {
+                // Payment still not available - retry if we have attempts left
+                if (response.status === 402 && result.paymentRequired && attempt < maxAttempts) {
+                  retryWithBackoff(attempt + 1, maxAttempts);
+                  return;
+                }
+                
+                // Check if limit was reached
+                if (response.status === 403 && result.limitReached) {
+                  setLimitInfo({
+                    currentUsage: result.currentUsage,
+                    limit: result.limit,
+                    plan: result.plan,
+                  });
+                  setShowLimitModal(true);
+                  sessionStorage.removeItem('pendingVerificationData');
+                } else {
+                  toast({
+                    title: 'Payment Processing',
+                    description: attempt >= maxAttempts 
+                      ? 'Payment is still processing. Please wait a moment and try creating the verification again.'
+                      : 'Waiting for payment to process...',
+                  });
+                }
+                return;
+              }
+
+              // Success - verification created
+              setVerifications([result.verification, ...verifications]);
+              setFormData({ name: '', email: '' });
+              setSelectedVerification(result.verification);
+              setActiveTab('all');
+              
+              // Clear stored data
+              sessionStorage.removeItem('pendingVerificationData');
+              
+              toast({ 
+                title: 'Success!', 
+                description: 'Payment processed and verification created successfully. Click "Send Email" to notify the recipient.' 
+              });
+            } catch (error) {
+              console.error('Error auto-retrying verification:', error);
+              if (attempt < maxAttempts) {
+                retryWithBackoff(attempt + 1, maxAttempts);
+              } else {
+                toast({
+                  title: 'Error',
+                  description: 'Failed to create verification. Please try again.',
+                  variant: 'destructive',
+                });
+              }
+            }
+          }, delay);
+        };
+
+        retryWithBackoff();
+      }
+      
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (paymentStatus === 'canceled') {
+      // Clear stored data on cancel
+      sessionStorage.removeItem('pendingVerificationData');
+      toast({
+        title: 'Payment Canceled',
+        description: 'You can try again when ready.',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [user]);
+
   async function loadVerifications() {
     if (!user) return;
     
@@ -87,8 +190,10 @@ export default function HomePageClient({
     }
   }
 
-  async function createVerification(e: React.FormEvent) {
-    e.preventDefault();
+  async function createVerification(e?: React.FormEvent) {
+    if (e) {
+      e.preventDefault();
+    }
     
     if (!formData.name || !formData.email) return;
 
@@ -117,8 +222,26 @@ export default function HomePageClient({
       const result = await response.json();
 
       if (!response.ok) {
-        // Check if limit was reached
-        if (response.status === 403 && result.limitReached) {
+        // Check if payment is required (402)
+        if (response.status === 402 && (result.paymentRequired || result.requiresPayment)) {
+          // Pay-as-you-go: payment required
+          // Store form data for auto-retry after payment
+          const formDataToStore = {
+            individual_name: formData.name,
+            individual_email: formData.email,
+            requested_by_name: landlordInfo.name || null,
+            requested_by_email: landlordInfo.email || null,
+            purpose: null,
+          };
+          sessionStorage.setItem('pendingVerificationData', JSON.stringify(formDataToStore));
+          
+          toast({ 
+            title: 'Payment Required', 
+            description: 'Payment required to create verification. Select a payment option.',
+          });
+          setShowPricingModal(true);
+        } else if (response.status === 403 && result.limitReached) {
+          // Check if limit was reached
           setLimitInfo({
             currentUsage: result.currentUsage,
             limit: result.limit,
@@ -132,20 +255,16 @@ export default function HomePageClient({
             variant: 'destructive' 
           });
         }
-      } else if (result.paymentRequired) {
-        // Pay-as-you-go: payment required
-        toast({ 
-          title: 'Payment Required', 
-          description: 'Please complete payment to create a verification. Click "Get Started" in the pricing section.',
-          variant: 'destructive'
-        });
-        setShowPricingModal(true);
       } else {
         // Subscription user - verification created, usage reported to Stripe
         setVerifications([result.verification, ...verifications]);
         setFormData({ name: '', email: '' });
         setSelectedVerification(result.verification);
         setActiveTab('all');
+        
+        // Clear any stored pending data (in case user manually created after payment)
+        sessionStorage.removeItem('pendingVerificationData');
+        
         toast({ 
           title: 'Created!', 
           description: 'Verification created successfully. Click "Send Email" to notify the recipient.' 
@@ -161,6 +280,7 @@ export default function HomePageClient({
       setCreating(false);
     }
   }
+
 
   function copyLink(token: string) {
     const link = `${window.location.origin}/verify/${token}`;

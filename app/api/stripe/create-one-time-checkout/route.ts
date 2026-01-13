@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Store pending payment in database
     const { error: insertError } = await supabaseAdmin
-      .from('one_time_payments')
+      .from('one_time_payments' as any)
       .insert({
         user_id: user.id,
         stripe_checkout_session_id: session.id,

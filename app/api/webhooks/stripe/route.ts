@@ -106,7 +106,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       : subscription.metadata?.plan_tier || 'starter';
 
   // Upsert subscription in database
-  const { error: upsertError } = await supabaseAdmin.from('stripe_subscriptions').upsert({
+  const { error: upsertError } = await supabaseAdmin.from('stripe_subscriptions' as any).upsert({
     user_id: userId,
     stripe_subscription_id: subscription.id,
     stripe_customer_id: customerId,
@@ -140,7 +140,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   // Update subscription status to canceled
   const { error: updateError } = await supabaseAdmin
-    .from('stripe_subscriptions')
+    .from('stripe_subscriptions' as any)
     .update({
       status: 'canceled',
       updated_at: new Date().toISOString(),
@@ -169,7 +169,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   if (subscriptionId) {
     // Update subscription status to past_due
     const { error: updateError } = await supabaseAdmin
-      .from('stripe_subscriptions')
+      .from('stripe_subscriptions' as any)
       .update({
         status: 'past_due',
         updated_at: new Date().toISOString(),
@@ -204,7 +204,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Update payment record to completed
   const { error: updateError } = await supabaseAdmin
-    .from('one_time_payments')
+    .from('one_time_payments' as any)
     .update({
       status: 'completed',
       stripe_payment_intent_id: paymentIntentId || null,

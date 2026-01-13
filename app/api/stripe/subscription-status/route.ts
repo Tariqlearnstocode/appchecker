@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (!subscription) {
       // Pay-as-you-go user - check if they have available payment
       const { data: availablePayment } = await supabase
-        .from('one_time_payments')
+        .from('one_time_payments' as any)
         .select('id')
         .eq('user_id', user.id)
         .eq('status', 'completed')

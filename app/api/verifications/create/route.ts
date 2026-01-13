@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
         // Get Stripe customer ID for meter reporting
         const { data: customer } = await supabase
-          .from('stripe_customers')
+          .from('stripe_customers' as any)
           .select('stripe_customer_id')
           .eq('id', user.id)
           .single() as { data: { stripe_customer_id: string } | null };
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       // No subscription - pay-as-you-go
       // Check if user has a completed one-time payment ready to use
       const { data: availablePayment } = await supabase
-        .from('one_time_payments')
+        .from('one_time_payments' as any)
         .select('id, stripe_checkout_session_id')
         .eq('user_id', user.id)
         .eq('status', 'completed')
@@ -205,12 +205,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Mark payment as used
-      const { error: updateError } = await (supabaseAdmin as any)
-        .from('one_time_payments')
+      const { error: updateError } = await supabaseAdmin
+        .from('one_time_payments' as any)
         .update({
           verification_id: verification.id,
           used_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', availablePayment.id);
 
       if (updateError) {
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
 
       // Get Stripe customer ID for meter reporting
       const { data: customer } = await supabase
-        .from('stripe_customers')
+        .from('stripe_customers' as any)
         .select('stripe_customer_id')
         .eq('id', user.id)
         .single() as { data: { stripe_customer_id: string } | null };

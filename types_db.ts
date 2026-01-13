@@ -50,62 +50,6 @@ export type Database = {
         }
         Relationships: []
       }
-      credit_transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string | null
-          id: string
-          stripe_payment_intent_id: string | null
-          transaction_type: string
-          user_id: string
-          verification_id: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          stripe_payment_intent_id?: string | null
-          transaction_type: string
-          user_id: string
-          verification_id?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          stripe_payment_intent_id?: string | null
-          transaction_type?: string
-          user_id?: string
-          verification_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "credit_transactions_verification_id_fkey"
-            columns: ["verification_id"]
-            isOneToOne: false
-            referencedRelation: "income_verifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customers: {
-        Row: {
-          id: string
-          stripe_customer_id: string | null
-        }
-        Insert: {
-          id: string
-          stripe_customer_id?: string | null
-        }
-        Update: {
-          id?: string
-          stripe_customer_id?: string | null
-        }
-        Relationships: []
-      }
       income_verifications: {
         Row: {
           completed_at: string | null
@@ -125,10 +69,9 @@ export type Database = {
           requested_by_email: string | null
           requested_by_name: string | null
           retention_expires_at: string | null
-          session_id: string | null
           status: Database["public"]["Enums"]["verification_status"]
           updated_at: string
-          user_id: string | null
+          user_id: string
           verification_token: string
         }
         Insert: {
@@ -149,10 +92,9 @@ export type Database = {
           requested_by_email?: string | null
           requested_by_name?: string | null
           retention_expires_at?: string | null
-          session_id?: string | null
           status?: Database["public"]["Enums"]["verification_status"]
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           verification_token?: string
         }
         Update: {
@@ -173,164 +115,169 @@ export type Database = {
           requested_by_email?: string | null
           requested_by_name?: string | null
           retention_expires_at?: string | null
-          session_id?: string | null
           status?: Database["public"]["Enums"]["verification_status"]
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           verification_token?: string
         }
         Relationships: []
       }
-      prices: {
+      meter_events: {
         Row: {
-          active: boolean | null
-          currency: string | null
-          description: string | null
+          created_at: string
+          event_name: string
           id: string
-          interval: Database["public"]["Enums"]["pricing_plan_interval"] | null
-          interval_count: number | null
-          metadata: Json | null
-          product_id: string | null
-          trial_period_days: number | null
-          type: Database["public"]["Enums"]["pricing_type"] | null
-          unit_amount: number | null
+          meter_id: string | null
+          stripe_event_id: string | null
+          user_id: string
+          value: number
+          verification_id: string
         }
         Insert: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
-          id: string
-          interval?: Database["public"]["Enums"]["pricing_plan_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["pricing_type"] | null
-          unit_amount?: number | null
+          created_at?: string
+          event_name?: string
+          id?: string
+          meter_id?: string | null
+          stripe_event_id?: string | null
+          user_id: string
+          value?: number
+          verification_id: string
         }
         Update: {
-          active?: boolean | null
-          currency?: string | null
-          description?: string | null
+          created_at?: string
+          event_name?: string
           id?: string
-          interval?: Database["public"]["Enums"]["pricing_plan_interval"] | null
-          interval_count?: number | null
-          metadata?: Json | null
-          product_id?: string | null
-          trial_period_days?: number | null
-          type?: Database["public"]["Enums"]["pricing_type"] | null
-          unit_amount?: number | null
+          meter_id?: string | null
+          stripe_event_id?: string | null
+          user_id?: string
+          value?: number
+          verification_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "prices_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "meter_events_verification_id_fkey"
+            columns: ["verification_id"]
             isOneToOne: false
-            referencedRelation: "products"
+            referencedRelation: "income_verifications"
             referencedColumns: ["id"]
           },
         ]
       }
-      products: {
+      one_time_payments: {
         Row: {
-          active: boolean | null
-          description: string | null
+          amount: number
+          completed_at: string | null
+          created_at: string
           id: string
-          image: string | null
-          metadata: Json | null
-          name: string | null
+          status: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id: string | null
+          used_at: string | null
+          user_id: string
+          verification_id: string | null
         }
         Insert: {
-          active?: boolean | null
-          description?: string | null
-          id: string
-          image?: string | null
-          metadata?: Json | null
-          name?: string | null
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id?: string | null
+          used_at?: string | null
+          user_id: string
+          verification_id?: string | null
         }
         Update: {
-          active?: boolean | null
-          description?: string | null
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
           id?: string
-          image?: string | null
-          metadata?: Json | null
-          name?: string | null
+          status?: string
+          stripe_checkout_session_id?: string
+          stripe_payment_intent_id?: string | null
+          used_at?: string | null
+          user_id?: string
+          verification_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_time_payments_verification_id_fkey"
+            columns: ["verification_id"]
+            isOneToOne: false
+            referencedRelation: "income_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stripe_customers: {
+        Row: {
+          created_at: string
+          id: string
+          stripe_customer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          stripe_customer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          stripe_customer_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
-      subscriptions: {
+      stripe_subscriptions: {
         Row: {
-          cancel_at: string | null
           cancel_at_period_end: boolean | null
-          canceled_at: string | null
-          created: string
-          credits_included: number | null
-          credits_used_this_period: number | null
-          current_period_end: string
-          current_period_start: string
-          ended_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
           id: string
-          metadata: Json | null
-          price_id: string | null
-          quantity: number | null
-          status: Database["public"]["Enums"]["subscription_status"] | null
-          stripe_customer_id: string | null
-          tier: string | null
-          trial_end: string | null
-          trial_start: string | null
+          plan_tier: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          stripe_usage_price_id: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          cancel_at?: string | null
           cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
-          created?: string
-          credits_included?: number | null
-          credits_used_this_period?: number | null
-          current_period_end?: string
-          current_period_start?: string
-          ended_at?: string | null
-          id: string
-          metadata?: Json | null
-          price_id?: string | null
-          quantity?: number | null
-          status?: Database["public"]["Enums"]["subscription_status"] | null
-          stripe_customer_id?: string | null
-          tier?: string | null
-          trial_end?: string | null
-          trial_start?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_tier?: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          stripe_usage_price_id?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          cancel_at?: string | null
           cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
-          created?: string
-          credits_included?: number | null
-          credits_used_this_period?: number | null
-          current_period_end?: string
-          current_period_start?: string
-          ended_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
           id?: string
-          metadata?: Json | null
-          price_id?: string | null
-          quantity?: number | null
-          status?: Database["public"]["Enums"]["subscription_status"] | null
-          stripe_customer_id?: string | null
-          tier?: string | null
-          trial_end?: string | null
-          trial_start?: string | null
+          plan_tier?: string | null
+          status?: string
+          stripe_customer_id?: string
+          stripe_price_id?: string
+          stripe_subscription_id?: string
+          stripe_usage_price_id?: string | null
+          updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_price_id_fkey"
-            columns: ["price_id"]
-            isOneToOne: false
-            referencedRelation: "prices"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_credits: {
         Row: {
@@ -395,53 +342,6 @@ export type Database = {
         }
         Relationships: []
       }
-      verification_payments: {
-        Row: {
-          amount_cents: number
-          created_at: string
-          currency: string | null
-          id: string
-          paid_at: string | null
-          payment_type: string
-          status: string | null
-          stripe_payment_intent_id: string | null
-          user_id: string
-          verification_id: string
-        }
-        Insert: {
-          amount_cents: number
-          created_at?: string
-          currency?: string | null
-          id?: string
-          paid_at?: string | null
-          payment_type: string
-          status?: string | null
-          stripe_payment_intent_id?: string | null
-          user_id: string
-          verification_id: string
-        }
-        Update: {
-          amount_cents?: number
-          created_at?: string
-          currency?: string | null
-          id?: string
-          paid_at?: string | null
-          payment_type?: string
-          status?: string | null
-          stripe_payment_intent_id?: string | null
-          user_id?: string
-          verification_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "verification_payments_verification_id_fkey"
-            columns: ["verification_id"]
-            isOneToOne: true
-            referencedRelation: "income_verifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -451,16 +351,6 @@ export type Database = {
       delete_expired_verifications: { Args: never; Returns: number }
       delete_user_data: { Args: { target_user_id: string }; Returns: boolean }
       export_user_data: { Args: { target_user_id: string }; Returns: Json }
-      grant_credits: {
-        Args: {
-          credit_amount: number
-          description?: string
-          stripe_payment_intent_id?: string
-          target_user_id: string
-          transaction_type: string
-        }
-        Returns: undefined
-      }
       mask_account_number: { Args: { account_num: string }; Returns: string }
       reset_subscription_credits: {
         Args: {
@@ -470,14 +360,6 @@ export type Database = {
           target_user_id: string
         }
         Returns: undefined
-      }
-      use_credit: {
-        Args: {
-          charge_overage?: boolean
-          target_user_id: string
-          verification_id: string
-        }
-        Returns: Json
       }
     }
     Enums: {
@@ -647,3 +529,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.67.1 (currently installed v1.226.4)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

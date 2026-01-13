@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import HomePageClient from './HomePageClient';
+import { Verification } from '@/components/VerificationsTable';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser();
   
   // Fetch verifications filtered by user_id if authenticated
-  let verifications = [];
+  let verifications: Verification[] = [];
   let landlordInfo = { name: '', email: '' };
   
   if (user) {

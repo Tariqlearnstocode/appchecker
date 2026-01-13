@@ -10,7 +10,7 @@ export async function getOrCreateStripeCustomer(userId: string, email: string) {
 
   // Check if customer already exists in our database
   const { data: existingCustomer } = await supabase
-    .from('stripe_customers')
+    .from('stripe_customers' as any)
     .select('stripe_customer_id')
     .eq('id', userId)
     .single() as { data: { stripe_customer_id: string } | null };
@@ -38,7 +38,7 @@ export async function getOrCreateStripeCustomer(userId: string, email: string) {
   });
 
   // Store in database
-  await supabase.from('stripe_customers').upsert({
+  await supabase.from('stripe_customers' as any).upsert({
     id: userId,
     stripe_customer_id: customer.id,
     updated_at: new Date().toISOString(),
@@ -78,21 +78,23 @@ export async function reportVerificationUsage(
   try {
     // Report usage to Stripe meter for tracking
     // Note: identifier is now the customer ID since we're not using subscription items
+    // Value must be in payload per meter configuration (value_settings.event_payload_key: 'value')
+    // Stripe requires all payload values to be strings
     const meterEvent = await stripe.billing.meterEvents.create({
       event_name: 'verification.created',
       identifier: customerId, // Customer ID for tracking
-      value: 1,
       payload: {
         verification_id: verificationId,
         user_id: userId,
+        value: '1', // Value must be in payload per meter configuration (as string)
       },
     });
 
     // Store in database for audit
-    await supabase.from('meter_events').insert({
+    await supabase.from('meter_events' as any).insert({
       user_id: userId,
       verification_id: verificationId,
-      stripe_event_id: meterEvent.id,
+      stripe_event_id: (meterEvent as any).id || null,
       meter_id: meterId,
       event_name: 'verification.created',
       value: 1,
@@ -141,12 +143,11 @@ export async function getSubscriptionItemId(
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-    // Find the usage-based price item
-    const usageItem = subscription.items.data.find(
-      (item) => item.price.billing_scheme === 'per_unit' && item.price.meter
-    );
+    // Find the first subscription item (we no longer use usage-based pricing)
+    // This function is kept for backwards compatibility but may not be needed
+    const item = subscription.items.data[0];
 
-    return usageItem?.id || null;
+    return item?.id || null;
   } catch (error) {
     console.error('Error getting subscription item:', error);
     return null;
@@ -172,12 +173,12 @@ export async function getCurrentPeriodUsage(
 
     // Query meter events for this user in current period
     const { data: events } = await supabase
-      .from('meter_events')
+      .from('meter_events' as any)
       .select('value')
       .eq('user_id', userId)
       .eq('meter_id', meterId)
       .gte('created_at', periodStart.toISOString())
-      .lt('created_at', periodEnd.toISOString());
+      .lt('created_at', periodEnd.toISOString()) as { data: Array<{ value: number | null }> | null };
 
     // Sum up the values
     const totalUsage = events?.reduce((sum, event) => sum + (event.value || 0), 0) || 0;
