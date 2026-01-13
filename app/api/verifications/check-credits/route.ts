@@ -18,37 +18,21 @@ export async function GET(request: NextRequest) {
     // Get user's credit balance
     const { data: credits } = await supabase
       .from('user_credits')
-      .select('credits_remaining, subscription_tier')
+      .select('credits_remaining')
       .eq('user_id', user.id)
-      .single() as { data: { credits_remaining: number; subscription_tier: string | null } | null };
-    
-    // Get active subscription
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('tier, status, credits_included')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single() as { data: { tier: string | null; status: string | null; credits_included: number | null } | null };
+      .single() as { data: { credits_remaining: number } | null };
     
     const hasCredits = (credits?.credits_remaining || 0) > 0;
-    const isSubscribed = !!subscription;
-    const tier = subscription?.tier;
     
-    // Determine payment amount based on subscription tier
+    // Determine payment amount (pay-as-you-go pricing)
     let paymentAmount = null;
     if (!hasCredits) {
-      if (isSubscribed) {
-        paymentAmount = tier === 'pro' ? 499 : 899; // $4.99 for Pro, $8.99 for Starter
-      } else {
-        paymentAmount = 1499; // $14.99 pay-as-you-go
-      }
+      paymentAmount = 1499; // $14.99 pay-as-you-go
     }
     
     return NextResponse.json({
       hasCredits,
       creditsRemaining: credits?.credits_remaining || 0,
-      subscriptionTier: tier || credits?.subscription_tier || null,
-      isSubscribed,
       requiresPayment: !hasCredits,
       paymentAmount,
     });

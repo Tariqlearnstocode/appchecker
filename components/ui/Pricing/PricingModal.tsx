@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/Toasts/use-toast';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -10,13 +11,69 @@ interface PricingModalProps {
 }
 
 export function PricingModal({ isOpen, onClose }: PricingModalProps) {
-
-  const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
-    // Payment integration to be implemented by user
-    alert(`You selected: ${priceType}. Payment integration needs to be implemented.`);
-  };
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (priceType: 'per_verification' | 'starter' | 'pro') => {
+    if (!user) {
+      // Store the selected plan for after sign-in
+      sessionStorage.setItem('pendingCheckout', priceType);
+      // Close pricing modal and open auth modal
+      onClose();
+      // Small delay to ensure pricing modal closes first
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openAuthModal', { detail: { mode: 'signup' } }));
+      }, 100);
+      return;
+    }
+
+    setLoading(priceType);
+    try {
+      let response;
+      if (priceType === 'per_verification') {
+        // One-time payment checkout
+        response = await fetch('/api/stripe/create-one-time-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } else {
+        // Subscription checkout
+        response = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: priceType }),
+        });
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to create checkout session',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start checkout. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -33,14 +90,25 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       const result = await response.json();
       
       if (!response.ok) {
-        alert(result.error || 'Failed to submit inquiry');
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to submit inquiry',
+          variant: 'destructive',
+        });
       } else {
-        alert('Thank you! We\'ve received your inquiry and will contact you shortly. Check your email for a confirmation and demo scheduling link.');
+        toast({
+          title: 'Submitted!',
+          description: 'Thank you! We\'ve received your inquiry and will contact you shortly. Check your email for a confirmation and demo scheduling link.',
+        });
         setEmail('');
         onClose();
       }
     } catch (error) {
-      alert('Failed to submit inquiry. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Failed to submit inquiry. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -97,10 +165,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 </div>
               </div>
               <button
-                onClick={async () => {
-                  // Always check auth and route to checkout
-                  await handleCheckout('per_verification');
-                }}
+                onClick={() => handleCheckout('per_verification')}
                 className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors"
               >
                 Get Started
@@ -129,9 +194,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               </div>
               <button
                 onClick={() => handleCheckout('starter')}
-                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
+                disabled={loading === 'starter'}
+                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
               >
-                Get Started
+                {loading === 'starter' ? 'Loading...' : 'Get Started'}
               </button>
             </div>
 
@@ -162,9 +228,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               </div>
               <button
                 onClick={() => handleCheckout('pro')}
-                className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors"
+                disabled={loading === 'pro'}
+                className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-600 text-white font-medium rounded-lg transition-colors"
               >
-                Get Started
+                {loading === 'pro' ? 'Loading...' : 'Get Started'}
               </button>
             </div>
           </div>

@@ -2,35 +2,36 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { FileCheck, Settings, LogOut, User } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { FileCheck, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function GlobalNavbar() {
-  const { user, loading, supabase } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
+  const { user, supabase } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   
-  // Don't show navbar on signin/verify/auth pages
-  if (pathname?.startsWith('/signin') || pathname?.startsWith('/verify/') || pathname?.startsWith('/auth/')) {
+  // Don't show navbar on verify pages
+  if (pathname?.startsWith('/verify/')) {
     return null;
   }
 
-  async function handleSignOut() {
-    if (signingOut) return; // Prevent multiple calls
-    
+  const handleSignOut = async () => {
+    if (signingOut) return;
     setSigningOut(true);
+    
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      // Ignore errors - user might already be signed out
-      console.log('[Navbar] Sign out (session may already be gone):', err);
+      console.error('Sign out error:', err);
+    } finally {
+      setSigningOut(false);
     }
-    
-    // Always redirect regardless of error - clears all state
-    window.location.href = '/';
-  }
+  };
+
+  const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
+    window.dispatchEvent(new CustomEvent('openAuthModal', { detail: { mode } }));
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
@@ -43,14 +44,19 @@ export default function GlobalNavbar() {
             <span className="font-semibold text-gray-900">Income Verifier</span>
           </Link>
           <div className="flex items-center gap-3">
-            {loading ? (
-              <div className="w-20 h-8 bg-gray-100 rounded animate-pulse" />
-            ) : user ? (
+            {user ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
                   <User className="w-4 h-4" />
                   <span>{user.email}</span>
                 </div>
+                <Link
+                  href="/settings"
+                  className="flex items-center justify-center w-9 h-9 text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
@@ -59,47 +65,21 @@ export default function GlobalNavbar() {
                   <LogOut className="w-4 h-4" />
                   {signingOut ? 'Signing out...' : 'Sign Out'}
                 </button>
-                <Link href="/settings" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
-                  <Settings className="w-5 h-5" />
-                </Link>
               </>
             ) : (
               <>
-                {pathname === '/' ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('openAuthModal', { detail: { mode: 'signin' } }));
-                      }}
-                      className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('openAuthModal', { detail: { mode: 'signup' } }));
-                      }}
-                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      Get Started
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/signin"
-                      className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/signin/signup"
-                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      Get Started
-                    </Link>
-                  </>
-                )}
+                <button
+                  onClick={() => handleOpenAuthModal('signin')}
+                  className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => handleOpenAuthModal('signup')}
+                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Get Started
+                </button>
               </>
             )}
           </div>

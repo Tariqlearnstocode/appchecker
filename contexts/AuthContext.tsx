@@ -21,22 +21,51 @@ export function AuthProvider({
   initialUser: User | null;
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
-  const [loading, setLoading] = useState(false); // No loading needed - we have initialUser
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  // Create client once and reuse it
   const supabase = useMemo(() => createClient(), []);
 
+  // Set initial user once on mount
   useEffect(() => {
-    // Listen for auth changes (login/logout)
+    console.log('[AuthContext] Setting initial user:', initialUser?.id || 'null');
+    setUser(initialUser);
+  }, []); // Only run once on mount
+
+  // Set up auth state listener once
+  useEffect(() => {
+    console.log('[AuthContext] Setting up auth state listener');
+    
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      console.log('[AuthContext] Auth state changed:', event, 'session user:', session?.user?.id || 'null');
       
-      // Refresh server components to get fresh data
-      router.refresh();
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+        // Clear localStorage on sign out
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith('sb-')) {
+              localStorage.removeItem(key);
+            }
+          });
+        }
+      } else {
+        setUser(session.user);
+      }
+      
+      // Only refresh on actual auth state changes, not on every render
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        console.log('[AuthContext] Calling router.refresh() for event:', event);
+        router.refresh();
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
+    return () => {
+      console.log('[AuthContext] Cleaning up auth state listener');
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]); // Don't include initialUser - listener should only be set up once
 
   return (
     <AuthContext.Provider value={{ user, loading, supabase }}>

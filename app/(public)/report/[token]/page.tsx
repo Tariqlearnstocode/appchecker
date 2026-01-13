@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ReportContent from './ReportContent';
 import { calculateIncomeReport } from '@/lib/income-calculations';
@@ -13,20 +13,11 @@ export default async function ReportPage({ params }: PageProps) {
   const { token } = await params;
   const supabase = await createClient();
 
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    // Redirect to sign in with return URL
-    redirect(`/signin/password_signin?redirect=/report/${token}`);
-  }
-
-  // Fetch verification (RLS will only return if user owns it)
+  // Fetch verification by token
   const { data: verification, error } = await supabase
     .from('income_verifications')
     .select('*')
     .eq('verification_token', token)
-    .eq('user_id', user.id)
     .single() as { data: any; error: any };
 
   if (error || !verification) {
