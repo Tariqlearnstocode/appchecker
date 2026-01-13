@@ -50,7 +50,12 @@ export default async function RootLayout({ children }: PropsWithChildren) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError) {
-    console.error('[ServerAuth] RootLayout: Auth error:', authError.message, authError);
+    // "Auth session missing" is expected when user is logged out - not a real error
+    if (authError.message?.includes('Auth session missing')) {
+      console.log('[ServerAuth] RootLayout: No active session (user logged out)');
+    } else {
+      console.error('[ServerAuth] RootLayout: Auth error:', authError.message, authError);
+    }
   }
   
   console.log('[ServerAuth] RootLayout: getUser() result - user:', user?.id || 'null', 'email:', user?.email || 'null');

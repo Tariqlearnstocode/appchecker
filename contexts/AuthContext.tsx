@@ -27,18 +27,13 @@ export function AuthProvider({
 
   // Set initial user once on mount
   useEffect(() => {
-    console.log('[AuthContext] Setting initial user:', initialUser?.id || 'null');
     setUser(initialUser);
   }, []); // Only run once on mount
 
   // Set up auth state listener once
   useEffect(() => {
-    console.log('[AuthContext] Setting up auth state listener');
-    
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthContext] Auth state changed:', event, 'session user:', session?.user?.id || 'null');
-      
       if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         // Clear localStorage on sign out
@@ -56,13 +51,11 @@ export function AuthProvider({
       
       // Only refresh on actual auth state changes, not on every render
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        console.log('[AuthContext] Calling router.refresh() for event:', event);
         router.refresh();
       }
     });
 
     return () => {
-      console.log('[AuthContext] Cleaning up auth state listener');
       subscription.unsubscribe();
     };
   }, [supabase, router]); // Don't include initialUser - listener should only be set up once

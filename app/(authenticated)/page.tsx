@@ -14,7 +14,12 @@ export default async function HomePage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError) {
-    console.error('[ServerAuth] HomePage: Auth error:', authError.message, authError);
+    // "Auth session missing" is expected when user is logged out - not a real error
+    if (authError.message?.includes('Auth session missing')) {
+      console.log('[ServerAuth] HomePage: No active session (user logged out)');
+    } else {
+      console.error('[ServerAuth] HomePage: Auth error:', authError.message, authError);
+    }
   }
   
   console.log('[ServerAuth] HomePage: getUser() result - user:', user?.id || 'null', 'email:', user?.email || 'null');

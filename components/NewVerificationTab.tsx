@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Loader2, Eye, ArrowUpRight } from 'lucide-react';
+import { Plus, Loader2, Eye, ArrowUpRight, User, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface LandlordInfo {
@@ -34,32 +34,35 @@ export function NewVerificationTab({
     <>
       {/* Form */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Create Income Verification Request</h2>
-       
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">Create Income Verification Request</h2>
         </div>
-        <form onSubmit={onSubmit} className="p-6">
-          <div className="space-y-6">
-            {/* From Section */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">From</h3>
-              <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={onSubmit} className="p-4">
+          <div className="space-y-4">
+            {/* Requester Section - Light Slate Background */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-4 h-4 text-slate-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Your Details</h3>
+                <span className="text-xs text-gray-600">— The organization requesting the verification</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="from-name" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Your / Company Name *
+                  <label htmlFor="from-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Requester Name *
                   </label>
                   <input
                     id="from-name"
                     type="text"
                     value={landlordInfo.name}
                     onChange={(e) => setLandlordInfo({ ...landlordInfo, name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
-                    placeholder="Enter name"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors text-gray-900 placeholder-gray-400"
+                    placeholder="Enter name or organization"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="from-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label htmlFor="from-email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email Address
                   </label>
                   <input
@@ -67,21 +70,25 @@ export function NewVerificationTab({
                     type="email"
                     value={landlordInfo.email}
                     onChange={(e) => setLandlordInfo({ ...landlordInfo, email: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors text-gray-900 placeholder-gray-400"
                     placeholder="Enter email"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Recipient Section */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Recipient</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+            {/* Recipient Section - White Background with Border */}
+            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Verification Target</h3>
+                <span className="text-xs text-gray-600">— The individual being verified</span>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Full Name */}
                   <div>
-                    <label htmlFor="individual-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="individual-name" className="block text-sm font-medium text-gray-700 mb-1">
                       Full Name of Individual *
                     </label>
                     <input
@@ -89,7 +96,7 @@ export function NewVerificationTab({
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
                       placeholder="Enter name"
                       required
                     />
@@ -97,7 +104,7 @@ export function NewVerificationTab({
 
                   {/* Email */}
                   <div>
-                    <label htmlFor="individual-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="individual-email" className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address *
                     </label>
                     <input
@@ -105,7 +112,7 @@ export function NewVerificationTab({
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
                       placeholder="Enter email"
                       required
                     />
@@ -114,13 +121,13 @@ export function NewVerificationTab({
 
                 {/* Custom Reference */}
                 <div>
-                  <label htmlFor="custom-reference" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label htmlFor="custom-reference" className="block text-sm font-medium text-gray-700 mb-1">
                     Custom Reference <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     id="custom-reference"
                     type="text"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-colors text-gray-900 placeholder-gray-400"
                     placeholder="e.g., Unit 4B"
                   />
                 </div>
@@ -129,13 +136,13 @@ export function NewVerificationTab({
           </div>
 
           {/* Submit */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex flex-col md:flex-row items-center gap-4">
               {/* Primary Action Button */}
               <button
                 type="submit"
                 disabled={creating || !formData.name || !formData.email}
-                className="flex-1 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-emerald-500/20 group disabled:shadow-none"
+                className="flex-1 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-emerald-500/20 group disabled:shadow-md"
               >
                 {creating ? (
                   <>
@@ -178,7 +185,6 @@ export function NewVerificationTab({
                 </div>
 
                 <div className="text-left min-w-0 flex-1">
-                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Output</span>
                   <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                     Preview Report
                     <ArrowUpRight className="w-3 h-3 text-gray-400 group-hover:text-emerald-500 flex-shrink-0 transition-colors" />

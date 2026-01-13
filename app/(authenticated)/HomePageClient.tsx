@@ -31,11 +31,6 @@ export default function HomePageClient({
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '' });
   const [landlordInfo, setLandlordInfo] = useState(initialLandlordInfo);
-  
-  // Log client-side auth state and initial props
-  console.log('[ClientAuth] HomePageClient: user from useAuth():', user?.id || 'null', 'email:', user?.email || 'null');
-  console.log('[ClientAuth] HomePageClient: initialLandlordInfo prop:', initialLandlordInfo);
-  console.log('[ClientAuth] HomePageClient: initialVerifications count:', initialVerifications.length);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -47,7 +42,28 @@ export default function HomePageClient({
     plan: 'starter' | 'pro';
   } | null>(null);
   const [headerDismissed, setHeaderDismissed] = useState(false);
+  const [bannerVariant, setBannerVariant] = useState<{ title: string; description: string } | null>(null);
   const { toast } = useToast();
+
+  // Randomly select banner variant on mount
+  useEffect(() => {
+    const variants = [
+      {
+        title: 'Direct bank-link income verification',
+        description: 'Stop chasing PDF bank history or forged documents. Get verified income data directly from their bank account in minutes.',
+      },
+      {
+        title: 'Verified Bank Income',
+        description: 'Eliminate the risk of doctored or forged PDF statements. Access 12 months of earnings history directly from any connected bank account.',
+      },
+      {
+        title: 'Instant Bank Verification',
+        description: 'Forget manual PDF checks. Get a verified report of earnings and deposits straight from the individual\'s bank account.',
+      },
+    ];
+    const randomIndex = Math.floor(Math.random() * variants.length);
+    setBannerVariant(variants[randomIndex]);
+  }, []);
 
   // Listen for auth modal events from navbar
   useEffect(() => {
@@ -321,15 +337,15 @@ export default function HomePageClient({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Header Banner */}
-        {showHeader && (
+        {showHeader && bannerVariant && (
           <div className="mb-6 bg-emerald-50 rounded-xl border border-emerald-100 p-6 relative overflow-hidden">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4 relative z-10">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Direct-source income verification
+                  {bannerVariant.title}
                 </h2>
                 <p className="text-gray-700 mb-4">
-                  Stop chasing PDF bank history, fraudulent or forged PDF documents. Get verified income data directly from the source in minutes.
+                  {bannerVariant.description}
                 </p>
                 <div className="flex flex-wrap items-center gap-4">
                   <Link 

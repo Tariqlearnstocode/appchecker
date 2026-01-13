@@ -11,9 +11,6 @@ export default function GlobalNavbar() {
   const { user, supabase } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   
-  // Log client-side auth state
-  console.log('[ClientAuth] GlobalNavbar: user:', user?.id || 'null', 'email:', user?.email || 'null');
-  
   // Don't show navbar on verify pages
   if (pathname?.startsWith('/verify/')) {
     return null;
