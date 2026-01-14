@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { sanitizeCompanyName } from '@/utils/sanitize';
 
 type AuthMode = 'signin' | 'signup' | 'reset';
 
@@ -40,12 +41,15 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setLoading(true);
 
     try {
+      // Sanitize company name before signup
+      const sanitizedCompanyName = companyName ? sanitizeCompanyName(companyName) : null;
+      
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            company_name: companyName || null
+            company_name: sanitizedCompanyName
           }
         }
       });

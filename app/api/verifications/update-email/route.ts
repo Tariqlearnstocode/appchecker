@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
+import { sanitizeEmail } from '@/utils/sanitize';
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -12,16 +13,19 @@ export async function PATCH(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { verification_id, individual_email } = body;
+    const { verification_id, individual_email: raw_email } = body;
     
-    if (!verification_id || !individual_email) {
+    if (!verification_id || !raw_email) {
       return NextResponse.json(
         { error: 'Verification ID and email are required' },
         { status: 400 }
       );
     }
     
-    // Validate email format
+    // Sanitize email
+    const individual_email = sanitizeEmail(raw_email);
+    
+    // Validate email format after sanitization
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(individual_email)) {
       return NextResponse.json(

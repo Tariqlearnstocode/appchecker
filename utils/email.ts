@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { escapeHtml } from './sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -34,6 +35,13 @@ export interface SendReminderEmailParams {
 export async function sendVerificationEmail(params: SendVerificationEmailParams) {
   const { to, individualName, requestedByName, requestedByEmail, verificationLink, purpose } = params;
 
+  // Escape all user-provided input for HTML
+  const safeIndividualName = escapeHtml(individualName);
+  const safeRequestedByName = escapeHtml(requestedByName);
+  const safeRequestedByEmail = requestedByEmail ? escapeHtml(requestedByEmail) : '';
+  const safePurpose = purpose ? escapeHtml(purpose) : '';
+  const safeTo = escapeHtml(to);
+
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -52,11 +60,11 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
             </div>
             
             <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-              <p style="font-size: 16px; margin-top: 0;">Hello ${individualName},</p>
+              <p style="font-size: 16px; margin-top: 0;">Hello ${safeIndividualName},</p>
               
               <p style="font-size: 16px;">
-                <strong>${requestedByName}</strong>${requestedByEmail ? ` (${requestedByEmail})` : ''} has requested your income verification.
-                ${purpose ? ` This verification is for: <strong>${purpose}</strong>` : ''}
+                <strong>${safeRequestedByName}</strong>${safeRequestedByEmail ? ` (${safeRequestedByEmail})` : ''} has requested your income verification.
+                ${safePurpose ? ` This verification is for: <strong>${safePurpose}</strong>` : ''}
               </p>
               
               <p style="font-size: 16px;">
@@ -79,7 +87,7 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
               </div>
               
               <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-                This verification link will expire in 7 days. If you have any questions, please contact ${requestedByEmail || requestedByName}.
+                This verification link will expire in 7 days. If you have any questions, please contact ${safeRequestedByEmail || safeRequestedByName}.
               </p>
               
               <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
@@ -89,7 +97,7 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
             
             <div style="text-align: center; margin-top: 20px; padding: 20px; color: #9ca3af; font-size: 12px;">
               <p style="margin: 0;">Powered by Income Verifier</p>
-              <p style="margin: 5px 0 0 0;">This email was sent to ${to}</p>
+              <p style="margin: 5px 0 0 0;">This email was sent to ${safeTo}</p>
             </div>
           </body>
         </html>
@@ -114,6 +122,10 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
 export async function sendCompletionEmail(params: SendCompletionEmailParams) {
   const { to, individualName, requestedByName, verificationLink } = params;
 
+  // Escape all user-provided input for HTML
+  const safeIndividualName = escapeHtml(individualName);
+  const safeRequestedByName = escapeHtml(requestedByName);
+
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -132,10 +144,10 @@ export async function sendCompletionEmail(params: SendCompletionEmailParams) {
             </div>
             
             <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-              <p style="font-size: 16px; margin-top: 0;">Hello ${requestedByName},</p>
+              <p style="font-size: 16px; margin-top: 0;">Hello ${safeRequestedByName},</p>
               
               <p style="font-size: 16px;">
-                Great news! <strong>${individualName}</strong> has completed their income verification.
+                Great news! <strong>${safeIndividualName}</strong> has completed their income verification.
               </p>
               
               <p style="font-size: 16px;">
@@ -183,6 +195,11 @@ export async function sendCompletionEmail(params: SendCompletionEmailParams) {
 export async function sendReminderEmail(params: SendReminderEmailParams) {
   const { to, individualName, requestedByName, verificationLink, daysRemaining } = params;
 
+  // Escape all user-provided input for HTML
+  const safeIndividualName = escapeHtml(individualName);
+  const safeRequestedByName = escapeHtml(requestedByName);
+  const safeTo = escapeHtml(to);
+
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -201,10 +218,10 @@ export async function sendReminderEmail(params: SendReminderEmailParams) {
             </div>
             
             <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-              <p style="font-size: 16px; margin-top: 0;">Hello ${individualName},</p>
+              <p style="font-size: 16px; margin-top: 0;">Hello ${safeIndividualName},</p>
               
               <p style="font-size: 16px;">
-                This is a friendly reminder that <strong>${requestedByName}</strong> is still waiting for you to complete your income verification.
+                This is a friendly reminder that <strong>${safeRequestedByName}</strong> is still waiting for you to complete your income verification.
               </p>
               
               <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -225,13 +242,13 @@ export async function sendReminderEmail(params: SendReminderEmailParams) {
               </div>
               
               <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-                If you have any questions or concerns, please contact ${requestedByName}.
+                If you have any questions or concerns, please contact ${safeRequestedByName}.
               </p>
             </div>
             
             <div style="text-align: center; margin-top: 20px; padding: 20px; color: #9ca3af; font-size: 12px;">
               <p style="margin: 0;">Powered by Income Verifier</p>
-              <p style="margin: 5px 0 0 0;">This email was sent to ${to}</p>
+              <p style="margin: 5px 0 0 0;">This email was sent to ${safeTo}</p>
             </div>
           </body>
         </html>

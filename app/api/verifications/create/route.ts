@@ -9,6 +9,7 @@ import {
 } from '@/lib/stripe/helpers';
 import { stripe } from '@/lib/stripe/client';
 import { validatePriceIds } from '@/lib/stripe/prices';
+import { sanitizeName, sanitizeEmail, sanitizePurpose, sanitizeCompanyName } from '@/utils/sanitize';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,16 +26,32 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      individual_name,
-      individual_email,
-      requested_by_name,
-      requested_by_email,
-      purpose,
+      individual_name: raw_individual_name,
+      individual_email: raw_individual_email,
+      requested_by_name: raw_requested_by_name,
+      requested_by_email: raw_requested_by_email,
+      purpose: raw_purpose,
     } = body;
+
+    // Sanitize all inputs
+    const individual_name = sanitizeName(raw_individual_name);
+    const individual_email = sanitizeEmail(raw_individual_email);
+    const requested_by_name = raw_requested_by_name ? sanitizeName(raw_requested_by_name) : null;
+    const requested_by_email = raw_requested_by_email ? sanitizeEmail(raw_requested_by_email) : null;
+    const purpose = raw_purpose ? sanitizePurpose(raw_purpose) : null;
 
     if (!individual_name || !individual_email) {
       return NextResponse.json(
         { error: 'Individual name and email are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format after sanitization
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(individual_email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -48,9 +65,9 @@ export async function POST(request: NextRequest) {
 
     const finalRequestedByName =
       requested_by_name ||
-      (userProfile?.company_name || null) ||
+      (userProfile?.company_name ? sanitizeCompanyName(userProfile.company_name) : null) ||
       'Requesting Party';
-    const finalRequestedByEmail = requested_by_email || user.email || null;
+    const finalRequestedByEmail = requested_by_email || (user.email ? sanitizeEmail(user.email) : null);
 
     // Check subscription status
     const subscription = await getActiveSubscription(user.id);

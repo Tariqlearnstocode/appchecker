@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { sanitizeEmail, escapeHtml } from '@/utils/sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Income Verifier <noreply@yourdomain.com>';
@@ -9,16 +10,19 @@ const CALENDLY_LINK = process.env.CALENDLY_LINK || 'https://calendly.com/your-ca
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email: raw_email } = body;
     
-    if (!email) {
+    if (!raw_email) {
       return NextResponse.json(
         { error: 'Email is required' },
         { status: 400 }
       );
     }
     
-    // Validate email format
+    // Sanitize email
+    const email = sanitizeEmail(raw_email);
+    
+    // Validate email format after sanitization
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -26,6 +30,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Escape email for HTML
+    const safeEmail = escapeHtml(email);
     
     // Send email to enterprise team
     try {
@@ -51,7 +58,7 @@ export async function POST(request: NextRequest) {
                 
                 <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
                   <p style="margin: 0; font-size: 14px; color: #065f46;">
-                    <strong>Contact Email:</strong> ${email}
+                    <strong>Contact Email:</strong> ${safeEmail}
                   </p>
                 </div>
                 

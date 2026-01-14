@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toasts/use-toast';
 import { Settings, User, CreditCard, Shield, Save, Loader2, Download, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { sanitizeCompanyName } from '@/utils/sanitize';
 
 interface SettingsClientProps {
   user: SupabaseUser;
@@ -92,16 +93,19 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
     setSaving(true);
 
     try {
+      // Sanitize company name before saving
+      const sanitizedCompanyName = companyName ? sanitizeCompanyName(companyName) : null;
+      
       const { error } = await supabase
         .from('users')
-        .update({ company_name: companyName || null })
+        .update({ company_name: sanitizedCompanyName || null })
         .eq('id', user.id);
 
       if (error) throw error;
 
       // Also update auth metadata
       const { error: metadataError } = await supabase.auth.updateUser({
-        data: { company_name: companyName || null }
+        data: { company_name: sanitizedCompanyName || null }
       });
 
       if (metadataError) throw metadataError;
