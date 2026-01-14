@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { sendCompletionEmail } from '@/utils/email';
+import { checkRateLimit } from '@/utils/rate-limit';
 import https from 'https';
 
 const TELLER_API_URL = 'https://api.teller.io';
@@ -65,6 +66,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Access token and verification token are required' },
         { status: 400 }
+      );
+    }
+
+    // Rate limiting: 5 Teller API calls per hour per verification token
+    // This prevents abuse of the external Teller API (costs money)
+    const rateLimit = checkRateLimit(`teller-fetch:${verification_token}`, 5, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded', 
+          message: 'Too many data fetch requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': '5',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          }
+        }
       );
     }
 

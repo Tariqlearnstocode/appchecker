@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { sanitizeEmail, escapeHtml } from '@/utils/sanitize';
+import { checkRateLimit, getClientIP } from '@/utils/rate-limit';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Income Verifier <noreply@yourdomain.com>';
@@ -9,6 +10,28 @@ const CALENDLY_LINK = process.env.CALENDLY_LINK || 'https://calendly.com/your-ca
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 3 contact form submissions per hour per IP (public endpoint)
+    const clientIP = getClientIP(request);
+    const rateLimit = checkRateLimit(`enterprise-contact:${clientIP}`, 3, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded', 
+          message: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': '3',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          }
+        }
+      );
+    }
+
     const body = await request.json();
     const { email: raw_email } = body;
     
