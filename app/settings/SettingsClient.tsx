@@ -289,20 +289,20 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
                     </span>
                   </div>
 
-                  {subscriptionStatus.usageInfo && (
+                  {subscriptionStatus.usageInfo && subscriptionStatus.limit && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600 mb-2">Usage this period</p>
+                      <p className="text-sm text-gray-600 mb-2">Remaining this period</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-bold text-gray-900">
-                          {subscriptionStatus.usageInfo.totalUsage}
+                          {Math.max(0, subscriptionStatus.limit - subscriptionStatus.usageInfo.totalUsage)}
                         </span>
                         <span className="text-sm text-gray-500">
-                          / {subscriptionStatus.includedQuantity} verifications
+                          / {subscriptionStatus.limit} verifications remaining
                         </span>
                       </div>
-                      {subscriptionStatus.usageInfo.totalUsage >= subscriptionStatus.includedQuantity && (
+                      {subscriptionStatus.usageInfo.totalUsage >= subscriptionStatus.limit && (
                         <p className="text-xs text-amber-600 mt-2">
-                          Overage billing will apply to additional verifications
+                          Limit reached. Upgrade to continue creating verifications.
                         </p>
                       )}
                     </div>

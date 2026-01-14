@@ -2,6 +2,7 @@ import { stripe } from './client';
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { getMeterId } from './meter';
+import Stripe from 'stripe';
 
 /**
  * Get or create a Stripe customer for a user
@@ -106,7 +107,8 @@ export async function getActiveSubscription(userId: string) {
 
 /**
  * Report verification usage to Stripe meter
- * Used for tracking usage (not for billing since we removed usage prices)
+ * Used for tracking/analytics only - limits are enforced in application code
+ * Subscriptions have fixed limits (10 for Starter, 50 for Pro) - no overage billing
  */
 export async function reportVerificationUsage(
   userId: string,
@@ -118,13 +120,16 @@ export async function reportVerificationUsage(
 
   try {
     // Report usage to Stripe meter for tracking
-    // Note: identifier is now the customer ID since we're not using subscription items
+    // Use verification_id as identifier to ensure uniqueness per verification
+    // This prevents duplicate event errors when multiple verifications are created quickly
     // Value must be in payload per meter configuration (value_settings.event_payload_key: 'value')
     // Stripe requires all payload values to be strings
+    // Stripe also requires stripe_customer_id in the payload to identify the customer
     const meterEvent = await stripe.billing.meterEvents.create({
       event_name: 'verification.created',
-      identifier: customerId, // Customer ID for tracking
+      identifier: verificationId, // Unique per verification to prevent duplicate errors
       payload: {
+        stripe_customer_id: customerId, // Required by Stripe to identify the customer
         verification_id: verificationId,
         user_id: userId,
         value: '1', // Value must be in payload per meter configuration (as string)
@@ -132,7 +137,8 @@ export async function reportVerificationUsage(
     });
 
     // Store in database for audit
-    await supabase.from('meter_events' as any).insert({
+    // Use supabaseAdmin to bypass RLS (server-side operation)
+    const { error: insertError } = await supabaseAdmin.from('meter_events' as any).insert({
       user_id: userId,
       verification_id: verificationId,
       stripe_event_id: (meterEvent as any).id || null,
@@ -140,6 +146,11 @@ export async function reportVerificationUsage(
       event_name: 'verification.created',
       value: 1,
     } as any);
+
+    if (insertError) {
+      console.error('Error storing meter event in database:', insertError);
+      // Don't throw - Stripe event was created successfully, DB insert is just for audit
+    }
 
     return meterEvent;
   } catch (error) {
@@ -205,12 +216,43 @@ export async function getCurrentPeriodUsage(
 ): Promise<number> {
   try {
     const supabase = await createClient();
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const meterId = await getMeterId();
 
-    // Get period dates
-    const periodStart = new Date((subscription as any).current_period_start * 1000);
-    const periodEnd = new Date((subscription as any).current_period_end * 1000);
+    // Get subscription from database (has period dates synced from Stripe webhooks)
+    const { data: dbSubscription } = await supabase
+      .from('stripe_subscriptions' as any)
+      .select('current_period_start, current_period_end')
+      .eq('stripe_subscription_id', subscriptionId)
+      .eq('user_id', userId)
+      .single() as { data: { current_period_start: string | null; current_period_end: string | null } | null };
+
+    let periodStart: Date;
+    let periodEnd: Date;
+
+    // Use database dates if available (preferred - more reliable)
+    if (dbSubscription?.current_period_start && dbSubscription?.current_period_end) {
+      periodStart = new Date(dbSubscription.current_period_start);
+      periodEnd = new Date(dbSubscription.current_period_end);
+    } else {
+      // Fallback: fetch from Stripe API if database doesn't have dates
+      const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const periodStartTimestamp = (stripeSubscription as any).current_period_start;
+      const periodEndTimestamp = (stripeSubscription as any).current_period_end;
+
+      if (!periodStartTimestamp || !periodEndTimestamp) {
+        console.warn('Subscription missing period dates in both DB and Stripe, returning 0 usage');
+        return 0;
+      }
+
+      periodStart = new Date(periodStartTimestamp * 1000);
+      periodEnd = new Date(periodEndTimestamp * 1000);
+    }
+
+    // Validate dates are valid
+    if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+      console.warn('Invalid period dates in subscription, returning 0 usage');
+      return 0;
+    }
 
     // Query meter events for this user in current period
     const { data: events } = await supabase

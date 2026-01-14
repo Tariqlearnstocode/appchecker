@@ -24,7 +24,7 @@ export default function HomePageClient({
   initialVerifications, 
   initialLandlordInfo 
 }: HomePageClientProps) {
-  const { user, supabase } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('new');
   const [verifications, setVerifications] = useState<Verification[]>(initialVerifications);
   const [loading, setLoading] = useState(false);
@@ -191,22 +191,38 @@ export default function HomePageClient({
       }
   }, [user]);
 
-  async function loadVerifications() {
-    if (!user) return;
+  async function loadVerifications(): Promise<Verification[] | null> {
+    if (!user) return null;
     
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('income_verifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/verifications/list');
+      const result = await response.json();
       
-      if (data) {
-        setVerifications(data as Verification[]);
+      if (!response.ok) {
+        console.error('Error loading verifications:', result.error);
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to load verifications',
+          variant: 'destructive',
+        });
+        return null;
       }
+      
+      if (result.verifications) {
+        const verificationsData = result.verifications as Verification[];
+        setVerifications(verificationsData);
+        return verificationsData;
+      }
+      return null;
     } catch (error) {
       console.error('Error loading verifications:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load verifications',
+        variant: 'destructive',
+      });
+      return null;
     } finally {
       setLoading(false);
     }
@@ -311,13 +327,34 @@ export default function HomePageClient({
   }
 
   async function deleteVerification(id: string) {
-    const { error } = await supabase.from('income_verifications').delete().eq('id', id);
-    if (error) {
-      toast({ title: 'Error', description: error.message || 'Failed to delete verification', variant: 'destructive' });
-    } else {
+    try {
+      const response = await fetch('/api/verifications/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete verification',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setVerifications(verifications.filter((v) => v.id !== id));
       if (selectedVerification?.id === id) setSelectedVerification(null);
       toast({ title: 'Deleted', description: 'Verification removed' });
+    } catch (error) {
+      console.error('Error deleting verification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete verification',
+        variant: 'destructive',
+      });
     }
   }
 
@@ -531,19 +568,11 @@ export default function HomePageClient({
                   onEmailSent={async () => {
                     // Refresh verifications to get updated last_email_sent_at
                     if (user) {
-                      const { data: verificationsData } = await supabase
-                        .from('income_verifications')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .order('created_at', { ascending: false });
-                      
-                      if (verificationsData) {
-                        setVerifications(verificationsData as Verification[]);
-                        // Update selected verification if it's the one we just sent email for
-                        if (selectedVerification) {
-                          const updated = (verificationsData as Verification[]).find(v => v.id === selectedVerification.id);
-                          if (updated) setSelectedVerification(updated);
-                        }
+                      const updatedVerifications = await loadVerifications();
+                      // Update selected verification if it's the one we just sent email for
+                      if (selectedVerification && updatedVerifications) {
+                        const updated = updatedVerifications.find(v => v.id === selectedVerification.id);
+                        if (updated) setSelectedVerification(updated);
                       }
                     }
                   }}
