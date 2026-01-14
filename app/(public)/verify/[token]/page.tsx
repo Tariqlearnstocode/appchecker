@@ -27,10 +27,30 @@ export default function ApplicantVerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [tellerConfig, setTellerConfig] = useState<{ applicationId: string; environment: string } | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVerification();
+    fetchTellerConfig();
   }, [token]);
+
+  async function fetchTellerConfig() {
+    try {
+      const response = await fetch('/api/teller/init-connect');
+      if (!response.ok) {
+        setConfigError('Failed to load Teller configuration');
+        return;
+      }
+      const data = await response.json();
+      setTellerConfig({
+        applicationId: data.applicationId,
+        environment: data.environment,
+      });
+    } catch (err) {
+      setConfigError('Failed to load Teller configuration');
+    }
+  }
 
   async function fetchVerification() {
     try {
@@ -94,8 +114,8 @@ export default function ApplicantVerificationPage() {
 
   // Teller Connect hook
   const { open, ready } = useTellerConnect({
-    applicationId: process.env.NEXT_PUBLIC_TELLER_APPLICATION_ID || '',
-    environment: (process.env.NEXT_PUBLIC_TELLER_ENV || 'sandbox') as 'sandbox' | 'development' | 'production',
+    applicationId: tellerConfig?.applicationId || '',
+    environment: (tellerConfig?.environment || 'sandbox') as 'sandbox' | 'development' | 'production',
     onSuccess: onTellerSuccess,
     onExit: () => {
       // User closed without completing
