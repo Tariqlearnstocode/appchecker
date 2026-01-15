@@ -178,17 +178,23 @@ export async function POST(request: NextRequest) {
         
         if (txnRes.ok) {
           const transactions = await txnRes.json();
-          console.log(`Successfully fetched transactions for account ${account.id}: ${transactions?.length || 0} transactions returned`);
+          const txnCount = transactions?.length || 0;
+          console.log(`Successfully fetched transactions for account ${account.id}: ${txnCount} transactions returned (date range: ${startDate} to ${endDate})`);
+          if (txnCount === 0) {
+            console.warn(`WARNING: Empty transaction array returned for account ${account.id} (${account.institution?.name || 'unknown'}). This may indicate the date range exceeds bank's available history.`);
+          }
           allTransactions = allTransactions.concat(transactions);
         } else {
           const errorData = await txnRes.json().catch(() => ({}));
-          console.error(`Failed to fetch transactions for account ${account.id}:`, {
+          console.error(`ERROR: Failed to fetch transactions for account ${account.id}:`, {
             status: txnRes.status,
             statusText: txnRes.statusText,
             error: errorData,
+            requestedDateRange: { start: startDate, end: endDate },
             accountInstitution: account.institution?.name,
             accountType: account.type,
             accountSubtype: account.subtype,
+            fullErrorResponse: JSON.stringify(errorData),
           });
         }
       } catch (err) {
