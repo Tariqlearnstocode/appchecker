@@ -95,11 +95,29 @@ export async function POST(request: NextRequest) {
     const headers = { Authorization: authHeader };
 
     // 1. Fetch all accounts
-    const accountsRes = await tellerFetch(`${TELLER_API_URL}/accounts`, { headers });
+    console.log('Fetching accounts from Teller API...');
+    let accountsRes;
+    try {
+      accountsRes = await tellerFetch(`${TELLER_API_URL}/accounts`, { headers });
+    } catch (err) {
+      console.error('Connection error fetching accounts:', {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      return NextResponse.json(
+        { error: 'Failed to connect to Teller API', details: err instanceof Error ? err.message : String(err) },
+        { status: 500 }
+      );
+    }
 
     if (!accountsRes.ok) {
       const errData = await accountsRes.json().catch(() => ({}));
-      console.error('Failed to fetch accounts:', errData);
+      console.error('Failed to fetch accounts:', {
+        status: accountsRes.status,
+        statusText: accountsRes.statusText,
+        error: errData,
+      });
       return NextResponse.json(
         { error: 'Failed to fetch accounts', details: errData },
         { status: accountsRes.status }
@@ -107,8 +125,10 @@ export async function POST(request: NextRequest) {
     }
 
     const accounts = await accountsRes.json();
+    console.log(`Successfully fetched ${accounts?.length || 0} account(s) from Teller API`);
 
     // 2. Fetch balances for each account
+    console.log('Fetching balances for all accounts...');
     const accountsWithBalances = await Promise.all(
       accounts.map(async (account: any) => {
         try {
@@ -116,9 +136,26 @@ export async function POST(request: NextRequest) {
             `${TELLER_API_URL}/accounts/${account.id}/balances`,
             { headers }
           );
-          const balances = balanceRes.ok ? await balanceRes.json() : null;
-          return { ...account, balances };
-        } catch {
+          if (balanceRes.ok) {
+            const balances = await balanceRes.json();
+            console.log(`Successfully fetched balance for account ${account.id} (${account.institution?.name || 'unknown'}): ledger=${balances?.ledger || 'N/A'}, available=${balances?.available || 'N/A'}`);
+            return { ...account, balances };
+          } else {
+            const errorData = await balanceRes.json().catch(() => ({}));
+            console.error(`Failed to fetch balance for account ${account.id}:`, {
+              status: balanceRes.status,
+              statusText: balanceRes.statusText,
+              error: errorData,
+              accountInstitution: account.institution?.name,
+            });
+            return { ...account, balances: null };
+          }
+        } catch (err) {
+          console.error(`Connection error fetching balance for account ${account.id}:`, {
+            error: err,
+            message: err instanceof Error ? err.message : String(err),
+            accountInstitution: account.institution?.name,
+          });
           return { ...account, balances: null };
         }
       })
@@ -134,18 +171,39 @@ export async function POST(request: NextRequest) {
 
     for (const account of accounts) {
       try {
-        const txnRes = await tellerFetch(
-          `${TELLER_API_URL}/accounts/${account.id}/transactions?start_date=${startDate}&end_date=${endDate}`,
-          { headers }
-        );
+        const txnUrl = `${TELLER_API_URL}/accounts/${account.id}/transactions?start_date=${startDate}&end_date=${endDate}`;
+        console.log(`Fetching transactions for account ${account.id} (${account.institution?.name || 'unknown'}): ${txnUrl}`);
+        
+        const txnRes = await tellerFetch(txnUrl, { headers });
+        
         if (txnRes.ok) {
           const transactions = await txnRes.json();
+          console.log(`Successfully fetched transactions for account ${account.id}: ${transactions?.length || 0} transactions returned`);
           allTransactions = allTransactions.concat(transactions);
+        } else {
+          const errorData = await txnRes.json().catch(() => ({}));
+          console.error(`Failed to fetch transactions for account ${account.id}:`, {
+            status: txnRes.status,
+            statusText: txnRes.statusText,
+            error: errorData,
+            accountInstitution: account.institution?.name,
+            accountType: account.type,
+            accountSubtype: account.subtype,
+          });
         }
       } catch (err) {
-        console.error(`Failed to fetch transactions for account ${account.id}:`, err);
+        console.error(`Connection error fetching transactions for account ${account.id}:`, {
+          error: err,
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          accountInstitution: account.institution?.name,
+          accountType: account.type,
+          accountSubtype: account.subtype,
+        });
       }
     }
+    
+    console.log(`Total transactions fetched: ${allTransactions.length} across ${accounts.length} account(s)`);
 
     // 4. Store raw data in database
     const rawTellerData = {
