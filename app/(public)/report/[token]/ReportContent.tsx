@@ -228,11 +228,17 @@ function TransactionHistory({ transactions }: { transactions: Array<{
     return { credits, debits };
   }, [allTransactionsForMonth]);
 
-  const formatMonthLabel = (monthKey: string) => {
+  const formatMonthLabel = (monthKey: string | undefined) => {
+    if (!monthKey) return '';
     const [year, month] = monthKey.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
+
+  // Early return if no months to display
+  if (monthlyData.sortedMonths.length === 0) {
+    return null;
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded mb-6 print:hidden">
