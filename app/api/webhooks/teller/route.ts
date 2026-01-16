@@ -70,8 +70,8 @@ async function storeWebhookEvent(event: TellerWebhookEvent, rawBody: string) {
   try {
     const eventTimestamp = event.timestamp ? new Date(event.timestamp).toISOString() : null;
 
-    // @ts-ignore - table will exist after migration
-    const { error } = await supabaseAdmin
+    // Type assertion needed - table exists after migration runs
+    const { error } = await (supabaseAdmin as any)
       .from('teller_webhook_events')
       .insert({
         event_id: event.id,
