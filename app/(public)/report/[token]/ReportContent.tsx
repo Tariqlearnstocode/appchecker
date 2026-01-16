@@ -741,9 +741,15 @@ export default function ReportContent({ verification, reportData, isCalculated }
           
           {/* Payroll Deposit Rows */}
           {(() => {
-            // Filter to only actual payroll deposits (using isPayroll from above)
+            // Filter to only actual payroll deposits from last 90 days (using isPayroll from above)
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            
             const payrollDeposits = income.allDeposits
-              .filter(d => isPayroll(d.name))
+              .filter(d => {
+                const depositDate = new Date(d.date);
+                return isPayroll(d.name) && depositDate >= threeMonthsAgo;
+              })
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
             if (payrollDeposits.length === 0) {
