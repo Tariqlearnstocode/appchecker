@@ -188,6 +188,28 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   isIncome: boolean;
   runningBalance: number | null;
 }> }) {
+  // Payroll detection logic
+  const PAYROLL_KEYWORDS = [
+    'payroll', 'salary', 'direct dep', 'dir dep', 'paycheck',
+    'adp', 'gusto', 'paychex', 'workday', 'ceridian', 'paylocity',
+    'paycor', 'bamboohr', 'namely', 'rippling', 'justworks',
+    'quickbooks payroll', 'square payroll', 'intuit', 'wage',
+    'employer', 'compensation', 'net pay', 'gross pay',
+    'ach payment', 'ach credit', 'ach deposit', 'direct deposit'
+  ];
+  const EXCLUDE_KEYWORDS = [
+    'venmo', 'zelle', 'cash app', 'cashapp', 'paypal', 'apple cash',
+    'google pay', 'gpay', 'square cash', 'transfer', 'xfer',
+    'savings', 'checking', '360 performance', 'money market',
+    'brokerage', 'investment', 'refund', 'return', 'rebate',
+    'wise', 'remitly', 'western union', 'moneygram'
+  ];
+  const isPayroll = (name: string) => {
+    const lower = name.toLowerCase();
+    if (EXCLUDE_KEYWORDS.some(kw => lower.includes(kw))) return false;
+    return PAYROLL_KEYWORDS.some(kw => lower.includes(kw));
+  };
+
   // Group transactions by month
   const monthlyData = useMemo(() => {
     const grouped: Record<string, typeof transactions> = {};
@@ -206,7 +228,7 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   }, [transactions]);
 
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
-  const [filter, setFilter] = useState<'all' | 'debits' | 'credits'>('all');
+  const [filter, setFilter] = useState<'all' | 'debits' | 'credits' | 'payroll'>('all');
   
   const selectedMonth = monthlyData.sortedMonths[selectedMonthIndex];
   const allTransactionsForMonth = monthlyData.grouped[selectedMonth] || [];
@@ -217,6 +239,8 @@ function TransactionHistory({ transactions }: { transactions: Array<{
       return allTransactionsForMonth.filter(t => !t.isIncome);
     } else if (filter === 'credits') {
       return allTransactionsForMonth.filter(t => t.isIncome);
+    } else if (filter === 'payroll') {
+      return allTransactionsForMonth.filter(t => t.isIncome && isPayroll(t.name));
     }
     return allTransactionsForMonth;
   }, [allTransactionsForMonth, filter]);
@@ -324,6 +348,16 @@ function TransactionHistory({ transactions }: { transactions: Array<{
           }`}
         >
           Credits Only
+        </button>
+        <button
+          onClick={() => setFilter('payroll')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            filter === 'payroll'
+              ? 'bg-black text-white'
+              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+          }`}
+        >
+          Payroll Only
         </button>
       </div>
       
@@ -647,15 +681,17 @@ export default function ReportContent({ verification, reportData, isCalculated }
           <div className="bg-white border border-gray-200 rounded p-5">
             <h3 className="font-semibold text-gray-900 mb-4">Illustrative Monthly Capacity</h3>
             <div className="grid grid-cols-2 gap-4">
-              {/* Left: ÷3 */}
+              {/* Left: 3x requirement */}
               <div className="text-center pr-4 border-r border-gray-200">
+                <div className="text-xs font-medium text-gray-600 mb-1">3x Requirement</div>
                 <div className="text-emerald-600 text-3xl font-light mb-2">
                   {formatCurrency(projectedMonthly / 3)}
                 </div>
                 <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 3)</p>
               </div>
-              {/* Right: ÷10 */}
+              {/* Right: 10x requirement */}
               <div className="text-center pl-4">
+                <div className="text-xs font-medium text-gray-600 mb-1">10x Requirement</div>
                 <div className="text-emerald-600 text-3xl font-light mb-2">
                   {formatCurrency(projectedMonthly / 10)}
                 </div>
