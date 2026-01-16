@@ -264,38 +264,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Delete all account connections to stop recurring charges
-    // Teller charges per active enrollment, so we must disconnect after fetching
-    console.log(`Disconnecting ${accounts.length} account(s) from Teller...`);
-    
-    const disconnectResults = await Promise.all(
-      accounts.map(async (account: any) => {
-      try {
-          const deleteRes = await tellerFetch(`${TELLER_API_URL}/accounts/${account.id}`, {
-          method: 'DELETE',
-            headers,
-          });
-          if (deleteRes.ok) {
-            console.log(`Successfully disconnected account ${account.id}`);
-            return { id: account.id, success: true };
-          } else {
-            const errText = await deleteRes.text().catch(() => 'Unknown error');
-            console.error(`Failed to disconnect account ${account.id}: ${errText}`);
-            return { id: account.id, success: false, error: errText };
-          }
-        } catch (err: any) {
-          console.error(`Error disconnecting account ${account.id}:`, err?.message);
-          return { id: account.id, success: false, error: err?.message };
+    // 5. Delete the entire enrollment to stop recurring charges
+    // DELETE /accounts removes access to all accounts in the enrollment (per Teller docs)
+    // This cancels billing for subscription-based products and prevents reenrollment
+    console.log(`Deleting enrollment to disconnect all ${accounts.length} account(s)...`);
+    try {
+      const deleteEnrollmentRes = await tellerFetch(`${TELLER_API_URL}/accounts`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (deleteEnrollmentRes.ok || deleteEnrollmentRes.status === 204) {
+        console.log('Successfully deleted enrollment - all access revoked');
+      } else {
+        const errText = await deleteEnrollmentRes.text().catch(() => 'Unknown error');
+        console.error(`Failed to delete enrollment: ${errText}`, {
+          status: deleteEnrollmentRes.status,
+          statusText: deleteEnrollmentRes.statusText,
+        });
       }
-      })
-    );
-    
-    const disconnectedCount = disconnectResults.filter(r => r.success).length;
-    console.log(`Disconnected ${disconnectedCount}/${accounts.length} accounts from Teller`);
+    } catch (err: any) {
+      console.error(`Error deleting enrollment:`, {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     return NextResponse.json({ 
       success: true,
-      disconnected: disconnectedCount,
       total_accounts: accounts.length
     });
   } catch (error: any) {
