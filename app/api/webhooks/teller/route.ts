@@ -111,8 +111,18 @@ interface TellerWebhookEvent {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('Teller webhook endpoint hit');
+  
   const body = await request.text();
   const signatureHeader = request.headers.get('teller-signature');
+
+  console.log('Teller webhook request received', {
+    hasBody: !!body,
+    bodyLength: body.length,
+    hasSignature: !!signatureHeader,
+    signaturePreview: signatureHeader ? signatureHeader.substring(0, 20) + '...' : null,
+    headers: Object.fromEntries(request.headers.entries()),
+  });
 
   if (!signatureHeader) {
     console.error('Teller webhook: No signature header');

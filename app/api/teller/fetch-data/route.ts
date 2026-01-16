@@ -58,6 +58,76 @@ async function tellerFetch(url: string, options: { method?: string; headers: Rec
   });
 }
 
+/**
+ * Fetch transactions in 3-month chunks as fallback when 12-month request fails
+ */
+async function fetchTransactionsInChunks(
+  account: any,
+  headers: Record<string, string>,
+  startDate: string,
+  endDate: string,
+  allTransactions: any[]
+): Promise<boolean> {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const chunkMonths = 3;
+  let totalFetched = 0;
+  let anyChunkSucceeded = false;
+
+  // Split into 4 chunks of 3 months each (12 months total)
+  for (let i = 0; i < 4; i++) {
+    const chunkStart = new Date(start);
+    chunkStart.setMonth(chunkStart.getMonth() + (i * chunkMonths));
+    
+    const chunkEnd = new Date(chunkStart);
+    chunkEnd.setMonth(chunkEnd.getMonth() + chunkMonths);
+    // Make sure we don't go past the original end date
+    if (chunkEnd > end) {
+      chunkEnd.setTime(end.getTime());
+    }
+
+    const chunkStartStr = chunkStart.toISOString().split('T')[0];
+    const chunkEndStr = chunkEnd.toISOString().split('T')[0];
+
+    try {
+      const txnUrl = `${TELLER_API_URL}/accounts/${account.id}/transactions?start_date=${chunkStartStr}&end_date=${chunkEndStr}`;
+      console.log(`Fetching 3-month chunk ${i + 1}/4 for account ${account.id}: ${chunkStartStr} to ${chunkEndStr}`);
+      
+      const txnRes = await tellerFetch(txnUrl, { headers });
+      
+      if (txnRes.ok) {
+        const transactions = await txnRes.json();
+        const txnCount = transactions?.length || 0;
+        totalFetched += txnCount;
+        allTransactions.push(...transactions);
+        anyChunkSucceeded = true;
+        console.log(`Successfully fetched chunk ${i + 1}/4: ${txnCount} transactions (${chunkStartStr} to ${chunkEndStr})`);
+      } else {
+        const errorData = await txnRes.json().catch(() => ({}));
+        console.error(`Failed to fetch chunk ${i + 1}/4 for account ${account.id}:`, {
+          status: txnRes.status,
+          error: errorData,
+          dateRange: { start: chunkStartStr, end: chunkEndStr },
+        });
+        // Continue with next chunk even if one fails
+      }
+    } catch (err) {
+      console.error(`Connection error fetching chunk ${i + 1}/4 for account ${account.id}:`, {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        dateRange: { start: chunkStartStr, end: chunkEndStr },
+      });
+      // Continue with next chunk even if one fails
+    }
+  }
+
+  if (anyChunkSucceeded) {
+    console.log(`Successfully fetched ${totalFetched} transactions using 3-month chunk fallback for account ${account.id}`);
+  }
+
+  return anyChunkSucceeded;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { access_token, verification_token } = await request.json();
@@ -162,6 +232,7 @@ export async function POST(request: NextRequest) {
     );
 
     // 3. Fetch transactions for each account (last 12 months)
+    // If 12-month request fails with timeout, fall back to 3-month chunks
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const startDate = twelveMonthsAgo.toISOString().split('T')[0];
@@ -170,6 +241,9 @@ export async function POST(request: NextRequest) {
     let allTransactions: any[] = [];
 
     for (const account of accounts) {
+      let transactionsFetched = false;
+      
+      // First, try 12 months in one request
       try {
         const txnUrl = `${TELLER_API_URL}/accounts/${account.id}/transactions?start_date=${startDate}&end_date=${endDate}`;
         console.log(`Fetching transactions for account ${account.id} (${account.institution?.name || 'unknown'}): ${txnUrl}`);
@@ -184,8 +258,11 @@ export async function POST(request: NextRequest) {
             console.warn(`WARNING: Empty transaction array returned for account ${account.id} (${account.institution?.name || 'unknown'}). This may indicate the date range exceeds bank's available history.`);
           }
           allTransactions = allTransactions.concat(transactions);
+          transactionsFetched = true;
         } else {
           const errorData = await txnRes.json().catch(() => ({}));
+          const isTimeout = txnRes.status === 504 || (errorData?.error?.code === 'gateway_timeout');
+          
           console.error(`ERROR: Failed to fetch transactions for account ${account.id}:`, {
             status: txnRes.status,
             statusText: txnRes.statusText,
@@ -196,6 +273,12 @@ export async function POST(request: NextRequest) {
             accountSubtype: account.subtype,
             fullErrorResponse: JSON.stringify(errorData),
           });
+          
+          // If it's a timeout, try fallback to 3-month chunks
+          if (isTimeout) {
+            console.log(`Timeout detected for 12-month request. Falling back to 3-month chunks for account ${account.id}...`);
+            transactionsFetched = await fetchTransactionsInChunks(account, headers, startDate, endDate, allTransactions);
+          }
         }
       } catch (err) {
         console.error(`Connection error fetching transactions for account ${account.id}:`, {
@@ -206,6 +289,16 @@ export async function POST(request: NextRequest) {
           accountType: account.type,
           accountSubtype: account.subtype,
         });
+        
+        // Try fallback on connection errors too
+        if (!transactionsFetched) {
+          console.log(`Connection error for 12-month request. Falling back to 3-month chunks for account ${account.id}...`);
+          transactionsFetched = await fetchTransactionsInChunks(account, headers, startDate, endDate, allTransactions);
+        }
+      }
+      
+      if (!transactionsFetched) {
+        console.warn(`Failed to fetch any transactions for account ${account.id} after trying both 12-month and 3-month chunk strategies`);
       }
     }
     
