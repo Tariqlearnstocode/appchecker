@@ -86,7 +86,7 @@ export default function FAQPage() {
         },
         {
           q: "Can I send verification requests to multiple individuals?",
-          a: "Yes. You can create unlimited verification requests on all paid plans. Each request generates a unique, secure link that you can share via email or any other method. Starter plans include 10 verifications per month, and Pro plans include 50 verifications per month, with overage options available."
+          a: "Yes. You can create unlimited verification requests on all paid plans. Each request generates a unique, secure link that you can share via email or any other method. Starter plans include 10 verifications per month, and Pro plans include 50 verifications per month. Additional verifications beyond your plan limit are $14.95 each."
         },
         {
           q: "How long do verification reports stay available?",
@@ -126,7 +126,7 @@ export default function FAQPage() {
           q: "How much does Income Checker cost?",
           a: (
             <>
-              We offer flexible pricing options: Pay-as-you-go at $14.99 per verification, Starter plan at $59/month (includes 10 verifications), and Pro plan at $199/month (includes 50 verifications). Overage pricing applies after included verifications. See our{' '}
+              We offer flexible pricing options: Pay-as-you-go at $14.99 per verification, Starter plan at $59/month (includes 10 verifications), and Pro plan at $129/month (includes 50 verifications). Overage pricing applies after included verifications. See our{' '}
               <Link href="/pricing" className="text-emerald-600 hover:text-emerald-700 underline">
                 Pricing page
               </Link>

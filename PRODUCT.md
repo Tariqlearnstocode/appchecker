@@ -18,7 +18,7 @@
 |------|-------|------------------------|----------------------|---------------------------|----------|
 | **Per Verification** | $14.99 | Pay as you go | $14.99 | — | Occasional use |
 | **Starter** | $59/mo | 10 | $5.90 | $8.99 | Small teams |
-| **Pro** ⭐ | $199/mo | 50 | $3.98 | $4.99 | Growing teams |
+| **Pro** ⭐ | $129/mo | 50 | $2.58 | $4.99 | Growing teams |
 | **Enterprise** | Custom | Custom | Custom | Custom | Large organizations |
 
 ---
@@ -45,7 +45,7 @@ Everything in Per Verification, plus:
 - Priority support
 - Overage: $8.99 per additional verification
 
-### Pro ($199/month) ⭐
+### Pro ($129/month) ⭐
 Everything in Starter, plus:
 - 50 verifications/month included
 - Overage: $4.99 per additional verification

@@ -96,7 +96,7 @@ export function PricingContent() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✓</span>
-              <span>Overage: $8.99 per additional</span>
+              <span>Overage: $14.95 per additional</span>
             </div>
           </div>
           <button
@@ -128,11 +128,11 @@ export function PricingContent() {
             <p className="text-sm font-medium text-gray-500 mb-1">Growing teams</p>
             <div className="mt-2">
               <div>
-                <span className="text-3xl font-bold text-gray-900">$199</span>
+                <span className="text-3xl font-bold text-gray-900">$129</span>
                 <span className="text-gray-600 text-sm ml-1">/month</span>
               </div>
               <div className="mt-1">
-                <span className="text-gray-600 text-sm">$3.98 per verification</span>
+                <span className="text-gray-600 text-sm">$2.58 per verification</span>
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@ export function PricingContent() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✓</span>
-              <span>Overage: $4.99 per additional</span>
+              <span>Overage: $14.95 per additional</span>
             </div>
           </div>
           <button
@@ -267,14 +267,14 @@ export function PricingContent() {
                 <td className="px-6 py-3 text-sm text-gray-700">Cost per report</td>
                 <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$14.99</td>
                 <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$5.90</td>
-                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$3.98</td>
+                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$2.58</td>
                 <td className="px-6 py-3 text-center text-sm text-gray-500">Custom</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-6 py-3 text-sm text-gray-700">Cost per overage</td>
                 <td className="px-6 py-3 text-center text-sm text-gray-400">—</td>
-                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$8.99</td>
-                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$4.99</td>
+                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$14.95</td>
+                <td className="px-6 py-3 text-center text-sm font-medium text-gray-900">$14.95</td>
                 <td className="px-6 py-3 text-center text-sm text-gray-500">Custom</td>
               </tr>
             </thead>

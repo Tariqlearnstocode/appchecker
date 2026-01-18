@@ -58,10 +58,10 @@ export async function setupProductsAndPrices() {
     prices.starterRecurring = starterRecurring;
     console.log('Starter recurring price:', starterRecurring.id);
 
-    // Pro recurring ($199/mo)
+    // Pro recurring ($129/mo)
     const proRecurring = await stripe.prices.create({
       product: productId,
-      unit_amount: 19900, // $199.00
+      unit_amount: 12900, // $129.00
       currency: 'usd',
       recurring: {
         interval: 'month',

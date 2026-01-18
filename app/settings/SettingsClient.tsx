@@ -281,7 +281,7 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
                         {subscriptionStatus.plan === 'starter' ? 'Starter Plan' : 'Pro Plan'}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {subscriptionStatus.plan === 'starter' ? '$59/month' : '$199/month'}
+                        {subscriptionStatus.plan === 'starter' ? '$59/month' : '$129/month'}
                       </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
