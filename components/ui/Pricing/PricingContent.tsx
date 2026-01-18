@@ -80,8 +80,13 @@ export function PricingContent() {
           <div className="mb-4">
             <p className="text-sm font-medium text-gray-500 mb-1">Small teams</p>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-gray-900">$59</span>
-              <span className="text-gray-600 text-sm ml-1">/month</span>
+              <div>
+                <span className="text-3xl font-bold text-gray-900">$59</span>
+                <span className="text-gray-600 text-sm ml-1">/month</span>
+              </div>
+              <div className="mt-1">
+                <span className="text-gray-600 text-sm">$5.90 per verification</span>
+              </div>
             </div>
           </div>
           <div className="space-y-2 text-sm text-gray-600 mb-6">
@@ -89,7 +94,6 @@ export function PricingContent() {
               <span className="text-emerald-500">✓</span>
               <span>10 verifications included</span>
             </div>
-            <div className="text-xs text-gray-500 ml-5">$5.90 per verification</div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✓</span>
               <span>Overage: $8.99 per additional</span>
@@ -123,8 +127,13 @@ export function PricingContent() {
           <div className="mb-4">
             <p className="text-sm font-medium text-gray-500 mb-1">Growing teams</p>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-gray-900">$199</span>
-              <span className="text-gray-600 text-sm ml-1">/month</span>
+              <div>
+                <span className="text-3xl font-bold text-gray-900">$199</span>
+                <span className="text-gray-600 text-sm ml-1">/month</span>
+              </div>
+              <div className="mt-1">
+                <span className="text-gray-600 text-sm">$3.98 per verification</span>
+              </div>
             </div>
           </div>
           <div className="space-y-2 text-sm text-gray-600 mb-6">
@@ -132,7 +141,6 @@ export function PricingContent() {
               <span className="text-emerald-500">✓</span>
               <span>50 verifications included</span>
             </div>
-            <div className="text-xs text-gray-500 ml-5">$3.98 per verification</div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✓</span>
               <span>Overage: $4.99 per additional</span>
