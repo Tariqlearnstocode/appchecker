@@ -23,7 +23,7 @@ export async function createVerificationsMeter() {
     // Create new meter
     const meter = await stripe.billing.meters.create({
       event_name: 'verification.created',
-      display_name: 'Income Verifications',
+      display_name: 'Income Checkers',
       default_aggregation: {
         formula: 'sum',
       },

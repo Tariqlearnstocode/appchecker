@@ -11,7 +11,7 @@ export default function SecurityPage() {
           <hr className="border-gray-200 mb-8" />
 
           <p className="text-gray-700 leading-relaxed mb-8">
-            Income Verifier is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
+            Income Checker is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
           </p>
 
           {/* Section 1 */}
@@ -217,7 +217,7 @@ export default function SecurityPage() {
               If you discover a security vulnerability, please report it responsibly:
             </p>
             <ol className="list-decimal list-inside text-gray-700 space-y-1 ml-4">
-              <li>Email us at security@[yourdomain].com</li>
+              <li>Email us at info@incomechecker.com</li>
               <li>Do not disclose publicly until we have had time to address the issue</li>
               <li>We aim to respond within 48 hours</li>
               <li>We do not pursue legal action against good-faith security researchers</li>
@@ -233,9 +233,9 @@ export default function SecurityPage() {
               For security concerns or questions, please contact:
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-1 ml-4">
-              <li><strong>Security Issues:</strong> security@[yourdomain].com</li>
-              <li><strong>Privacy Requests:</strong> privacy@[yourdomain].com</li>
-              <li><strong>General Support:</strong> support@[yourdomain].com</li>
+              <li><strong>Security Issues:</strong> info@incomechecker.com</li>
+              <li><strong>Privacy Requests:</strong> info@incomechecker.com</li>
+              <li><strong>General Support:</strong> info@incomechecker.com</li>
             </ul>
           </section>
 

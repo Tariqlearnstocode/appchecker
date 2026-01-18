@@ -2,7 +2,7 @@
 
 ## Overview
 
-Income Verifier is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
+Income Checker is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
 
 ---
 
@@ -158,7 +158,7 @@ Audit logs are:
 
 If you discover a security vulnerability, please report it responsibly:
 
-1. **Email**: security@[yourdomain].com
+1. **Email**: info@incomechecker.com
 2. **Do not** disclose publicly until we've had time to address it
 3. We aim to respond within 48 hours
 4. We do not pursue legal action against good-faith security researchers
@@ -205,9 +205,9 @@ If you discover a security vulnerability, please report it responsibly:
 ## Contact
 
 For security concerns or questions:
-- **Security Issues**: security@[yourdomain].com
-- **Privacy Requests**: privacy@[yourdomain].com
-- **General Support**: support@[yourdomain].com
+- **Security Issues**: info@incomechecker.com
+- **Privacy Requests**: info@incomechecker.com
+- **General Support**: info@incomechecker.com
 
 ---
 

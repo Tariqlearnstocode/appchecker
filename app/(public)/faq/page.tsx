@@ -23,8 +23,8 @@ export default function FAQPage() {
       category: "Getting Started",
       questions: [
         {
-          q: "What is Income Verifier?",
-          a: "Income Verifier is a secure platform that allows organizations to verify income by connecting directly to bank accounts. We provide detailed income reports based on real bank transaction data, making the verification process faster and more reliable than traditional methods like pay stubs or employer calls."
+          q: "What is Income Checker?",
+          a: "Income Checker is a secure platform that allows organizations to verify income by connecting directly to bank accounts. We provide detailed income reports based on real bank transaction data, making the verification process faster and more reliable than traditional methods like pay stubs or employer calls."
         },
         {
           q: "How does the verification process work?",
@@ -123,7 +123,7 @@ export default function FAQPage() {
       category: "Pricing & Plans",
       questions: [
         {
-          q: "How much does Income Verifier cost?",
+          q: "How much does Income Checker cost?",
           a: (
             <>
               We offer flexible pricing options: Pay-as-you-go at $14.99 per verification, Starter plan at $59/month (includes 10 verifications), and Pro plan at $199/month (includes 50 verifications). Overage pricing applies after included verifications. See our{' '}
@@ -176,12 +176,12 @@ export default function FAQPage() {
           a: "Verification links expire after a set period for security reasons. Contact the requesting party to request a new verification link. They can easily generate a new one from their dashboard."
         },
         {
-          q: "Can I use Income Verifier on mobile devices?",
-          a: "Yes, Income Verifier works on all modern mobile devices. The bank connection process and dashboard are fully responsive and optimized for mobile browsers."
+          q: "Can I use Income Checker on mobile devices?",
+          a: "Yes, Income Checker works on all modern mobile devices. The bank connection process and dashboard are fully responsive and optimized for mobile browsers."
         },
         {
           q: "Who can I contact for help?",
-          a: "You can reach our support team via email at support@example.com. We typically respond within 24 hours during business days. For urgent matters, paid plan subscribers receive priority support."
+          a: "You can reach our support team via email at info@incomechecker.com. We typically respond within 24 hours during business days. For urgent matters, paid plan subscribers receive priority support."
         }
       ]
     }
@@ -233,7 +233,7 @@ export default function FAQPage() {
         {/* Header */}
         <div className="mb-8">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">QUICK ANSWERS</p>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Income Verifier FAQs</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Income Checker FAQs</h1>
           <p className="text-lg text-gray-600">Your questions answered</p>
         </div>
 

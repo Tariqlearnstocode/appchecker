@@ -14,7 +14,7 @@ export default function Footer() {
               <FileCheck className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm text-gray-500">
-              © {currentYear}, Income Verifier
+              © {currentYear}, Income Checker
             </span>
           </div>
           
@@ -38,7 +38,7 @@ export default function Footer() {
             <Link href="/security" className="text-gray-700 hover:text-emerald-700 transition-colors">
               Security
             </Link>
-            <Link href="mailto:support@example.com" className="text-gray-700 hover:text-emerald-700 transition-colors">
+            <Link href="mailto:info@incomechecker.com" className="text-gray-700 hover:text-emerald-700 transition-colors">
               Contact Us
             </Link>
             <Link href="/disclaimers" className="text-gray-700 hover:text-emerald-700 transition-colors">

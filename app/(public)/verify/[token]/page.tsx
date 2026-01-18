@@ -182,7 +182,7 @@ export default function ApplicantVerificationPage() {
         
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Income Verification</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Income Checker</h1>
           <p className="text-gray-500">Secure bank connection powered by Teller</p>
         </div>
 

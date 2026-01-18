@@ -35,7 +35,7 @@ export function NewVerificationTab({
       {/* Form */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="p-4 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">Create Income Verification Request</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Create Income Checker Request</h2>
         </div>
         <form onSubmit={onSubmit} className="p-4">
           <div className="space-y-4">

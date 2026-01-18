@@ -8,8 +8,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/server';
 import 'styles/main.css';
 
-const title = 'Income Verification';
-const description = 'Verify applicant income, bank balances, and transaction history securely via Plaid.';
+const title = 'Income Checker';
+const description = 'Verify applicant income, bank balances, and transaction history securely via Teller.';
 
 const siteUrl = getURL();
 const ogImage = `${siteUrl}/opengraph-image.png`;
@@ -22,13 +22,13 @@ export const metadata: Metadata = {
     title: title,
     description: description,
     url: siteUrl,
-    siteName: 'Income Verification',
+    siteName: 'Income Checker',
     images: [
       {
         url: ogImage,
         width: 1200,
         height: 630,
-        alt: 'Income Verification',
+        alt: 'Income Checker',
       },
     ],
     locale: 'en_US',
