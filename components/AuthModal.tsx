@@ -12,9 +12,11 @@ interface AuthModalProps {
   onClose: () => void;
   initialMode?: AuthMode;
   onAuthSuccess?: () => void | Promise<void>;
+  initialEmail?: string;
+  initialCompanyName?: string;
 }
 
-export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSuccess }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSuccess, initialEmail = '', initialCompanyName = '' }: AuthModalProps) {
   const { supabase } = useAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
@@ -24,14 +26,21 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
   const [error, setError] = useState('');
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  // Reset mode when modal opens or initialMode changes
+  // Reset mode and populate initial values when modal opens or initialMode changes
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
       setError('');
       setResetEmailSent(false);
+      // Pre-populate email and company name from initial values
+      if (initialEmail) {
+        setEmail(initialEmail);
+      }
+      if (initialCompanyName) {
+        setCompanyName(initialCompanyName);
+      }
     }
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, initialEmail, initialCompanyName]);
 
   if (!isOpen) return null;
 

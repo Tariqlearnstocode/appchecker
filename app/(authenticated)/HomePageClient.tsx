@@ -13,7 +13,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { LimitReachedModal } from '@/components/LimitReachedModal';
 import { useAuth } from '@/contexts/AuthContext';
 
-type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'expired';
+type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'canceled';
 
 interface HomePageClientProps {
   initialVerifications: Verification[];
@@ -74,8 +74,10 @@ export default function HomePageClient({
 
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
+    const subscriptionStatus = params.get('subscription');
     
-    if (paymentStatus === 'success') {
+    // Handle both PAYG payment success and subscription success
+    if (paymentStatus === 'success' || subscriptionStatus === 'success') {
       const storedData = sessionStorage.getItem('pendingVerificationData');
       if (storedData) {
         // Wait for webhook to process payment, then retry with exponential backoff
@@ -100,13 +102,18 @@ export default function HomePageClient({
               const result = await response.json();
 
               if (!response.ok) {
-                // Payment still not available - retry if we have attempts left
-                if (response.status === 402 && result.paymentRequired && attempt < maxAttempts) {
-                  retryWithBackoff(attempt + 1, maxAttempts);
-                  return;
+                // For subscriptions: webhook might not have processed yet, retry
+                // For PAYG: payment might not be available yet, retry
+                if ((response.status === 402 && result.paymentRequired) || 
+                    (response.status === 401 && subscriptionStatus === 'success')) {
+                  // Retry if we have attempts left (subscription webhook still processing)
+                  if (attempt < maxAttempts) {
+                    retryWithBackoff(attempt + 1, maxAttempts);
+                    return;
+                  }
                 }
                 
-                // Check if limit was reached
+                // Check if limit was reached (subscription active but over limit)
                 if (response.status === 403 && result.limitReached) {
                   setLimitInfo({
                     currentUsage: result.currentUsage,
@@ -116,11 +123,16 @@ export default function HomePageClient({
                   setShowLimitModal(true);
                   sessionStorage.removeItem('pendingVerificationData');
                 } else {
+                  // Other error or max attempts reached
+                  const message = subscriptionStatus === 'success'
+                    ? 'Subscription is still processing. Please wait a moment and try creating the verification again.'
+                    : attempt >= maxAttempts 
+                    ? 'Payment is still processing. Please wait a moment and try creating the verification again.'
+                    : 'Waiting for subscription to process...';
+                  
                   toast({
-                    title: 'Payment Processing',
-                    description: attempt >= maxAttempts 
-                      ? 'Payment is still processing. Please wait a moment and try creating the verification again.'
-                      : 'Waiting for payment to process...',
+                    title: subscriptionStatus === 'success' ? 'Subscription Processing' : 'Payment Processing',
+                    description: message,
                   });
                 }
         return;
@@ -135,9 +147,13 @@ export default function HomePageClient({
               // Clear stored data
               sessionStorage.removeItem('pendingVerificationData');
               
+              const successMessage = subscriptionStatus === 'success'
+                ? 'Subscription activated and verification created successfully. Click "Send Email" to notify the recipient.'
+                : 'Payment processed and verification created successfully. Click "Send Email" to notify the recipient.';
+              
               toast({ 
                 title: 'Success!', 
-                description: 'Payment processed and verification created successfully. Click "Send Email" to notify the recipient.' 
+                description: successMessage
               });
             } catch (error) {
               console.error('Error auto-retrying verification:', error);
@@ -157,13 +173,13 @@ export default function HomePageClient({
         retryWithBackoff();
       }
       
-      // Clean up URL
+      // Clean up URL (remove both payment and subscription params)
       window.history.replaceState({}, '', window.location.pathname);
-    } else if (paymentStatus === 'canceled') {
+    } else if (paymentStatus === 'canceled' || subscriptionStatus === 'canceled') {
       // Clear stored data on cancel
       sessionStorage.removeItem('pendingVerificationData');
       toast({
-        title: 'Payment Canceled',
+        title: subscriptionStatus === 'canceled' ? 'Subscription Canceled' : 'Payment Canceled',
         description: 'You can try again when ready.',
       });
       // Clean up URL
@@ -306,7 +322,7 @@ export default function HomePageClient({
     toast({ title: 'Copied!', description: 'Link copied to clipboard' });
   }
 
-  async function deleteVerification(id: string) {
+  async function cancelVerification(id: string) {
     try {
       const response = await fetch('/api/verifications/delete', {
         method: 'DELETE',
@@ -319,20 +335,35 @@ export default function HomePageClient({
       if (!response.ok) {
         toast({
           title: 'Error',
-          description: result.error || 'Failed to delete verification',
+          description: result.message || result.error || 'Failed to cancel verification',
           variant: 'destructive',
         });
         return;
       }
 
-      setVerifications(verifications.filter((v) => v.id !== id));
-      if (selectedVerification?.id === id) setSelectedVerification(null);
-      toast({ title: 'Deleted', description: 'Verification removed' });
+      // Update verification status in local state
+      setVerifications(verifications.map((v) => 
+        v.id === id ? { ...v, status: 'canceled' as const } : v
+      ));
+      
+      if (selectedVerification?.id === id) {
+        setSelectedVerification({ ...selectedVerification, status: 'canceled' as const });
+      }
+      
+      toast({ 
+        title: 'Canceled', 
+        description: result.creditRefunded 
+          ? 'Verification canceled and credit refunded' 
+          : 'Verification canceled'
+      });
+      
+      // Reload verifications to get fresh data
+      await loadVerifications();
     } catch (error) {
-      console.error('Error deleting verification:', error);
+      console.error('Error canceling verification:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete verification',
+        description: 'Failed to cancel verification',
         variant: 'destructive',
       });
     }
@@ -343,7 +374,7 @@ export default function HomePageClient({
     all: verifications.length,
     pending: verifications.filter((v) => v.status === 'pending').length,
     completed: verifications.filter((v) => v.status === 'completed').length,
-    expired: verifications.filter((v) => v.status === 'expired').length,
+    canceled: verifications.filter((v) => v.status === 'canceled').length,
   };
 
   const showHeader = (!user || verifications.length === 0) && !headerDismissed;
@@ -409,12 +440,12 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   <span className="font-medium">New Verification</span>
                 </button>
                 <div className="grid grid-cols-4 gap-2">
-                  {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
+                  {(['all', 'pending', 'completed', 'canceled'] as const).map((tab) => {
                     const labels = {
                       all: 'All',
                       pending: 'Pending',
                       completed: 'Completed',
-                      expired: 'Expired',
+                      canceled: 'Canceled',
                     };
                     const isActive = activeTab === tab;
 
@@ -466,12 +497,12 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   )}
                 </button>
 
-                {(['all', 'pending', 'completed', 'expired'] as const).map((tab) => {
+                {(['all', 'pending', 'completed', 'canceled'] as const).map((tab) => {
                   const labels = {
                     all: 'All Verifications',
                     pending: 'Pending',
                     completed: 'Completed',
-                    expired: 'Expired',
+                    canceled: 'Canceled',
                   };
                   const isActive = activeTab === tab;
 
@@ -525,7 +556,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   onSelect={setSelectedVerification}
                   onCopyLink={copyLink}
                   onDelete={(id) => {
-                    deleteVerification(id);
+                    cancelVerification(id);
                     setSelectedVerification(null);
                   }}
                   onEdit={(verification) => {
@@ -549,7 +580,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   selectedVerification={selectedVerification}
                   onCopyLink={copyLink}
                   onDelete={(id) => {
-                    deleteVerification(id);
+                    cancelVerification(id);
                     setSelectedVerification(null);
                   }}
                   onUpgradeClick={() => {
@@ -686,6 +717,8 @@ Stop fake paystubs with bank-verified income reports.         </h1>
             isOpen={showAuthModal}
             onClose={() => setShowAuthModal(false)}
             initialMode={authModalMode}
+            initialEmail={landlordInfo.email || ''}
+            initialCompanyName={landlordInfo.name || ''}
             onAuthSuccess={async () => {
               // Check if there's a pending checkout after successful auth
               const pendingCheckout = sessionStorage.getItem('pendingCheckout');
