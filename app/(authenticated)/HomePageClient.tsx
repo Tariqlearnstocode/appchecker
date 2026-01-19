@@ -353,7 +353,7 @@ export default function HomePageClient({
       toast({ 
         title: 'Canceled', 
         description: result.creditRefunded 
-          ? 'Verification canceled and credit refunded' 
+          ? 'Verification canceled and credit returned' 
           : 'Verification canceled'
       });
       

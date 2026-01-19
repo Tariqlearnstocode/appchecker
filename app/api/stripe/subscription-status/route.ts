@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .single() as { data: { id: string } | null };
 
+      // Get count of available PAYG credits
+      const { count: availableCredits } = await supabase
+        .from('one_time_payments' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .is('verification_id', null);
+
       // Get total verifications created (for display)
       const { count: totalVerifications } = await supabase
         .from('income_verifications')
@@ -42,6 +50,7 @@ export async function GET(request: NextRequest) {
         paymentAmount: 1499, // $14.99
         totalVerifications: totalVerifications || 0,
         hasAvailablePayment: !!availablePayment,
+        availableCredits: availableCredits || 0,
       });
     }
 

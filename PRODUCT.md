@@ -43,12 +43,12 @@ Everything in Per Verification, plus:
 - Verification stored for 1 year
 - Multi-user team access
 - Priority support
-- Overage: $8.99 per additional verification
+- Overage: $14.99 per additional verification
 
 ### Pro ($129/month) ⭐
 Everything in Starter, plus:
 - 50 verifications/month included
-- Overage: $4.99 per additional verification
+- Overage: $14.99 per additional verification
 
 ### Enterprise (Contact Us)
 Everything in Pro, plus:

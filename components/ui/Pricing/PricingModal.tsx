@@ -193,7 +193,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-500">✓</span>
-                  <span>Overage: $8.99 per additional</span>
+                  <span>Overage: $14.99 per additional</span>
                 </div>
               </div>
               <button

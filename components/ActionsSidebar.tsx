@@ -1,9 +1,10 @@
 'use client';
 
-import { Copy, Eye, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2, Trash2 } from 'lucide-react';
+import { Copy, Eye, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2, Trash2, TrendingUp } from 'lucide-react';
 import { Verification } from './VerificationsTable';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ActionsSidebarProps {
   selectedVerification: Verification | null;
@@ -12,6 +13,12 @@ interface ActionsSidebarProps {
   onEmailSent?: () => void;
   onUpgradeClick?: () => void;
   startEditing?: boolean;
+}
+
+function formatRenewalDate(dateString: string | null): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatTimeAgo(dateString: string | null): string {
@@ -69,7 +76,11 @@ export function ActionsSidebar({
     requested_by_email: '',
   });
   const [updating, setUpdating] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Sync edit form when selected verification changes
   useEffect(() => {
@@ -95,6 +106,30 @@ export function ActionsSidebar({
       });
     }
   }, [startEditing, selectedVerification, isActive]);
+
+  // Load subscription status when verification is selected
+  useEffect(() => {
+    if (user && selectedVerification) {
+      loadSubscriptionStatus();
+    }
+  }, [user, selectedVerification?.id]);
+
+  async function loadSubscriptionStatus() {
+    if (!user) return;
+    
+    setLoadingSubscription(true);
+    try {
+      const response = await fetch('/api/stripe/subscription-status');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionStatus(data);
+      }
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  }
   
   async function handleSendEmail() {
     if (!selectedVerification) return;
@@ -354,6 +389,7 @@ export function ActionsSidebar({
                 )}
               </div>
             </div>
+            
             <div className="space-y-2">
               {/* Send Verification Link via Email - Only for active (pending/in_progress) */}
               {isActive && (
@@ -400,7 +436,7 @@ export function ActionsSidebar({
               {isCanceled && (
                 <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-center">
                   <p className="text-sm text-gray-600">
-                    This verification has been canceled. Credit has been refunded.
+                    This verification has been canceled. Credit has been returned.
                   </p>
                 </div>
               )}
@@ -408,11 +444,16 @@ export function ActionsSidebar({
               {/* Cancel button - Only for incomplete verifications */}
               {canCancel && (
                 <button
-                  onClick={() => onDelete(selectedVerification.id)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-red-300 bg-white hover:bg-red-50 text-red-600 font-medium rounded-lg transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowCancelConfirm(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-red-300 bg-white hover:bg-red-50 text-red-600 font-medium rounded-lg transition-colors flex-wrap"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Cancel Verification
+                  <Trash2 className="w-4 h-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Cancel Verification</span>
+                  <span className="text-xs font-normal opacity-75 whitespace-nowrap">(credit returned)</span>
                 </button>
               )}
               
@@ -439,6 +480,141 @@ export function ActionsSidebar({
           </div>
         )}
       </div>
+      
+      {/* Credits & Savings Card - Marketing Style */}
+      {subscriptionStatus && selectedVerification && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+          {/* Title */}
+          <h3 className="text-base font-bold text-gray-900 mb-3">Plan & Usage</h3>
+          
+          {/* Progress Bar - Only for subscriptions */}
+          {subscriptionStatus.hasSubscription && (
+            <div className="mb-3">
+              <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                <div
+                  className="bg-emerald-500 h-2 rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(((subscriptionStatus.currentUsage || 0) / subscriptionStatus.limit) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="flex items-baseline justify-between text-xs text-gray-600">
+                <span>{subscriptionStatus.currentUsage || 0}/{subscriptionStatus.limit} verifications used</span>
+                {subscriptionStatus.usageInfo?.periodEnd && (
+                  <span>Renews {formatRenewalDate(subscriptionStatus.usageInfo.periodEnd)}</span>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* PAYG Credits Display */}
+          {!subscriptionStatus.hasSubscription && subscriptionStatus.availableCredits !== undefined && (
+            <div className="mb-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg font-semibold text-gray-900">
+                  1 credit remaining
+                </span>
+                <span className="text-xs text-gray-500">
+                  1/1 available
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {/* Marketing Copy & CTA */}
+          {((subscriptionStatus.hasSubscription && subscriptionStatus.plan === 'starter') || !subscriptionStatus.hasSubscription) && (
+            <>
+              <p className="text-sm font-semibold text-gray-900 mb-2">
+                {subscriptionStatus.hasSubscription
+                  ? 'Need more than 10 verifications?'
+                  : 'Subscribe and save.'}
+              </p>
+              <p className="text-xs text-gray-600 mb-4">
+                {subscriptionStatus.hasSubscription
+                  ? 'Get 50 per month for $129 ($2.58 each)'
+                  : 'Get 50 verifications/month for $129 ($2.58 each) instead of $14.99 each.'}
+              </p>
+              {onUpgradeClick && (
+                <button
+                  onClick={onUpgradeClick}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md"
+                >
+Compare Plans             </button>
+              )}
+            </>
+          )}
+          
+          {/* For Pro users, just show usage info */}
+          {subscriptionStatus.hasSubscription && subscriptionStatus.plan === 'pro' && (
+            <div className="space-y-1">
+              <p className="text-sm text-gray-700">
+                {subscriptionStatus.limit - (subscriptionStatus.currentUsage || 0)} credits remaining
+              </p>
+              {subscriptionStatus.usageInfo?.periodEnd && (
+                <p className="text-xs text-gray-500">
+                  Renews {formatRenewalDate(subscriptionStatus.usageInfo.periodEnd)}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && selectedVerification && (
+        <div 
+          className="fixed inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center z-50" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.target === e.currentTarget) {
+              setShowCancelConfirm(false);
+            }
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              e.stopPropagation();
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4 text-center" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel verification?</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This will cancel the request and return your credit.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCancelConfirm(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Keep verification
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCancelConfirm(false);
+                  onDelete(selectedVerification.id);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Cancel verification
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
