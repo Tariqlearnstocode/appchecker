@@ -42,28 +42,7 @@ export default function HomePageClient({
     plan: 'starter' | 'pro';
   } | null>(null);
   const [headerDismissed, setHeaderDismissed] = useState(false);
-  const [bannerVariant, setBannerVariant] = useState<{ title: string; description: string } | null>(null);
   const { toast } = useToast();
-
-  // Randomly select banner variant on mount
-  useEffect(() => {
-    const variants = [
-      {
-        title: 'Direct bank-link income verification',
-        description: 'Stop chasing PDF bank history or forged documents. Get verified income data directly from their bank account in minutes.',
-      },
-      {
-        title: 'Verified Bank Income',
-        description: 'Eliminate the risk of doctored or forged PDF statements. Access 12 months of earnings history directly from any connected bank account.',
-      },
-      {
-        title: 'Instant Bank Verification',
-        description: 'Forget manual PDF checks. Get a verified report of earnings and deposits straight from the individual\'s bank account.',
-      },
-    ];
-    const randomIndex = Math.floor(Math.random() * variants.length);
-    setBannerVariant(variants[randomIndex]);
-  }, []);
 
   // Listen for auth modal events from navbar
   useEffect(() => {
@@ -374,16 +353,14 @@ export default function HomePageClient({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Header Banner */}
-        {showHeader && bannerVariant && (
+        {showHeader && (
           <div className="mb-6 bg-emerald-50 rounded-xl border border-emerald-100 p-6 relative overflow-hidden">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4 relative z-10">
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {bannerVariant.title}
-                </h2>
-                <p className="text-gray-700 mb-4">
-                  {bannerVariant.description}
-                </p>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+Stop fake paystubs with bank-verified income reports.         </h1>
+                <h2 className="text-lg text-gray-700 mb-4">
+                Applicants connect their bank and you receive a verified earnings report with up to 12 months of income history in minutes.                </h2>
                 <div className="flex flex-wrap items-center gap-4">
                   <Link 
                     href="/report/example" 
