@@ -41,7 +41,7 @@ export default function GlobalNavbar() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 hidden sm:inline">Income Checker</span>
+            <span className="font-semibold text-gray-900 hidden sm:inline">IncomeChecker.com</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             {user ? (

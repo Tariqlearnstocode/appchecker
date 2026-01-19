@@ -42,6 +42,7 @@ export default function HomePageClient({
     plan: 'starter' | 'pro';
   } | null>(null);
   const [headerDismissed, setHeaderDismissed] = useState(false);
+  const [startEditing, setStartEditing] = useState(false);
   const { toast } = useToast();
 
   // Listen for auth modal events from navbar
@@ -394,7 +395,10 @@ Stop fake paystubs with bank-verified income reports.         </h1>
               {/* Mobile: Stacked layout */}
               <div className="flex flex-col sm:hidden gap-2 mb-4">
                 <button
-                  onClick={() => setActiveTab('new')}
+                  onClick={() => {
+                    setActiveTab('new');
+                    setSelectedVerification(null);
+                  }}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                     activeTab === 'new'
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-600'
@@ -445,7 +449,10 @@ Stop fake paystubs with bank-verified income reports.         </h1>
               {/* Desktop: Horizontal layout */}
               <div className="hidden sm:flex items-end gap-0 border-b border-gray-200">
                 <button
-                  onClick={() => setActiveTab('new')}
+                  onClick={() => {
+                    setActiveTab('new');
+                    setSelectedVerification(null);
+                  }}
                   className={`flex items-center gap-2 px-5 py-3 rounded-t-lg border-t border-x transition-all relative ${
                     activeTab === 'new'
                       ? 'border-emerald-500 border-b-2 border-b-transparent bg-white text-emerald-600 shadow-sm z-10'
@@ -521,6 +528,12 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                     deleteVerification(id);
                     setSelectedVerification(null);
                   }}
+                  onEdit={(verification) => {
+                    setSelectedVerification(verification);
+                    setStartEditing(true);
+                    // Reset after a brief moment to allow the sidebar to react
+                    setTimeout(() => setStartEditing(false), 100);
+                  }}
                   loading={loading}
                   filter={activeTab}
                 />
@@ -542,6 +555,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   onUpgradeClick={() => {
                     setShowPricingModal(true);
                   }}
+                  startEditing={startEditing}
                   onEmailSent={async () => {
                     // Refresh verifications to get updated last_email_sent_at
                     if (user) {

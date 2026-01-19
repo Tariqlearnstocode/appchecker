@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Eye, Trash2, Loader2, Link2 } from 'lucide-react';
+import { Copy, Eye, Trash2, Loader2, Link2, Pencil } from 'lucide-react';
 
 export type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed';
 
@@ -38,6 +38,7 @@ interface VerificationsTableProps {
   onCopyLink?: (token: string) => void;
   onViewReport?: (token: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (verification: Verification) => void;
   loading?: boolean;
   title?: string;
   showPagination?: boolean;
@@ -51,6 +52,7 @@ export function VerificationsTable({
   onCopyLink,
   onViewReport,
   onDelete,
+  onEdit,
   loading = false,
   title,
   showPagination = true,
@@ -104,6 +106,8 @@ export function VerificationsTable({
               const status = statusConfig[v.status];
               const isSelected = selectedVerification?.id === v.id;
               const isCompleted = v.status === 'completed';
+              const isExpired = v.status === 'expired';
+              const canEdit = !isCompleted && !isExpired;
               return (
                 <tr
                   key={v.id}
@@ -155,6 +159,19 @@ export function VerificationsTable({
                   </td>
                   <td className="px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
+                      {/* Edit */}
+                      {canEdit && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit?.(v);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-emerald-600 transition-colors"
+                          title="Edit verification"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
                       {/* Copy Link */}
                       <button
                         onClick={(e) => {

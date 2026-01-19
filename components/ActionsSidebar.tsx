@@ -1,8 +1,8 @@
 'use client';
 
-import { Copy, Eye, Trash2, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2, Folder, Bell, Clock, Users } from 'lucide-react';
+import { Copy, Eye, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2 } from 'lucide-react';
 import { Verification } from './VerificationsTable';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
 
 interface ActionsSidebarProps {
@@ -11,6 +11,7 @@ interface ActionsSidebarProps {
   onDelete: (id: string) => void;
   onEmailSent?: () => void;
   onUpgradeClick?: () => void;
+  startEditing?: boolean;
 }
 
 function formatTimeAgo(dateString: string | null): string {
@@ -32,22 +33,66 @@ function formatTimeAgo(dateString: string | null): string {
   }
 }
 
+function formatDateTime(dateString: string | null): string {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 export function ActionsSidebar({
   selectedVerification,
   onCopyLink,
   onDelete,
   onEmailSent,
   onUpgradeClick,
+  startEditing = false,
 }: ActionsSidebarProps) {
   const isCompleted = selectedVerification?.status === 'completed';
   const isExpired = selectedVerification?.status === 'expired';
   const isActive = selectedVerification && !isCompleted && !isExpired;
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [sendingReminder, setSendingReminder] = useState(false);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    individual_name: '',
+    individual_email: '',
+    requested_by_name: '',
+    requested_by_email: '',
+  });
+  const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
+  
+  // Sync edit form when selected verification changes
+  useEffect(() => {
+    if (selectedVerification && !editing) {
+      setEditForm({
+        individual_name: selectedVerification.individual_name,
+        individual_email: selectedVerification.individual_email,
+        requested_by_name: selectedVerification.requested_by_name || '',
+        requested_by_email: selectedVerification.requested_by_email || '',
+      });
+    }
+  }, [selectedVerification, editing]);
+
+  // Start editing when startEditing prop is true
+  useEffect(() => {
+    if (startEditing && selectedVerification && isActive) {
+      setEditing(true);
+      setEditForm({
+        individual_name: selectedVerification.individual_name,
+        individual_email: selectedVerification.individual_email,
+        requested_by_name: selectedVerification.requested_by_name || '',
+        requested_by_email: selectedVerification.requested_by_email || '',
+      });
+    }
+  }, [startEditing, selectedVerification, isActive]);
   
   async function handleSendEmail() {
     if (!selectedVerification) return;
@@ -86,54 +131,29 @@ export function ActionsSidebar({
     }
   }
 
-  async function handleSendReminder() {
+  async function handleUpdateVerification() {
     if (!selectedVerification) return;
     
-    setSendingReminder(true);
-    try {
-      const response = await fetch('/api/verifications/send-reminder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verification_id: selectedVerification.id }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to send reminder',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Reminder sent!',
-          description: `Reminder email sent to ${selectedVerification.individual_email}`,
-        });
-        onEmailSent?.();
-      }
-    } catch (error) {
+    if (!editForm.individual_name.trim() || !editForm.individual_email.trim()) {
       toast({
         title: 'Error',
-        description: 'Failed to send reminder',
+        description: 'Applicant name and email are required',
         variant: 'destructive',
       });
-    } finally {
-      setSendingReminder(false);
+      return;
     }
-  }
-
-  async function handleUpdateEmail() {
-    if (!selectedVerification || !newEmail) return;
     
-    setUpdatingEmail(true);
+    setUpdating(true);
     try {
-      const response = await fetch('/api/verifications/update-email', {
+      const response = await fetch('/api/verifications/update', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           verification_id: selectedVerification.id,
-          individual_email: newEmail,
+          individual_name: editForm.individual_name,
+          individual_email: editForm.individual_email,
+          requested_by_name: editForm.requested_by_name || null,
+          requested_by_email: editForm.requested_by_email || null,
         }),
       });
       
@@ -142,26 +162,25 @@ export function ActionsSidebar({
       if (!response.ok) {
         toast({
           title: 'Error',
-          description: result.error || 'Failed to update email',
+          description: result.error || 'Failed to update verification',
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'Email updated!',
-          description: `Applicant email updated to ${newEmail}`,
+          title: 'Verification updated!',
+          description: 'Verification details have been updated successfully',
         });
-        setEditingEmail(false);
-        setNewEmail('');
+        setEditing(false);
         onEmailSent?.(); // Refresh the verification data
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to update email',
+        description: 'Failed to update verification',
         variant: 'destructive',
       });
     } finally {
-      setUpdatingEmail(false);
+      setUpdating(false);
     }
   }
   
@@ -204,49 +223,107 @@ export function ActionsSidebar({
         {selectedVerification ? (
           <>
             <div className="mb-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Selected</p>
-              <p className="font-semibold text-gray-900 text-base">
-                {selectedVerification.individual_name.toUpperCase()}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-gray-600">{selectedVerification.individual_email}</p>
-                {isActive && (
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Selected</p>
+                {isActive && !editing && (
                   <button
                     onClick={() => {
-                      setEditingEmail(true);
-                      setNewEmail(selectedVerification.individual_email);
+                      setEditing(true);
+                      setEditForm({
+                        individual_name: selectedVerification.individual_name,
+                        individual_email: selectedVerification.individual_email,
+                        requested_by_name: selectedVerification.requested_by_name || '',
+                        requested_by_email: selectedVerification.requested_by_email || '',
+                      });
                     }}
                     className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline"
-                    title="Edit email"
+                    title="Edit verification details"
                   >
                     Edit
                   </button>
                 )}
               </div>
-              {editingEmail && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="New email address"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    disabled={updatingEmail}
-                  />
-                  <div className="flex gap-2 mt-2">
+              
+              {!editing ? (
+                <>
+                  <p className="font-semibold text-gray-900 text-base">
+                    {selectedVerification.individual_name.toUpperCase()}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">{selectedVerification.individual_email}</p>
+                </>
+              ) : (
+                <div className="mt-2 space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Applicant Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.individual_name}
+                      onChange={(e) => setEditForm({ ...editForm, individual_name: e.target.value })}
+                      placeholder="Applicant name"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      disabled={updating}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Applicant Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.individual_email}
+                      onChange={(e) => setEditForm({ ...editForm, individual_email: e.target.value })}
+                      placeholder="applicant@example.com"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      disabled={updating}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Company Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.requested_by_name}
+                      onChange={(e) => setEditForm({ ...editForm, requested_by_name: e.target.value })}
+                      placeholder="Company name (optional)"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      disabled={updating}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Company Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.requested_by_email}
+                      onChange={(e) => setEditForm({ ...editForm, requested_by_email: e.target.value })}
+                      placeholder="company@example.com (optional)"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      disabled={updating}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
                     <button
-                      onClick={handleUpdateEmail}
-                      disabled={updatingEmail || !newEmail}
+                      onClick={handleUpdateVerification}
+                      disabled={updating || !editForm.individual_name.trim() || !editForm.individual_email.trim()}
                       className="flex-1 px-3 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded transition-colors"
                     >
-                      {updatingEmail ? 'Updating...' : 'Save'}
+                      {updating ? 'Updating...' : 'Save'}
                     </button>
                     <button
                       onClick={() => {
-                        setEditingEmail(false);
-                        setNewEmail('');
+                        setEditing(false);
+                        setEditForm({
+                          individual_name: '',
+                          individual_email: '',
+                          requested_by_name: '',
+                          requested_by_email: '',
+                        });
                       }}
-                      disabled={updatingEmail}
+                      disabled={updating}
                       className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
                     >
                       Cancel
@@ -254,8 +331,18 @@ export function ActionsSidebar({
                   </div>
                 </div>
               )}
-              <div className="mt-3">
+              <div className="mt-3 space-y-2">
                 {getStatusBadge()}
+                {!isCompleted && selectedVerification.last_email_sent_at && (
+                  <p className="text-xs text-gray-500">
+                    Last email sent at: {formatDateTime(selectedVerification.last_email_sent_at)}
+                  </p>
+                )}
+                {isCompleted && selectedVerification.completed_at && (
+                  <p className="text-xs text-gray-500">
+                    Completed at: {formatDateTime(selectedVerification.completed_at)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -274,7 +361,7 @@ export function ActionsSidebar({
                   ) : (
                     <>
                       <Mail className="w-4 h-4" />
-                      Send Verification Link
+                      {selectedVerification.last_email_sent_at ? 'Resend Verification Link' : 'Send Verification Link'}
                     </>
                   )}
                 </button>
@@ -322,78 +409,6 @@ export function ActionsSidebar({
             </p>
           </div>
         )}
-      </div>
-
-      {/* Additional Actions */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Folder className="w-4 h-4 text-amber-500" />
-          <span className="font-medium text-gray-900">Additional Actions</span>
-        </div>
-        <div className="space-y-2">
-          <button
-            onClick={handleSendReminder}
-            disabled={!selectedVerification || !isActive || sendingReminder}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {sendingReminder ? (
-              <>
-                <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
-                <span className="text-sm text-gray-700">Sending...</span>
-              </>
-            ) : (
-              <>
-                <Bell className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-700">Email reminder to applicant</span>
-              </>
-            )}
-          </button>
-          
-          <button
-            disabled
-            className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-colors opacity-60 cursor-not-allowed"
-          >
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-600" />
-              <span className="text-sm text-gray-700">Enable Auto-Reminders</span>
-            </div>
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">Pro</span>
-          </button>
-          
-          <button
-            disabled
-            className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 rounded-lg transition-colors opacity-60 cursor-not-allowed"
-          >
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-600" />
-              <span className="text-sm text-gray-700">Team access</span>
-            </div>
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded">Pro</span>
-          </button>
-          
-          {/* Delete */}
-          {selectedVerification && (
-            <button
-              onClick={() => onDelete(selectedVerification.id)}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="text-sm">Delete verification</span>
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => {
-            if (onUpgradeClick) {
-              onUpgradeClick();
-            } else {
-              window.location.href = '/settings?tab=subscription';
-            }
-          }}
-          className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
-        >
-          Upgrade to Pro
-        </button>
       </div>
     </div>
   );

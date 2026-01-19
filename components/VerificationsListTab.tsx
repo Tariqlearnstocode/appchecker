@@ -10,6 +10,7 @@ interface VerificationsListTabProps {
   onSelect: (verification: Verification) => void;
   onCopyLink?: (token: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (verification: Verification) => void;
   loading: boolean;
   filter: FilterType;
 }
@@ -27,6 +28,7 @@ export function VerificationsListTab({
   onSelect,
   onCopyLink,
   onDelete,
+  onEdit,
   loading,
   filter,
 }: VerificationsListTabProps) {
@@ -43,6 +45,7 @@ export function VerificationsListTab({
       onSelect={onSelect}
       onCopyLink={onCopyLink}
       onDelete={onDelete}
+      onEdit={onEdit}
       loading={loading}
       title={filterTitles[filter]}
       showPagination={true}

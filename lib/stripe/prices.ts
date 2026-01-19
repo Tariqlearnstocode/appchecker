@@ -8,13 +8,13 @@ export async function setupProductsAndPrices() {
   try {
     // Create or get product
     const productSearch = await stripe.products.search({
-      query: 'name:"Income Checker"',
+      query: 'name:"IncomeChecker.com"',
     });
 
     let productId: string;
     if (productSearch.data.length === 0) {
       const newProduct = await stripe.products.create({
-        name: 'Income Checker',
+        name: 'IncomeChecker.com',
         description: 'Bank-verified income verification service',
       });
       productId = newProduct.id;

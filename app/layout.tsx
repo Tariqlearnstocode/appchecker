@@ -8,7 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/server';
 import 'styles/main.css';
 
-const title = 'Income Checker';
+const title = 'IncomeChecker.com';
 const description = 'Verify applicant income, bank balances, and transaction history securely via Teller.';
 
 const siteUrl = getURL();
@@ -22,13 +22,13 @@ export const metadata: Metadata = {
     title: title,
     description: description,
     url: siteUrl,
-    siteName: 'Income Checker',
+    siteName: 'IncomeChecker.com',
     images: [
       {
         url: ogImage,
         width: 1200,
         height: 630,
-        alt: 'Income Checker',
+        alt: 'IncomeChecker.com',
       },
     ],
     locale: 'en_US',

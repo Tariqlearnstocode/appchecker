@@ -14,7 +14,7 @@ export default function Footer() {
               <FileCheck className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm text-gray-500">
-              © {currentYear}, Income Checker
+              © {currentYear}, IncomeChecker.com
             </span>
           </div>
           

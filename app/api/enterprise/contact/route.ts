@@ -4,7 +4,7 @@ import { sanitizeEmail, escapeHtml } from '@/utils/sanitize';
 import { checkRateLimit, getClientIP } from '@/utils/rate-limit';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Income Checker <noreply@yourdomain.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'IncomeChecker.com <noreply@yourdomain.com>';
 const ENTERPRISE_EMAIL = process.env.ENTERPRISE_EMAIL || process.env.FROM_EMAIL || 'enterprise@yourdomain.com';
 const CALENDLY_LINK = process.env.CALENDLY_LINK || 'https://calendly.com/your-calendly-link';
 
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: [email],
-        subject: 'Thank you for your interest in Income Checker Enterprise',
+        subject: 'Thank you for your interest in IncomeChecker.com Enterprise',
         html: `
           <!DOCTYPE html>
           <html>
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
                 <p style="font-size: 16px; margin-top: 0;">Hello,</p>
                 
                 <p style="font-size: 16px;">
-                  Thank you for your interest in Income Checker Enterprise. Our team has received your inquiry and will reach out to you shortly to discuss your needs and provide a custom pricing quote.
+                  Thank you for your interest in IncomeChecker.com Enterprise. Our team has received your inquiry and will reach out to you shortly to discuss your needs and provide a custom pricing quote.
                 </p>
                 
                 <p style="font-size: 16px;">

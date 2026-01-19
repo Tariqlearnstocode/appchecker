@@ -11,7 +11,7 @@ export default function SecurityPage() {
           <hr className="border-gray-200 mb-8" />
 
           <p className="text-gray-700 leading-relaxed mb-8">
-            Income Checker is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
+            IncomeChecker.com is designed with security and privacy as core principles. This document outlines our security practices, data handling procedures, and compliance measures.
           </p>
 
           {/* Section 1 */}

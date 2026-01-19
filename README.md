@@ -1,4 +1,4 @@
-# Income Checker
+# IncomeChecker.com
 
 A modern income verification tool for landlords and property managers. Securely verify applicant income, bank balances, and transaction history via Teller.
 

@@ -599,7 +599,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
 
         {/* Disclaimer Box */}
         <div className="bg-[#FFF8E7] border border-[#E8DFC7] rounded p-4 mb-6 text-sm text-gray-700 leading-relaxed">
-          <strong>Disclaimer:</strong> This Income Checker Report is provided for informational purposes only. It presents income-related data derived from bank account information voluntarily authorized by the individual. This report does not constitute a recommendation, approval, denial, or eligibility determination for any purpose. Any interpretation or use of this information is the sole responsibility of the recipient.
+          <strong>Disclaimer:</strong> This IncomeChecker.com Report is provided for informational purposes only. It presents income-related data derived from bank account information voluntarily authorized by the individual. This report does not constitute a recommendation, approval, denial, or eligibility determination for any purpose. Any interpretation or use of this information is the sole responsibility of the recipient.
         </div>
 
         {/* Income Summary Section */}

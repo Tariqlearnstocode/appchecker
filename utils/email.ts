@@ -3,7 +3,7 @@ import { escapeHtml } from './sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Income Checker <noreply@yourdomain.com>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'IncomeChecker.com <noreply@yourdomain.com>';
 
 export interface SendVerificationEmailParams {
   to: string;
@@ -56,7 +56,7 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">Income Checker Request</h1>
+              <h1 style="color: white; margin: 0; font-size: 24px;">IncomeChecker.com Request</h1>
             </div>
             
             <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
@@ -96,7 +96,7 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
             </div>
             
             <div style="text-align: center; margin-top: 20px; padding: 20px; color: #9ca3af; font-size: 12px;">
-              <p style="margin: 0;">Powered by Income Checker</p>
+              <p style="margin: 0;">Powered by IncomeChecker.com</p>
               <p style="margin: 5px 0 0 0;">This email was sent to ${safeTo}</p>
             </div>
           </body>
@@ -170,7 +170,7 @@ export async function sendCompletionEmail(params: SendCompletionEmailParams) {
             </div>
             
             <div style="text-align: center; margin-top: 20px; padding: 20px; color: #9ca3af; font-size: 12px;">
-              <p style="margin: 0;">Powered by Income Checker</p>
+              <p style="margin: 0;">Powered by IncomeChecker.com</p>
             </div>
           </body>
         </html>
@@ -247,7 +247,7 @@ export async function sendReminderEmail(params: SendReminderEmailParams) {
             </div>
             
             <div style="text-align: center; margin-top: 20px; padding: 20px; color: #9ca3af; font-size: 12px;">
-              <p style="margin: 0;">Powered by Income Checker</p>
+              <p style="margin: 0;">Powered by IncomeChecker.com</p>
               <p style="margin: 5px 0 0 0;">This email was sent to ${safeTo}</p>
             </div>
           </body>
