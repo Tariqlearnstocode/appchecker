@@ -2,7 +2,7 @@
 
 import { VerificationsTable, Verification } from './VerificationsTable';
 
-type FilterType = 'all' | 'pending' | 'completed' | 'expired';
+type FilterType = 'all' | 'pending' | 'completed' | 'canceled';
 
 interface VerificationsListTabProps {
   verifications: Verification[];
@@ -19,7 +19,7 @@ const filterTitles: Record<FilterType, string> = {
   all: 'All Verifications',
   pending: 'Pending Verifications',
   completed: 'Completed Verifications',
-  expired: 'Expired Verifications',
+  canceled: 'Canceled Verifications',
 };
 
 export function VerificationsListTab({

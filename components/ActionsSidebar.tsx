@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Eye, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2 } from 'lucide-react';
+import { Copy, Eye, FileCheck, Crown, CheckCircle, Link2, Mail, Loader2, Trash2 } from 'lucide-react';
 import { Verification } from './VerificationsTable';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toasts/use-toast';
@@ -57,7 +57,9 @@ export function ActionsSidebar({
 }: ActionsSidebarProps) {
   const isCompleted = selectedVerification?.status === 'completed';
   const isExpired = selectedVerification?.status === 'expired';
-  const isActive = selectedVerification && !isCompleted && !isExpired;
+  const isCanceled = selectedVerification?.status === 'canceled';
+  const isActive = selectedVerification && !isCompleted && !isExpired && !isCanceled;
+  const canCancel = selectedVerification && (selectedVerification.status === 'pending' || selectedVerification.status === 'in_progress');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -200,6 +202,13 @@ export function ActionsSidebar({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">Expired</span>
+        </div>
+      );
+    } else if (status === 'canceled') {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">Canceled</span>
         </div>
       );
     } else if (status === 'pending') {
@@ -385,6 +394,26 @@ export function ActionsSidebar({
                     This verification link has expired
                   </p>
                 </div>
+              )}
+              
+              {/* Canceled message */}
+              {isCanceled && (
+                <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                  <p className="text-sm text-gray-600">
+                    This verification has been canceled. Credit has been refunded.
+                  </p>
+                </div>
+              )}
+              
+              {/* Cancel button - Only for incomplete verifications */}
+              {canCancel && (
+                <button
+                  onClick={() => onDelete(selectedVerification.id)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-red-300 bg-white hover:bg-red-50 text-red-600 font-medium rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Cancel Verification
+                </button>
               )}
               
               {/* View Report - For completed or expired (if report exists) */}

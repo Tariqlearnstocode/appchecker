@@ -2,7 +2,7 @@
 
 import { Copy, Eye, Trash2, Loader2, Link2, Pencil } from 'lucide-react';
 
-export type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed';
+export type VerificationStatus = 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed' | 'canceled';
 
 export interface Verification {
   id: string;
@@ -29,6 +29,7 @@ export const statusConfig: Record<VerificationStatus, { color: string; bgColor: 
   completed: { color: 'text-emerald-600', bgColor: 'bg-emerald-50', label: 'Completed' },
   expired: { color: 'text-gray-500', bgColor: 'bg-gray-100', label: 'Expired' },
   failed: { color: 'text-red-600', bgColor: 'bg-red-50', label: 'Failed' },
+  canceled: { color: 'text-gray-600', bgColor: 'bg-gray-100', label: 'Canceled' },
 };
 
 interface VerificationsTableProps {
@@ -107,7 +108,9 @@ export function VerificationsTable({
               const isSelected = selectedVerification?.id === v.id;
               const isCompleted = v.status === 'completed';
               const isExpired = v.status === 'expired';
-              const canEdit = !isCompleted && !isExpired;
+              const isCanceled = v.status === 'canceled';
+              const canEdit = !isCompleted && !isExpired && !isCanceled;
+              const canCancel = (v.status === 'pending' || v.status === 'in_progress') && !isCanceled;
               return (
                 <tr
                   key={v.id}
@@ -178,13 +181,21 @@ export function VerificationsTable({
                           e.stopPropagation();
                           onCopyLink?.(v.verification_token);
                         }}
-                        disabled={isCompleted}
+                        disabled={isCompleted || isCanceled || isExpired}
                         className={`p-1.5 rounded-lg transition-colors ${
-                          isCompleted
+                          isCompleted || isCanceled || isExpired
                             ? 'text-gray-300 cursor-not-allowed'
                             : 'text-gray-500 hover:bg-gray-100 hover:text-emerald-600'
                         }`}
-                        title={isCompleted ? 'User verified' : 'Copy verification link'}
+                        title={
+                          isCompleted 
+                            ? 'User verified' 
+                            : isCanceled 
+                            ? 'Verification canceled' 
+                            : isExpired
+                            ? 'Verification expired'
+                            : 'Copy verification link'
+                        }
                       >
                         <Link2 className="w-4 h-4" />
                       </button>
@@ -195,28 +206,42 @@ export function VerificationsTable({
                         rel="noopener noreferrer"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isCompleted) e.preventDefault();
+                          if (!isCompleted || isCanceled) e.preventDefault();
                         }}
                         className={`p-1.5 rounded-lg transition-colors ${
-                          isCompleted
+                          isCompleted && !isCanceled
                             ? 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
                             : 'text-gray-300 cursor-not-allowed'
                         }`}
-                        title={isCompleted ? 'View verification report' : 'Report available upon verification'}
+                        title={
+                          isCanceled 
+                            ? 'Report not available - verification canceled' 
+                            : isCompleted 
+                            ? 'View verification report' 
+                            : 'Report available upon verification'
+                        }
                       >
                         <Eye className="w-4 h-4" />
                       </a>
-                      {/* Delete */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete?.(v.id);
-                        }}
-                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-600 transition-colors"
-                        title="Delete verification"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Cancel - only show for incomplete verifications */}
+                      {canCancel && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete?.(v.id);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-600 transition-colors"
+                          title="Cancel verification"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {/* Show canceled badge for canceled verifications */}
+                      {isCanceled && (
+                        <span className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded">
+                          Canceled
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>

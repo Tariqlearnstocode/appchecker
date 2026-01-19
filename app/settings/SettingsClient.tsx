@@ -37,6 +37,7 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
 
   const currentTab = (activeTab as Tab) || 'profile';
 
+
   // Load subscription status
   useEffect(() => {
     if (currentTab === 'subscription') {

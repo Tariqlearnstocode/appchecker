@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 
-export type AuditAction = 'view' | 'create' | 'update' | 'delete' | 'export' | 'gdpr_delete';
+export type AuditAction = 'view' | 'create' | 'update' | 'delete' | 'cancel' | 'export' | 'gdpr_delete';
 export type ResourceType = 'verification' | 'user_data' | 'report';
 
 interface AuditLogParams {

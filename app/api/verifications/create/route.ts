@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import {
-  getOrCreateStripeCustomer,
   getActiveSubscription,
-  reportVerificationUsage,
   getCurrentPeriodUsage,
 } from '@/lib/stripe/helpers';
-import { stripe } from '@/lib/stripe/client';
-import { validatePriceIds } from '@/lib/stripe/prices';
 import { sanitizeName, sanitizeEmail, sanitizePurpose, sanitizeCompanyName } from '@/utils/sanitize';
+import { logAudit, getRequestContext } from '@/lib/audit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +28,7 @@ export async function POST(request: NextRequest) {
       requested_by_name: raw_requested_by_name,
       requested_by_email: raw_requested_by_email,
       purpose: raw_purpose,
+      request_id: raw_request_id,
     } = body;
 
     // Sanitize all inputs
@@ -56,6 +54,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for idempotency if request_id provided
+    if (raw_request_id) {
+      const { data: existingVerification } = await supabase
+        .from('income_verifications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('request_id', raw_request_id)
+        .maybeSingle() as { data: { id: string } | null };
+        
+      if (existingVerification) {
+        return NextResponse.json({
+          success: true,
+          verification: existingVerification,
+          message: 'Verification already created (idempotent request)',
+        });
+      }
+    }
+
     // Get user's company name if not provided
     const { data: userProfile } = await supabase
       .from('users')
@@ -68,6 +84,9 @@ export async function POST(request: NextRequest) {
       (userProfile?.company_name ? sanitizeCompanyName(userProfile.company_name) : null) ||
       'Requesting Party';
     const finalRequestedByEmail = requested_by_email || (user.email ? sanitizeEmail(user.email) : null);
+
+    // Get request context for audit logging
+    const { ipAddress, userAgent } = getRequestContext(request);
 
     // Check subscription status
     const subscription = await getActiveSubscription(user.id);
@@ -111,7 +130,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Create verification
+        // Create verification with ledger entry
         const { data: verification, error: createError } = await supabase
           .from('income_verifications')
           .insert({
@@ -121,6 +140,7 @@ export async function POST(request: NextRequest) {
             requested_by_email: finalRequestedByEmail,
             purpose: purpose || null,
             user_id: user.id,
+            request_id: raw_request_id || null,
           } as any)
           .select()
           .single() as { data: { id: string } | null; error: any };
@@ -140,17 +160,41 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Report usage to Stripe meter for tracking
-        try {
-          await reportVerificationUsage(
-            user.id,
-            verification.id,
-            customerId
-          );
-        } catch (usageError) {
-          console.error('Error reporting usage:', usageError);
-          // Don't fail the verification creation if usage reporting fails
+        // Insert into usage ledger
+        const { error: ledgerError } = await supabaseAdmin
+          .from('usage_ledger' as any)
+          .insert({
+            user_id: user.id,
+            verification_id: verification.id,
+            source: 'subscription',
+            stripe_subscription_id: subscription.stripe_subscription_id,
+            period_start: subscription.current_period_start,
+            period_end: subscription.current_period_end,
+          } as any);
+
+        if (ledgerError) {
+          console.error('Error inserting into usage ledger:', ledgerError);
+          // Log but don't fail - verification is created
         }
+
+        // Log to audit logs
+        await logAudit({
+          action: 'create',
+          resourceType: 'verification',
+          resourceId: verification.id,
+          metadata: {
+            verification_id: verification.id,
+            source: 'subscription',
+            subscription_id: subscription.stripe_subscription_id,
+            plan_tier: subscription.plan_tier,
+            period_start: subscription.current_period_start,
+            period_end: subscription.current_period_end,
+            usage_after: currentUsage + 1,
+            limit,
+          },
+          ipAddress,
+          userAgent,
+        });
 
         return NextResponse.json({
           success: true,
@@ -168,16 +212,16 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // No subscription - pay-as-you-go
-      // Check if user has a completed one-time payment ready to use
-      const { data: availablePayment } = await supabase
+      // Find available payment with row-level lock to prevent race conditions
+      const { data: availablePayment } = await supabaseAdmin
         .from('one_time_payments' as any)
-        .select('id, stripe_checkout_session_id')
+        .select('id, amount, stripe_checkout_session_id')
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .is('verification_id', null) // Not yet used
-        .order('completed_at', { ascending: false })
+        .order('completed_at', { ascending: true })
         .limit(1)
-        .single() as { data: { id: string; stripe_checkout_session_id: string } | null };
+        .single() as { data: { id: string; amount: number; stripe_checkout_session_id: string } | null };
 
       if (!availablePayment) {
         // No payment available - redirect to checkout
@@ -192,7 +236,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // User has a completed payment - create verification
+      // User has a completed payment - create verification with ledger entry
       const { data: verification, error: createError } = await supabase
         .from('income_verifications')
         .insert({
@@ -202,6 +246,7 @@ export async function POST(request: NextRequest) {
           requested_by_email: finalRequestedByEmail,
           purpose: purpose || null,
           user_id: user.id,
+          request_id: raw_request_id || null,
         } as any)
         .select()
         .single() as { data: { id: string } | null; error: any };
@@ -221,6 +266,21 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Insert into usage ledger
+      const { error: ledgerError } = await supabaseAdmin
+        .from('usage_ledger' as any)
+        .insert({
+          user_id: user.id,
+          verification_id: verification.id,
+          source: 'payg',
+          one_time_payment_id: availablePayment.id,
+        } as any);
+
+      if (ledgerError) {
+        console.error('Error inserting into usage ledger:', ledgerError);
+        // Log but don't fail - verification is created
+      }
+
       // Mark payment as used
       const { error: updateError } = await supabaseAdmin
         .from('one_time_payments' as any)
@@ -235,26 +295,20 @@ export async function POST(request: NextRequest) {
         // Don't fail - verification is created
       }
 
-      // Get Stripe customer ID for meter reporting
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('stripe_customer_id')
-        .eq('id', user.id)
-        .single() as { data: { stripe_customer_id: string | null } | null };
-
-      // Report usage to meter for analytics (even for pay-as-you-go)
-      if (userProfile?.stripe_customer_id) {
-        try {
-          await reportVerificationUsage(
-            user.id,
-            verification.id,
-            userProfile.stripe_customer_id
-          );
-        } catch (usageError) {
-          console.error('Error reporting usage:', usageError);
-          // Don't fail - verification is created
-        }
-      }
+      // Log to audit logs
+      await logAudit({
+        action: 'create',
+        resourceType: 'verification',
+        resourceId: verification.id,
+        metadata: {
+          verification_id: verification.id,
+          source: 'payg',
+          payment_id: availablePayment.id,
+          payment_amount_cents: availablePayment.amount,
+        },
+        ipAddress,
+        userAgent,
+      });
 
       return NextResponse.json({
         success: true,

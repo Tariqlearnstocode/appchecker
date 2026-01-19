@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
         },
       },
       allow_promotion_codes: true,
-      success_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/settings?tab=subscription&success=true`,
-      cancel_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/settings?tab=subscription&canceled=true`,
+      success_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/?subscription=success`,
+      cancel_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/?subscription=canceled`,
       metadata: {
         user_id: user.id,
         plan_tier: plan,

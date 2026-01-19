@@ -107,6 +107,7 @@ export async function getActiveSubscription(userId: string) {
 
 /**
  * Report verification usage to Stripe meter
+ * @deprecated This function is deprecated. Use usage_ledger table instead.
  * Used for tracking/analytics only - limits are enforced in application code
  * Subscriptions have fixed limits (10 for Starter, 50 for Pro) - no overage billing
  */
@@ -207,7 +208,7 @@ export async function getSubscriptionItemId(
 }
 
 /**
- * Get current period usage count from meter
+ * Get current period usage count from usage ledger
  * Returns the number of verifications used in the current billing period
  */
 export async function getCurrentPeriodUsage(
@@ -216,57 +217,73 @@ export async function getCurrentPeriodUsage(
 ): Promise<number> {
   try {
     const supabase = await createClient();
-    const meterId = await getMeterId();
 
-    // Get subscription from database (has period dates synced from Stripe webhooks)
-    const { data: dbSubscription } = await supabase
+    // Get subscription period from database (synced from Stripe webhooks)
+    const { data: subscription } = await supabase
       .from('stripe_subscriptions' as any)
       .select('current_period_start, current_period_end')
       .eq('stripe_subscription_id', subscriptionId)
       .eq('user_id', userId)
       .single() as { data: { current_period_start: string | null; current_period_end: string | null } | null };
 
-    let periodStart: Date;
-    let periodEnd: Date;
-
-    // Use database dates if available (preferred - more reliable)
-    if (dbSubscription?.current_period_start && dbSubscription?.current_period_end) {
-      periodStart = new Date(dbSubscription.current_period_start);
-      periodEnd = new Date(dbSubscription.current_period_end);
-    } else {
+    if (!subscription?.current_period_start || !subscription?.current_period_end) {
       // Fallback: fetch from Stripe API if database doesn't have dates
-      const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const periodStartTimestamp = (stripeSubscription as any).current_period_start;
-      const periodEndTimestamp = (stripeSubscription as any).current_period_end;
+      try {
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const periodStartTimestamp = (stripeSubscription as any).current_period_start;
+        const periodEndTimestamp = (stripeSubscription as any).current_period_end;
 
-      if (!periodStartTimestamp || !periodEndTimestamp) {
-        console.warn('Subscription missing period dates in both DB and Stripe, returning 0 usage');
+        if (!periodStartTimestamp || !periodEndTimestamp) {
+          console.warn('Subscription missing period dates in both DB and Stripe, returning 0 usage');
+          return 0;
+        }
+
+        const periodStart = new Date(periodStartTimestamp * 1000);
+        const periodEnd = new Date(periodEndTimestamp * 1000);
+
+        // Validate dates are valid
+        if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+          console.warn('Invalid period dates in subscription, returning 0 usage');
+          return 0;
+        }
+
+        // Query usage ledger for this period (fallback)
+        const { count } = await supabase
+          .from('usage_ledger' as any)
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('source', 'subscription')
+          .eq('stripe_subscription_id', subscriptionId)
+          .eq('period_start', periodStart.toISOString())
+          .is('reversed_at', null);
+
+        return count || 0;
+      } catch (stripeError) {
+        console.error('Error fetching subscription from Stripe:', stripeError);
         return 0;
       }
-
-      periodStart = new Date(periodStartTimestamp * 1000);
-      periodEnd = new Date(periodEndTimestamp * 1000);
     }
 
     // Validate dates are valid
+    const periodStart = new Date(subscription.current_period_start);
+    const periodEnd = new Date(subscription.current_period_end);
+
     if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
       console.warn('Invalid period dates in subscription, returning 0 usage');
       return 0;
     }
 
-    // Query meter events for this user in current period
-    const { data: events } = await supabase
-      .from('meter_events' as any)
-      .select('value')
+    // Count active ledger entries for this period (exclude reversed/canceled)
+    const { count } = await supabase
+      .from('usage_ledger' as any)
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('meter_id', meterId)
-      .gte('created_at', periodStart.toISOString())
-      .lt('created_at', periodEnd.toISOString()) as { data: Array<{ value: number | null }> | null };
+      .eq('source', 'subscription')
+      .eq('stripe_subscription_id', subscriptionId)
+      .eq('period_start', subscription.current_period_start)
+      .is('reversed_at', null);
 
-    // Sum up the values
-    const totalUsage = events?.reduce((sum, event) => sum + (event.value || 0), 0) || 0;
-
-    return totalUsage;
+    return count || 0;
   } catch (error) {
     console.error('Error getting current period usage:', error);
     // Fallback: return 0 if we can't get usage (allows verification)
