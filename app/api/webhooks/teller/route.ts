@@ -84,12 +84,22 @@ async function storeWebhookEvent(event: TellerWebhookEvent, rawBody: string) {
       } as any);
 
     if (error) {
+      // Handle duplicate event (webhook retry) - this is idempotent
+      if (error.code === '23505') {
+        console.log(`Webhook event ${event.id} already processed (duplicate)`);
+        return;
+      }
       console.error('Error storing webhook event:', error);
       throw error;
     }
 
     console.log(`Stored webhook event ${event.id} (${event.type}) in database`);
   } catch (err: any) {
+    // If it's a duplicate, we've already handled it above
+    if (err.code === '23505') {
+      console.log(`Webhook event ${event.id} already processed (duplicate)`);
+      return;
+    }
     // Log but don't throw - we want to continue processing even if storage fails
     console.error('Failed to store webhook event:', err);
     throw err;
@@ -100,7 +110,7 @@ interface TellerWebhookEvent {
   id: string;
   type: string;
   timestamp: string;
-  data: {
+  data?: {
     enrollment_id?: string;
     account_id?: string;
     reason?: string;
@@ -225,6 +235,11 @@ export async function POST(request: NextRequest) {
  * Triggered when an enrollment loses connection to the institution
  */
 async function handleEnrollmentDisconnected(event: TellerWebhookEvent) {
+  if (!event.data) {
+    console.error('enrollment.disconnected: Missing event.data');
+    return;
+  }
+
   const { enrollment_id, reason } = event.data;
 
   if (!enrollment_id) {
@@ -263,6 +278,11 @@ async function handleEnrollmentDisconnected(event: TellerWebhookEvent) {
  * Triggered when Teller discovers new transactions (at least once per 24h)
  */
 async function handleTransactionsProcessed(event: TellerWebhookEvent) {
+  if (!event.data) {
+    console.error('transactions.processed: Missing event.data');
+    return;
+  }
+
   const { enrollment_id, transactions } = event.data;
 
   if (!enrollment_id) {
@@ -287,6 +307,11 @@ async function handleTransactionsProcessed(event: TellerWebhookEvent) {
  * Triggered after microdeposit verification succeeds or expires
  */
 async function handleAccountVerificationProcessed(event: TellerWebhookEvent) {
+  if (!event.data) {
+    console.error('account.number_verification.processed: Missing event.data');
+    return;
+  }
+
   const { account_id, status } = event.data;
 
   if (!account_id) {
