@@ -18,31 +18,43 @@ export default function Footer() {
             </span>
           </div>
           
-          {/* Links - Two Columns */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-            <Link href="/pricing" className="text-gray-700 hover:text-emerald-700 transition-colors">
-              Pricing
-            </Link>
-            <Link href="/security" className="text-gray-700 hover:text-emerald-700 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/banks" className="text-gray-700 hover:text-emerald-700 transition-colors">
-              Supported Banks
-            </Link>
-            <Link href="/disclaimers" className="text-gray-700 hover:text-emerald-700 transition-colors">
-              Terms of Use
-            </Link>
+          {/* Links - Three Columns */}
+          <div className="grid grid-cols-3 gap-x-8 gap-y-2 text-sm">
+            {/* Column 1 */}
             <Link href="/faq" className="text-gray-700 hover:text-emerald-700 transition-colors">
               FAQ
             </Link>
-            <Link href="/security" className="text-gray-700 hover:text-emerald-700 transition-colors">
-              Security
-            </Link>
+            {/* Column 2 */}
             <Link href="mailto:info@incomechecker.com" className="text-gray-700 hover:text-emerald-700 transition-colors">
               Contact Us
             </Link>
+            {/* Column 3 */}
+            <Link href="/security" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Security
+            </Link>
+            {/* Column 1 */}
+            <Link href="/pricing" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Pricing
+            </Link>
+            {/* Column 2 */}
             <Link href="/disclaimers" className="text-gray-700 hover:text-emerald-700 transition-colors">
               Disclaimers
+            </Link>
+            {/* Column 3 */}
+            <Link href="/privacy" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Privacy Policy
+            </Link>
+            {/* Column 1 */}
+            <Link href="/report/example" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Example Report
+            </Link>
+            {/* Column 2 */}
+            <Link href="/banks" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Supported Banks
+            </Link>
+            {/* Column 3 */}
+            <Link href="/terms" className="text-gray-700 hover:text-emerald-700 transition-colors">
+              Terms of Use
             </Link>
           </div>
         </div>
@@ -50,7 +62,7 @@ export default function Footer() {
         {/* Secondary Links */}
         <div className="mt-4 pt-4 border-t border-emerald-100 text-center">
           <Link 
-            href="/security#gdpr" 
+            href="/privacy" 
             className="text-xs text-gray-600 hover:text-emerald-700 transition-colors"
           >
             Do Not Sell or Share My Personal Information

@@ -20,6 +20,108 @@ interface HomePageClientProps {
   initialLandlordInfo: { name: string; email: string };
 }
 
+// Plan & Usage component for mobile (rendered separately after main content)
+function PlanAndUsageMobile({ 
+  user, 
+  verifications, 
+  selectedVerification, 
+  onUpgradeClick 
+}: { 
+  user: any; 
+  verifications: Verification[]; 
+  selectedVerification: Verification | null;
+  onUpgradeClick: () => void;
+}) {
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetch('/api/stripe/subscription-status')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => setSubscriptionStatus(data))
+        .catch(err => console.error('Error loading subscription status:', err));
+    }
+  }, [user]);
+
+  if (!user || verifications.length === 0 || !subscriptionStatus) {
+    return null;
+  }
+
+  const formatRenewalDate = (dateString: string | null): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div className="lg:hidden order-3 w-full">
+      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+        <h3 className="text-base font-bold text-gray-900 mb-3">Plan & Usage</h3>
+        
+        {subscriptionStatus.hasSubscription && (
+          <div className="mb-3">
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+              <div
+                className="bg-emerald-500 h-2 rounded-full transition-all"
+                style={{
+                  width: `${Math.min(((subscriptionStatus.currentUsage || 0) / subscriptionStatus.limit) * 100, 100)}%`,
+                }}
+              />
+            </div>
+            <div className="flex items-baseline justify-between text-xs text-gray-600">
+              <span>{subscriptionStatus.currentUsage || 0}/{subscriptionStatus.limit} verifications used</span>
+              {subscriptionStatus.usageInfo?.periodEnd && (
+                <span>Renews {formatRenewalDate(subscriptionStatus.usageInfo.periodEnd)}</span>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {!subscriptionStatus.hasSubscription && subscriptionStatus.availableCredits !== undefined && (
+          <div className="mb-3">
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-semibold text-gray-900">1 credit remaining</span>
+              <span className="text-xs text-gray-500">1/1 available</span>
+            </div>
+          </div>
+        )}
+        
+        {((subscriptionStatus.hasSubscription && subscriptionStatus.plan === 'starter') || !subscriptionStatus.hasSubscription) && (
+          <>
+            <p className="text-sm font-semibold text-gray-900 mb-2">
+              {subscriptionStatus.hasSubscription ? 'Need more than 10 verifications?' : 'Subscribe and save.'}
+            </p>
+            <p className="text-xs text-gray-600 mb-4">
+              {subscriptionStatus.hasSubscription
+                ? 'Get 50 per month for $129 ($2.58 each)'
+                : 'Get 50 verifications/month for $129 ($2.58 each) instead of $14.99 each.'}
+            </p>
+            <button
+              onClick={onUpgradeClick}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md"
+            >
+              Compare Plans
+            </button>
+          </>
+        )}
+        
+        {subscriptionStatus.hasSubscription && subscriptionStatus.plan === 'pro' && (
+          <div className="space-y-1">
+            <p className="text-sm text-gray-700">
+              {subscriptionStatus.limit - (subscriptionStatus.currentUsage || 0)} credits remaining
+            </p>
+            {subscriptionStatus.usageInfo?.periodEnd && (
+              <p className="text-xs text-gray-500">
+                Renews {formatRenewalDate(subscriptionStatus.usageInfo.periodEnd)}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function HomePageClient({ 
   initialVerifications, 
   initialLandlordInfo 
@@ -419,7 +521,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Tabs + Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 order-2 lg:order-1">
             {/* Tab Bar */}
             {showTabs && (
             <div className="mb-6">
@@ -572,9 +674,19 @@ Stop fake paystubs with bank-verified income reports.         </h1>
             </div>
           </div>
           
+          {/* Plan & Usage - Mobile Only (shown after main content) */}
+          {user && verifications.length > 0 && (
+            <PlanAndUsageMobile 
+              user={user}
+              verifications={verifications}
+              selectedVerification={selectedVerification}
+              onUpgradeClick={() => setShowPricingModal(true)}
+            />
+          )}
+          
           {/* Sidebar */}
-          <div className="w-full lg:w-[340px] flex-shrink-0">
-            <div className="lg:sticky lg:top-6">
+          <div className="w-full lg:w-[340px] flex-shrink-0 order-1 lg:order-2 flex flex-col lg:block">
+            <div className="lg:sticky lg:top-6 flex flex-col gap-4">
               {user && verifications.length > 0 ? (
                 <ActionsSidebar
                   selectedVerification={selectedVerification}

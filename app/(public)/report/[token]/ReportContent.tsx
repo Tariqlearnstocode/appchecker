@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { IncomeReport, formatCurrency, formatDate } from '@/lib/income-calculations';
@@ -362,7 +362,7 @@ function TransactionHistory({ transactions }: { transactions: Array<{
       </div>
       
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+      <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
         <div className="col-span-2">Date</div>
         <div className="col-span-4">Description</div>
         <div className="col-span-2 text-right">Debit</div>
@@ -373,36 +373,71 @@ function TransactionHistory({ transactions }: { transactions: Array<{
       {/* Table Rows */}
       <div className="max-h-[400px] overflow-y-auto">
         {selectedTransactions.map((txn, i) => (
-          <div 
-            key={i} 
-            className={`grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
-          >
-            <div className="col-span-2 text-emerald-600">
-              {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-            </div>
-            <div className="col-span-4 text-gray-900 truncate cursor-help" title={txn.name}>
-              {txn.name}
-              {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
-            </div>
-            <div className="col-span-2 text-right text-gray-900">
-              {!txn.isIncome && formatCurrency(txn.amount)}
-            </div>
-            <div className="col-span-2 text-right text-gray-900">
-              {txn.isIncome && formatCurrency(txn.amount)}
+          <React.Fragment key={i}>
+            {/* Mobile Card View */}
+            <div 
+              className={`sm:hidden px-3 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
+            >
+              <div className="flex justify-between items-start mb-1">
+                <div className="text-emerald-600 text-xs font-medium">
+                  {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                </div>
+                <div className="text-right">
+                  {txn.isIncome ? (
+                    <div className="text-emerald-600 font-medium">{formatCurrency(txn.amount)}</div>
+                  ) : (
+                    <div className="text-gray-900 font-medium">{formatCurrency(txn.amount)}</div>
+                  )}
+                  {txn.runningBalance !== null && (
+                    <div className="text-xs text-gray-500 mt-0.5">Balance: {formatCurrency(txn.runningBalance)}</div>
+                  )}
+                </div>
               </div>
-            <div className="col-span-2 text-right text-gray-500">
-              {txn.runningBalance !== null ? formatCurrency(txn.runningBalance) : '—'}
+              <div className="text-gray-900 truncate cursor-help" title={txn.name}>
+                {txn.name}
+                {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
+              </div>
             </div>
-          </div>
+            {/* Desktop Grid View */}
+            <div 
+              className={`hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
+            >
+              <div className="col-span-2 text-emerald-600 text-xs">
+                {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+              </div>
+              <div className="col-span-4 text-gray-900 truncate cursor-help text-xs sm:text-sm" title={txn.name}>
+                {txn.name}
+                {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
+              </div>
+              <div className="col-span-2 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
+                {!txn.isIncome && formatCurrency(txn.amount)}
+              </div>
+              <div className="col-span-2 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
+                {txn.isIncome && formatCurrency(txn.amount)}
+              </div>
+              <div className="col-span-2 text-right text-gray-500 text-xs sm:text-sm whitespace-nowrap">
+                {txn.runningBalance !== null ? formatCurrency(txn.runningBalance) : '—'}
+              </div>
+            </div>
+          </React.Fragment>
         ))}
       </div>
       
       {/* Month Summary */}
-      <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 grid grid-cols-12 gap-4 text-sm font-medium">
-        <div className="col-span-6 text-gray-700">Month Total</div>
-        <div className="col-span-2 text-right text-gray-900">{formatCurrency(monthTotals.debits)}</div>
-        <div className="col-span-2 text-right text-emerald-600">{formatCurrency(monthTotals.credits)}</div>
-        <div className="col-span-2"></div>
+      <div className="px-3 sm:px-5 py-3 bg-gray-50 border-t border-gray-200">
+        <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 text-sm font-medium">
+          <div className="col-span-6 text-gray-700">Month Total</div>
+          <div className="col-span-2 text-right text-gray-900">{formatCurrency(monthTotals.debits)}</div>
+          <div className="col-span-2 text-right text-emerald-600">{formatCurrency(monthTotals.credits)}</div>
+          <div className="col-span-2"></div>
+        </div>
+        <div className="sm:hidden flex justify-between text-sm font-medium">
+          <div className="text-gray-700">Month Total</div>
+          <div className="text-right">
+            <div className="text-gray-900">Debit: {formatCurrency(monthTotals.debits)}</div>
+            <div className="text-emerald-600">Credit: {formatCurrency(monthTotals.credits)}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -731,7 +766,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
           </div>
           
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
+          <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
             <div className="col-span-2">Pay Date</div>
             <div className="col-span-4">Source</div>
             <div className="col-span-2">Type</div>
@@ -754,7 +789,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
             
             if (payrollDeposits.length === 0) {
               return (
-                <div className="px-5 py-8 text-center text-gray-500">
+                <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
                   No payroll deposits identified. Income may come from other sources.
                 </div>
               );
@@ -768,26 +803,48 @@ export default function ReportContent({ verification, reportData, isCalculated }
             }).reverse();
             
             return depositsWithTotal.map((deposit, i) => (
-                  <div 
-                    key={i} 
-                    className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 text-sm"
-                  >
-                    <div className="col-span-2 text-emerald-600">
+              <React.Fragment key={i}>
+                {/* Mobile Card View */}
+                <div 
+                  className="sm:hidden px-3 py-3 border-b border-gray-100 text-sm"
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="text-emerald-600 text-xs font-medium">
                       {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
                     </div>
-                    <div className="col-span-4 text-gray-900 truncate cursor-help" title={deposit.name}>
-                      {deposit.name}
-                    </div>
-                    <div className="col-span-2">
-                      <IncomeTypeBadge type="payroll" />
-                    </div>
-                    <div className="col-span-2 text-right text-gray-900 font-medium">
-                      {formatCurrency(deposit.amount)}
-                    </div>
-                    <div className="col-span-2 text-right text-gray-500">
-                      {formatCurrency(deposit.runningTotal)}
+                    <div className="text-right">
+                      <div className="text-emerald-600 font-medium">{formatCurrency(deposit.amount)}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Total: {formatCurrency(deposit.runningTotal)}</div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <IncomeTypeBadge type="payroll" />
+                    <div className="text-gray-900 truncate cursor-help flex-1" title={deposit.name}>
+                      {deposit.name}
+                    </div>
+                  </div>
+                </div>
+                {/* Desktop Grid View */}
+                <div 
+                  className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm"
+                >
+                  <div className="col-span-2 text-emerald-600 text-xs">
+                    {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                  </div>
+                  <div className="col-span-4 text-gray-900 truncate cursor-help text-xs sm:text-sm" title={deposit.name}>
+                    {deposit.name}
+                  </div>
+                  <div className="col-span-2">
+                    <IncomeTypeBadge type="payroll" />
+                  </div>
+                  <div className="col-span-2 text-right text-gray-900 font-medium text-xs sm:text-sm whitespace-nowrap">
+                    {formatCurrency(deposit.amount)}
+                  </div>
+                  <div className="col-span-2 text-right text-gray-500 text-xs sm:text-sm whitespace-nowrap">
+                    {formatCurrency(deposit.runningTotal)}
+                  </div>
+                </div>
+              </React.Fragment>
             ));
           })()}
         </div>

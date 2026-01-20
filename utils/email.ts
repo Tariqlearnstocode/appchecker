@@ -117,7 +117,7 @@ export async function sendVerificationEmail(params: SendVerificationEmailParams)
 }
 
 /**
- * Send completion notification email to landlord
+ * Send completion notification email to requester
  */
 export async function sendCompletionEmail(params: SendCompletionEmailParams) {
   const { to, individualName, requestedByName, verificationLink } = params;

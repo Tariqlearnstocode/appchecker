@@ -41,7 +41,7 @@ export default function GlobalNavbar() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 hidden sm:inline">IncomeChecker.com</span>
+            <span className="font-semibold text-gray-900">IncomeChecker.com</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             {user ? (
@@ -71,13 +71,13 @@ export default function GlobalNavbar() {
               <>
                 <button
                   onClick={() => handleOpenAuthModal('signin')}
-                  className="px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                  className="hidden sm:inline-block px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => handleOpenAuthModal('signup')}
-                  className="px-3 sm:px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 sm:bg-emerald-500 sm:hover:bg-emerald-600 sm:text-white sm:border-transparent font-medium transition-colors"
                 >
                   Get Started
                 </button>

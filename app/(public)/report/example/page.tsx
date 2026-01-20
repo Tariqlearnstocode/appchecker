@@ -26,11 +26,12 @@ const generateSampleTransactions = () => {
   const oldJobAmount = 2200;
   const newJobAmount = 1300;
   
-  // Generate payroll deposits for 12 months
-  // Start from 12 months ago
+  // Generate payroll deposits for 12 complete months
+  // Start from 12 months ago (but use the first of that month to ensure complete months)
   const startDate = new Date(now);
   startDate.setMonth(startDate.getMonth() - 12);
   startDate.setDate(1); // Start of month
+  startDate.setHours(0, 0, 0, 0); // Start of day
   
   let currentDate = new Date(startDate);
   let depositCount = 0;
@@ -56,38 +57,219 @@ const generateSampleTransactions = () => {
     currentDate.setDate(currentDate.getDate() + payFrequency);
   }
   
-  // Add some expenses
-  const expenseCategories = [
-    { name: 'Grocery Store', amount: -150, category: 'Food and Drink' },
-    { name: 'Gas Station', amount: -80, category: 'Transportation' },
-    { name: 'Electric Bill', amount: -120, category: 'Bills and Utilities' },
-    { name: 'Coffee Shop', amount: -25, category: 'Food and Drink' },
-    { name: 'Restaurant', amount: -75, category: 'Food and Drink' },
-    { name: 'Online Purchase', amount: -200, category: 'Shops' },
-    { name: 'Phone Bill', amount: -90, category: 'Bills and Utilities' },
-    { name: 'Gym Membership', amount: -50, category: 'Recreation' },
+  // Create a pool of 100 random debit transactions
+  const debitTransactionPool = [
+    { name: 'WALMART', amount: 85, category: 'Shops' },
+    { name: 'TARGET', amount: 120, category: 'Shops' },
+    { name: 'KROGER', amount: 145, category: 'Food and Drink' },
+    { name: 'SAFEWAY', amount: 95, category: 'Food and Drink' },
+    { name: 'WHOLE FOODS', amount: 175, category: 'Food and Drink' },
+    { name: 'TRADER JOES', amount: 85, category: 'Food and Drink' },
+    { name: 'CHEVRON', amount: 65, category: 'Transportation' },
+    { name: 'SHELL', amount: 70, category: 'Transportation' },
+    { name: 'EXXON', amount: 68, category: 'Transportation' },
+    { name: 'BP', amount: 72, category: 'Transportation' },
+    { name: 'UBER', amount: 28, category: 'Transportation' },
+    { name: 'LYFT', amount: 32, category: 'Transportation' },
+    { name: 'AMAZON', amount: 45, category: 'Shops' },
+    { name: 'AMAZON.COM', amount: 89, category: 'Shops' },
+    { name: 'APPLE.COM', amount: 15, category: 'Shops' },
+    { name: 'NETFLIX', amount: 16, category: 'Recreation' },
+    { name: 'SPOTIFY', amount: 11, category: 'Recreation' },
+    { name: 'DISNEY+', amount: 14, category: 'Recreation' },
+    { name: 'HULU', amount: 13, category: 'Recreation' },
+    { name: 'STARBUCKS', amount: 8, category: 'Food and Drink' },
+    { name: 'DUNKIN', amount: 6, category: 'Food and Drink' },
+    { name: 'CHIPOTLE', amount: 12, category: 'Food and Drink' },
+    { name: 'MCDONALDS', amount: 9, category: 'Food and Drink' },
+    { name: 'SUBWAY', amount: 11, category: 'Food and Drink' },
+    { name: 'PANERA BREAD', amount: 14, category: 'Food and Drink' },
+    { name: 'OLIVE GARDEN', amount: 48, category: 'Food and Drink' },
+    { name: 'APPLEBEES', amount: 42, category: 'Food and Drink' },
+    { name: 'OUTBACK STEAKHOUSE', amount: 68, category: 'Food and Drink' },
+    { name: 'HOME DEPOT', amount: 125, category: 'Shops' },
+    { name: 'LOWES', amount: 135, category: 'Shops' },
+    { name: 'ACE HARDWARE', amount: 45, category: 'Shops' },
+    { name: 'CVS PHARMACY', amount: 32, category: 'Shops' },
+    { name: 'WALGREENS', amount: 28, category: 'Shops' },
+    { name: 'RIte Aid', amount: 25, category: 'Shops' },
+    { name: 'PETCO', amount: 65, category: 'Shops' },
+    { name: 'PETSMART', amount: 58, category: 'Shops' },
+    { name: 'BEST BUY', amount: 299, category: 'Shops' },
+    { name: 'COSTCO', amount: 185, category: 'Shops' },
+    { name: 'SAMS CLUB', amount: 165, category: 'Shops' },
+    { name: 'DOLLAR TREE', amount: 12, category: 'Shops' },
+    { name: 'DOLLAR GENERAL', amount: 18, category: 'Shops' },
+    { name: 'FIVE BELOW', amount: 22, category: 'Shops' },
+    { name: 'MADEWELL', amount: 89, category: 'Shops' },
+    { name: 'OLD NAVY', amount: 45, category: 'Shops' },
+    { name: 'GAP', amount: 68, category: 'Shops' },
+    { name: 'NIKE', amount: 125, category: 'Shops' },
+    { name: 'ADIDAS', amount: 98, category: 'Shops' },
+    { name: 'BARNES & NOBLE', amount: 32, category: 'Shops' },
+    { name: 'BOOKS-A-MILLION', amount: 28, category: 'Shops' },
+    { name: 'MARSHALLS', amount: 55, category: 'Shops' },
+    { name: 'TJ MAXX', amount: 62, category: 'Shops' },
+    { name: 'ROSS', amount: 42, category: 'Shops' },
+    { name: 'BURLINGTON', amount: 48, category: 'Shops' },
+    { name: 'DSW', amount: 85, category: 'Shops' },
+    { name: 'FOOT LOCKER', amount: 125, category: 'Shops' },
+    { name: 'H&M', amount: 35, category: 'Shops' },
+    { name: 'FOREVER 21', amount: 28, category: 'Shops' },
+    { name: 'ZARA', amount: 68, category: 'Shops' },
+    { name: 'UTILITY BILL', amount: 145, category: 'Bills and Utilities' },
+    { name: 'ELECTRIC COMPANY', amount: 125, category: 'Bills and Utilities' },
+    { name: 'GAS COMPANY', amount: 85, category: 'Bills and Utilities' },
+    { name: 'WATER DEPARTMENT', amount: 65, category: 'Bills and Utilities' },
+    { name: 'AT&T', amount: 95, category: 'Bills and Utilities' },
+    { name: 'VERIZON', amount: 88, category: 'Bills and Utilities' },
+    { name: 'T-MOBILE', amount: 82, category: 'Bills and Utilities' },
+    { name: 'SPRINT', amount: 85, category: 'Bills and Utilities' },
+    { name: 'COMCAST', amount: 89, category: 'Bills and Utilities' },
+    { name: 'XFINITY', amount: 92, category: 'Bills and Utilities' },
+    { name: 'SPECTRUM', amount: 79, category: 'Bills and Utilities' },
+    { name: 'DIRECTV', amount: 115, category: 'Bills and Utilities' },
+    { name: 'DISH NETWORK', amount: 108, category: 'Bills and Utilities' },
+    { name: 'GYM MEMBERSHIP', amount: 45, category: 'Recreation' },
+    { name: 'PLANET FITNESS', amount: 22, category: 'Recreation' },
+    { name: '24 HOUR FITNESS', amount: 35, category: 'Recreation' },
+    { name: 'GOLDS GYM', amount: 42, category: 'Recreation' },
+    { name: 'CINEMA', amount: 28, category: 'Recreation' },
+    { name: 'AMC THEATERS', amount: 32, category: 'Recreation' },
+    { name: 'REGAL CINEMAS', amount: 29, category: 'Recreation' },
+    { name: 'BOWLING ALLEY', amount: 48, category: 'Recreation' },
+    { name: 'MINI GOLF', amount: 35, category: 'Recreation' },
+    { name: 'DENTIST', amount: 185, category: 'Medical' },
+    { name: 'DOCTOR', amount: 125, category: 'Medical' },
+    { name: 'PHARMACY', amount: 42, category: 'Medical' },
+    { name: 'HOSPITAL', amount: 450, category: 'Medical' },
+    { name: 'URGENT CARE', amount: 165, category: 'Medical' },
+    { name: 'EYE DOCTOR', amount: 95, category: 'Medical' },
+    { name: 'VET CLINIC', amount: 125, category: 'Medical' },
+    { name: 'POST OFFICE', amount: 12, category: 'Service' },
+    { name: 'UPS STORE', amount: 18, category: 'Service' },
+    { name: 'FEDEX', amount: 22, category: 'Service' },
+    { name: 'DRY CLEANERS', amount: 28, category: 'Service' },
+    { name: 'LAUNDROMAT', amount: 15, category: 'Service' },
+    { name: 'HAIR SALON', amount: 65, category: 'Service' },
+    { name: 'BARBERSHOP', amount: 25, category: 'Service' },
+    { name: 'NAIL SALON', amount: 45, category: 'Service' },
+    { name: 'CAR WASH', amount: 18, category: 'Service' },
+    { name: 'AUTO REPAIR', amount: 285, category: 'Service' },
+    { name: 'OIL CHANGE', amount: 48, category: 'Service' },
+    { name: 'TIRE SHOP', amount: 425, category: 'Service' },
+    { name: 'HOTEL', amount: 145, category: 'Travel' },
+    { name: 'AIRLINE', amount: 385, category: 'Travel' },
+    { name: 'RENTAL CAR', amount: 125, category: 'Travel' },
+    { name: 'AIRBNB', amount: 185, category: 'Travel' },
   ];
   
-  // Add expenses for each month (12 months)
-  for (let month = 0; month < 12; month++) {
-    expenseCategories.forEach((expense, idx) => {
-      const date = new Date(now);
-      date.setMonth(date.getMonth() - month);
-      date.setDate(5 + (idx % 28)); // Spread throughout the month
+  // Calculate the first day of the month 12 months ago
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  twelveMonthsAgo.setDate(1);
+  twelveMonthsAgo.setHours(0, 0, 0, 0);
+  
+  // Randomly distribute 70 debit transactions per month across 12 complete months
+  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+    // Create a copy of the pool and shuffle it
+    const shuffled = [...debitTransactionPool].sort(() => Math.random() - 0.5);
+    
+    // Take 70 random transactions for this month
+    const selectedDebits = shuffled.slice(0, 70);
+    
+    // Calculate the target month (12 months ago + monthOffset)
+    const targetMonth = new Date(twelveMonthsAgo);
+    targetMonth.setMonth(targetMonth.getMonth() + monthOffset);
+    
+    // Distribute them randomly throughout the month
+    selectedDebits.forEach((debit) => {
+      const date = new Date(targetMonth);
+      // Random day of the month (1-28 to avoid month boundary issues)
+      const randomDay = Math.floor(Math.random() * 28) + 1;
+      date.setDate(randomDay);
       
       // Skip if date is in the future
       if (date > now) return;
       
+      // Add some random variation to the amount (±20%)
+      const variation = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+      const amount = Math.round(debit.amount * variation);
+      
       transactions.push({
         date: date.toISOString(),
-        amount: Math.abs(expense.amount),
-        name: expense.name,
-        category: expense.category,
+        amount: amount,
+        name: debit.name,
+        category: debit.category,
         pending: false,
         isIncome: false,
         runningBalance: null,
       });
     });
+  }
+  
+  // Add P2P (peer-to-peer) transactions - both incoming and outgoing
+  // These should be filtered out by the system to show users we exclude P2P
+  const p2pServices = [
+    { name: 'VENMO', category: 'P2P' },
+    { name: 'ZELLE', category: 'P2P' },
+    { name: 'CASH APP', category: 'P2P' },
+    { name: 'CASHAPP', category: 'P2P' },
+    { name: 'PAYPAL', category: 'P2P' },
+    { name: 'APPLE CASH', category: 'P2P' },
+    { name: 'GOOGLE PAY', category: 'P2P' },
+    { name: 'GPAY', category: 'P2P' },
+    { name: 'SQUARE CASH', category: 'P2P' },
+    { name: 'WISE', category: 'P2P' },
+  ];
+  
+  // Add P2P transactions throughout the 12 months
+  // Mix of incoming and outgoing
+  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+    // Add 3-8 P2P transactions per month
+    const p2pCount = 3 + Math.floor(Math.random() * 6); // 3-8 transactions
+    
+    for (let i = 0; i < p2pCount; i++) {
+      const targetMonth = new Date(twelveMonthsAgo);
+      targetMonth.setMonth(targetMonth.getMonth() + monthOffset);
+      
+      // Random day of the month (1-28)
+      const randomDay = Math.floor(Math.random() * 28) + 1;
+      const date = new Date(targetMonth);
+      date.setDate(randomDay);
+      
+      // Skip if date is in the future
+      if (date > now) continue;
+      
+      // Random P2P service
+      const p2pService = p2pServices[Math.floor(Math.random() * p2pServices.length)];
+      
+      // Mix of incoming (40%) and outgoing (60%)
+      const isIncome = Math.random() < 0.4;
+      
+      // P2P amounts are typically smaller: $5-$200 for outgoing, $10-$300 for incoming
+      const amount = isIncome 
+        ? Math.floor(Math.random() * 290) + 10  // $10-$300
+        : Math.floor(Math.random() * 195) + 5;  // $5-$200
+      
+      // Add person names for P2P transactions
+      const personNames = [
+        'Sarah M', 'Mike Johnson', 'Jennifer L', 'David Smith', 'Emma Wilson',
+        'Chris Brown', 'Alex Taylor', 'Jordan Lee', 'Sam Davis', 'Taylor Kim',
+        'Ryan Chen', 'Maya Patel', 'Lucas Garcia', 'Sophia Martinez', 'Noah Anderson'
+      ];
+      const personName = personNames[Math.floor(Math.random() * personNames.length)];
+      
+      transactions.push({
+        date: date.toISOString(),
+        amount: amount,
+        name: `${p2pService.name} ${isIncome ? 'FROM' : 'TO'} ${personName}`,
+        category: p2pService.category,
+        pending: false,
+        isIncome: isIncome,
+        runningBalance: null,
+      });
+    }
   }
   
   // Sort by date (oldest first for balance calculation)
@@ -96,7 +278,9 @@ const generateSampleTransactions = () => {
   );
   
   // Calculate running balances (from oldest to newest)
-  let runningBalance = 5000; // Starting balance 12 months ago
+  // Start with a realistic balance for someone making ~$65k/year
+  // Typical checking account might have $2,000-$3,000 as a starting point
+  let runningBalance = 2500; // Starting balance 12 months ago
   const transactionsWithBalance = sorted.map(txn => {
     if (txn.isIncome) {
       runningBalance += txn.amount;

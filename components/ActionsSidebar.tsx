@@ -107,12 +107,12 @@ export function ActionsSidebar({
     }
   }, [startEditing, selectedVerification, isActive]);
 
-  // Load subscription status when verification is selected
+  // Load subscription status when user is available
   useEffect(() => {
-    if (user && selectedVerification) {
+    if (user) {
       loadSubscriptionStatus();
     }
-  }, [user, selectedVerification?.id]);
+  }, [user]);
 
   async function loadSubscriptionStatus() {
     if (!user) return;
@@ -261,9 +261,9 @@ export function ActionsSidebar({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col">
       {/* Selected User Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 order-1 lg:order-none">
         {selectedVerification ? (
           <>
             <div className="mb-4">
@@ -482,8 +482,8 @@ export function ActionsSidebar({
       </div>
       
       {/* Credits & Savings Card - Marketing Style */}
-      {subscriptionStatus && selectedVerification && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+      {subscriptionStatus && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 hidden lg:block">
           {/* Title */}
           <h3 className="text-base font-bold text-gray-900 mb-3">Plan & Usage</h3>
           

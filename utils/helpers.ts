@@ -6,10 +6,10 @@ export const getURL = (path: string = '') => {
     process?.env?.NEXT_PUBLIC_SITE_URL &&
     process.env.NEXT_PUBLIC_SITE_URL.trim() !== ''
       ? process.env.NEXT_PUBLIC_SITE_URL
-      : // If not set, check for NEXT_PUBLIC_VERCEL_URL, which is automatically set by Vercel.
-        process?.env?.NEXT_PUBLIC_VERCEL_URL &&
-          process.env.NEXT_PUBLIC_VERCEL_URL.trim() !== ''
-        ? process.env.NEXT_PUBLIC_VERCEL_URL
+      : // If not set, check for Railway's public domain
+        process?.env?.RAILWAY_PUBLIC_DOMAIN &&
+          process.env.RAILWAY_PUBLIC_DOMAIN.trim() !== ''
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
         : // If neither is set, default to localhost for local development.
           'http://localhost:3000/';
 

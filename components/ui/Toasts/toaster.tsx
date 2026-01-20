@@ -50,8 +50,12 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
+        // 2 seconds on mobile, 5 seconds on desktop
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        const duration = isMobile ? 2000 : 5000;
+        
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} {...props} duration={duration}>
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (

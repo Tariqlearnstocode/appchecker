@@ -7,7 +7,6 @@ import type {
 } from '@/components/ui/Toasts/toast';
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -62,13 +61,17 @@ const addToRemoveQueue = (toastId: string) => {
     return;
   }
 
+  // Check if mobile (window width < 640px) for 2 second duration, else 5 seconds
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const delay = isMobile ? 2000 : 5000;
+
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId);
     dispatch({
       type: 'REMOVE_TOAST',
       toastId: toastId
     });
-  }, TOAST_REMOVE_DELAY);
+  }, delay);
 
   toastTimeouts.set(toastId, timeout);
 };
