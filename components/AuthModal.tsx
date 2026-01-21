@@ -278,11 +278,18 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
                 >
                   <option value="">Select an industry</option>
-                  <option value="Real Estate">Real Estate</option>
-                  <option value="Property Management">Property Management</option>
                   <option value="Lending">Lending</option>
                   <option value="Financial Services">Financial Services</option>
-                  <option value="Housing Authority">Housing Authority</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Property Management">Property Management</option>
+                  <option value="HR & Employment">HR & Employment</option>
+                  <option value="Insurance">Insurance</option>
+                  <option value="Government">Government</option>
+                  <option value="Non-Profit">Non-Profit</option>
+                  <option value="Background Screening">Background Screening</option>
+                  <option value="Credit Union">Credit Union</option>
+                  <option value="Mortgage Broker">Mortgage Broker</option>
+                  <option value="Legal Services">Legal Services</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
