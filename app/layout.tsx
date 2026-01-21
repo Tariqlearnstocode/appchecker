@@ -31,10 +31,15 @@ export const metadata: Metadata = {
     apple: '/favicon.svg',
   },
   openGraph: {
-    title: title,
-    description: description,
+    type: 'website',
+    locale: 'en_US',
     url: siteUrl,
     siteName: 'IncomeChecker.com',
+    title: {
+      template: 'IncomeChecker.com | %s',
+      default: 'IncomeChecker.com',
+    },
+    description: description,
     images: [
       {
         url: ogImage,
@@ -43,12 +48,13 @@ export const metadata: Metadata = {
         alt: 'IncomeChecker.com',
       },
     ],
-    locale: 'en_US',
-    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: title,
+    title: {
+      template: 'IncomeChecker.com | %s',
+      default: 'IncomeChecker.com',
+    },
     description: description,
     images: [ogImage],
   },
