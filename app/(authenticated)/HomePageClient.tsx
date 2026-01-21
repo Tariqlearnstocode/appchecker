@@ -12,6 +12,7 @@ import { PricingModal } from '@/components/ui/Pricing';
 import { AuthModal } from '@/components/AuthModal';
 import { LimitReachedModal } from '@/components/LimitReachedModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { analytics } from '@/utils/analytics';
 
 type ActiveTab = 'new' | 'all' | 'pending' | 'completed' | 'canceled';
 
@@ -135,6 +136,13 @@ export default function HomePageClient({
   const [landlordInfo, setLandlordInfo] = useState(initialLandlordInfo);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+
+  // Track pricing modal opens
+  useEffect(() => {
+    if (showPricingModal) {
+      analytics.modalOpened({ modal_type: 'pricing' });
+    }
+  }, [showPricingModal]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
   const [showLimitModal, setShowLimitModal] = useState(false);
@@ -499,6 +507,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                   <Link 
                     href="/report/example" 
                     className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                    onClick={() => analytics.ctaClicked({ cta_name: 'See Sample Report', location: 'header' })}
                   >
                     See a sample report →
                   </Link>
@@ -680,7 +689,10 @@ Stop fake paystubs with bank-verified income reports.         </h1>
               user={user}
               verifications={verifications}
               selectedVerification={selectedVerification}
-              onUpgradeClick={() => setShowPricingModal(true)}
+              onUpgradeClick={() => {
+                analytics.ctaClicked({ cta_name: 'Compare Plans', location: 'sidebar' });
+                setShowPricingModal(true);
+              }}
             />
           )}
           
@@ -696,6 +708,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                     setSelectedVerification(null);
                   }}
                   onUpgradeClick={() => {
+                    analytics.ctaClicked({ cta_name: 'Compare Plans', location: 'actions_sidebar' });
                     setShowPricingModal(true);
                   }}
                   startEditing={startEditing}
@@ -779,7 +792,11 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                       <div>
                         <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
                         <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
-                        <Link href="/report/example" className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block">
+                        <Link 
+                          href="/report/example" 
+                          className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block"
+                          onClick={() => analytics.ctaClicked({ cta_name: 'See Example Report', location: 'form_footer' })}
+                        >
                           See example report →
                         </Link>
                       </div>

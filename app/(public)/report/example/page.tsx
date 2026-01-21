@@ -1,11 +1,12 @@
+'use client';
+
+import { useEffect } from 'react';
 import ReportContent from '../[token]/ReportContent';
 import { IncomeReport } from '@/lib/income-calculations';
-import { Metadata } from 'next';
+import { analytics } from '@/utils/analytics';
 
-export const metadata: Metadata = {
-  title: 'Sample Report',
-  description: 'View a sample income verification report from IncomeChecker.com. See how we calculate and display income data from bank transactions.',
-};
+// Metadata needs to be handled differently for client components
+// We'll set it via useEffect or in a separate layout
 
 // Sample verification data
 const sampleVerification = {
@@ -471,6 +472,10 @@ const sampleReportData: IncomeReport = {
 };
 
 export default function ExampleReportPage() {
+  useEffect(() => {
+    analytics.sampleReportViewed();
+  }, []);
+
   return (
     <ReportContent
       verification={sampleVerification}

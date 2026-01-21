@@ -2,6 +2,8 @@
 
 import { Plus, Loader2, Eye, ArrowUpRight, User, UserCheck } from 'lucide-react';
 import Link from 'next/link';
+import { analytics } from '@/utils/analytics';
+import { useState, useRef, useEffect } from 'react';
 
 interface LandlordInfo {
   name: string;
@@ -30,6 +32,29 @@ export function NewVerificationTab({
   creating,
   onSubmit,
 }: NewVerificationTabProps) {
+  const [formStarted, setFormStarted] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Track form started on first interaction
+  useEffect(() => {
+    const handleFormInteraction = () => {
+      if (!formStarted) {
+        setFormStarted(true);
+        analytics.formStarted();
+      }
+    };
+
+    const form = formRef.current;
+    if (form) {
+      form.addEventListener('focusin', handleFormInteraction, true);
+      form.addEventListener('input', handleFormInteraction, true);
+      return () => {
+        form.removeEventListener('focusin', handleFormInteraction, true);
+        form.removeEventListener('input', handleFormInteraction, true);
+      };
+    }
+  }, [formStarted]);
+
   return (
     <>
       {/* Form */}
@@ -37,7 +62,7 @@ export function NewVerificationTab({
         <div className="p-4 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900">Create Income Verification Request</h2>
         </div>
-        <form onSubmit={onSubmit} className="p-4">
+        <form ref={formRef} onSubmit={onSubmit} className="p-4">
           <div className="space-y-4">
             {/* Requester Section - Light Slate Background */}
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -162,6 +187,7 @@ export function NewVerificationTab({
                 href="/report/example"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => analytics.ctaClicked({ cta_name: 'See Example Report', location: 'form' })}
                 className="flex-1 w-full flex items-center gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 p-3 rounded-xl transition-all group"
               >
                 {/* Document Preview Card */}
