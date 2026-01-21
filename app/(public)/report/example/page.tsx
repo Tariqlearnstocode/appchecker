@@ -1,5 +1,11 @@
 import ReportContent from '../[token]/ReportContent';
 import { IncomeReport } from '@/lib/income-calculations';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Sample Report',
+  description: 'View a sample income verification report from IncomeChecker.com. See how we calculate and display income data from bank transactions.',
+};
 
 // Sample verification data
 const sampleVerification = {

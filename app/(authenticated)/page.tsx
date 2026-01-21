@@ -1,6 +1,12 @@
 import { createClient } from '@/utils/supabase/server';
 import HomePageClient from './HomePageClient';
 import { Verification } from '@/components/VerificationsTable';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Verify Income in Minutes',
+  description: 'Create and manage income verification requests. Track verification status and view reports.',
+};
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';

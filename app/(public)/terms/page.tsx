@@ -1,3 +1,10 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Use',
+  description: 'Terms of Use for IncomeChecker.com. Review the terms and conditions for using our income verification service.',
+};
+
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50">

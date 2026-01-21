@@ -1,3 +1,10 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Privacy Policy for IncomeChecker.com. Learn how we collect, use, and protect your information when using our income verification service.',
+};
+
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gray-50">

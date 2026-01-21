@@ -1,6 +1,12 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import SettingsClient from './SettingsClient';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Settings',
+  description: 'Manage your IncomeChecker.com account settings, profile, subscription, and preferences.',
+};
 
 interface PageProps {
   searchParams: Promise<{ tab?: string }>;

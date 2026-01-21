@@ -4,9 +4,33 @@ import Link from 'next/link';
 import ReportContent from './ReportContent';
 import { calculateIncomeReport } from '@/lib/income-calculations';
 import { logAudit } from '@/lib/audit';
+import { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ token: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { token } = await params;
+  const supabase = await createClient();
+  
+  const { data: verification } = await supabase
+    .from('income_verifications')
+    .select('individual_name, status')
+    .eq('verification_token', token)
+    .single() as { data: any | null };
+  
+  if (verification) {
+    return {
+      title: `Report - ${verification.individual_name}`,
+      description: `Income verification report for ${verification.individual_name}`,
+    };
+  }
+  
+  return {
+    title: 'Report',
+    description: 'Income verification report',
+  };
 }
 
 export default async function ReportPage({ params }: PageProps) {

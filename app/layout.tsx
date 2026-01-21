@@ -17,10 +17,16 @@ const ogImage = `${siteUrl}/opengraph-image.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: title,
+  title: {
+    template: 'IncomeChecker.com | %s',
+    default: 'IncomeChecker.com',
+  },
   description: description,
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
     shortcut: '/favicon.ico',
     apple: '/favicon.svg',
   },
