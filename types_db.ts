@@ -7,319 +7,364 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
       audit_logs: {
         Row: {
-          action: string
-          created_at: string
           id: string
-          ip_address: string | null
-          metadata: Json | null
-          resource_id: string | null
-          resource_type: string
-          user_agent: string | null
+          created_at: string
           user_id: string | null
+          action: string
+          resource_type: string
+          resource_id: string | null
+          ip_address: string | null
+          user_agent: string | null
+          metadata: Json
         }
         Insert: {
-          action: string
-          created_at?: string
           id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          resource_id?: string | null
-          resource_type: string
-          user_agent?: string | null
+          created_at?: string
           user_id?: string | null
+          action: string
+          resource_type: string
+          resource_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          metadata?: Json
         }
         Update: {
-          action?: string
-          created_at?: string
           id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          resource_id?: string | null
-          resource_type?: string
-          user_agent?: string | null
+          created_at?: string
           user_id?: string | null
+          action?: string
+          resource_type?: string
+          resource_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          metadata?: Json
         }
         Relationships: []
       }
       income_verifications: {
         Row: {
-          completed_at: string | null
-          created_at: string
-          expires_at: string
           id: string
-          individual_email: string
+          session_id: string | null
+          user_id: string | null
           individual_name: string
-          last_email_sent_at: string | null
-          last_reminder_sent_at: string | null
+          individual_email: string
+          verification_token: string
+          status: 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed' | 'canceled'
           plaid_access_token: string | null
           plaid_item_id: string | null
-          purpose: string | null
-          raw_plaid_data: Json | null
-          reminder_count: number | null
           report_data: Json | null
-          requested_by_email: string | null
-          requested_by_name: string | null
-          retention_expires_at: string | null
-          status: Database["public"]["Enums"]["verification_status"]
+          raw_plaid_data: Json | null
+          created_at: string
           updated_at: string
-          user_id: string
-          verification_token: string
+          expires_at: string
+          completed_at: string | null
+          requested_by_name: string | null
+          requested_by_email: string | null
+          purpose: string | null
+          retention_expires_at: string | null
+          request_id: string | null
         }
         Insert: {
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string
           id?: string
-          individual_email: string
+          session_id?: string | null
+          user_id?: string | null
           individual_name: string
-          last_email_sent_at?: string | null
-          last_reminder_sent_at?: string | null
+          individual_email: string
+          verification_token?: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed' | 'canceled'
           plaid_access_token?: string | null
           plaid_item_id?: string | null
-          purpose?: string | null
-          raw_plaid_data?: Json | null
-          reminder_count?: number | null
           report_data?: Json | null
-          requested_by_email?: string | null
-          requested_by_name?: string | null
-          retention_expires_at?: string | null
-          status?: Database["public"]["Enums"]["verification_status"]
+          raw_plaid_data?: Json | null
+          created_at?: string
           updated_at?: string
-          user_id: string
-          verification_token?: string
+          expires_at?: string
+          completed_at?: string | null
+          requested_by_name?: string | null
+          requested_by_email?: string | null
+          purpose?: string | null
+          retention_expires_at?: string | null
+          request_id?: string | null
         }
         Update: {
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string
           id?: string
-          individual_email?: string
+          session_id?: string | null
+          user_id?: string | null
           individual_name?: string
-          last_email_sent_at?: string | null
-          last_reminder_sent_at?: string | null
+          individual_email?: string
+          verification_token?: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed' | 'canceled'
           plaid_access_token?: string | null
           plaid_item_id?: string | null
-          purpose?: string | null
-          raw_plaid_data?: Json | null
-          reminder_count?: number | null
           report_data?: Json | null
-          requested_by_email?: string | null
-          requested_by_name?: string | null
-          retention_expires_at?: string | null
-          status?: Database["public"]["Enums"]["verification_status"]
+          raw_plaid_data?: Json | null
+          created_at?: string
           updated_at?: string
-          user_id?: string
-          verification_token?: string
+          expires_at?: string
+          completed_at?: string | null
+          requested_by_name?: string | null
+          requested_by_email?: string | null
+          purpose?: string | null
+          retention_expires_at?: string | null
+          request_id?: string | null
         }
         Relationships: []
       }
       meter_events: {
         Row: {
-          created_at: string
-          event_name: string
           id: string
-          meter_id: string | null
+          user_id: string
+          verification_id: string
           stripe_event_id: string | null
-          user_id: string
+          meter_id: string | null
+          event_name: string
           value: number
-          verification_id: string
+          created_at: string
         }
         Insert: {
-          created_at?: string
-          event_name?: string
           id?: string
-          meter_id?: string | null
-          stripe_event_id?: string | null
           user_id: string
-          value?: number
           verification_id: string
+          stripe_event_id?: string | null
+          meter_id?: string | null
+          event_name?: string
+          value?: number
+          created_at?: string
         }
         Update: {
-          created_at?: string
-          event_name?: string
           id?: string
-          meter_id?: string | null
-          stripe_event_id?: string | null
           user_id?: string
-          value?: number
           verification_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meter_events_verification_id_fkey"
-            columns: ["verification_id"]
-            isOneToOne: false
-            referencedRelation: "income_verifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      one_time_payments: {
-        Row: {
-          amount: number
-          completed_at: string | null
-          created_at: string
-          id: string
-          status: string
-          stripe_checkout_session_id: string
-          stripe_payment_intent_id: string | null
-          used_at: string | null
-          user_id: string
-          verification_id: string | null
-        }
-        Insert: {
-          amount: number
-          completed_at?: string | null
+          stripe_event_id?: string | null
+          meter_id?: string | null
+          event_name?: string
+          value?: number
           created_at?: string
-          id?: string
-          status: string
-          stripe_checkout_session_id: string
-          stripe_payment_intent_id?: string | null
-          used_at?: string | null
-          user_id: string
-          verification_id?: string | null
-        }
-        Update: {
-          amount?: number
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          status?: string
-          stripe_checkout_session_id?: string
-          stripe_payment_intent_id?: string | null
-          used_at?: string | null
-          user_id?: string
-          verification_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "one_time_payments_verification_id_fkey"
-            columns: ["verification_id"]
-            isOneToOne: false
-            referencedRelation: "income_verifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stripe_subscriptions: {
-        Row: {
-          cancel_at_period_end: boolean | null
-          created_at: string
-          current_period_end: string | null
-          current_period_start: string | null
-          id: string
-          plan_tier: string | null
-          status: string
-          stripe_customer_id: string
-          stripe_price_id: string
-          stripe_subscription_id: string
-          stripe_usage_price_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          cancel_at_period_end?: boolean | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          plan_tier?: string | null
-          status: string
-          stripe_customer_id: string
-          stripe_price_id: string
-          stripe_subscription_id: string
-          stripe_usage_price_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          cancel_at_period_end?: boolean | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          plan_tier?: string | null
-          status?: string
-          stripe_customer_id?: string
-          stripe_price_id?: string
-          stripe_subscription_id?: string
-          stripe_usage_price_id?: string | null
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
-      user_credits: {
+      one_time_payments: {
         Row: {
-          created_at: string
-          credits_remaining: number
-          credits_used_this_period: number
           id: string
-          period_end: string | null
-          period_start: string | null
-          subscription_tier: string | null
-          updated_at: string
           user_id: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id: string | null
+          amount: number
+          status: 'pending' | 'completed' | 'failed'
+          verification_id: string | null
+          created_at: string
+          completed_at: string | null
+          used_at: string | null
         }
         Insert: {
-          created_at?: string
-          credits_remaining?: number
-          credits_used_this_period?: number
           id?: string
-          period_end?: string | null
-          period_start?: string | null
-          subscription_tier?: string | null
-          updated_at?: string
           user_id: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id?: string | null
+          amount: number
+          status: 'pending' | 'completed' | 'failed'
+          verification_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+          used_at?: string | null
         }
         Update: {
-          created_at?: string
-          credits_remaining?: number
-          credits_used_this_period?: number
           id?: string
-          period_end?: string | null
-          period_start?: string | null
-          subscription_tier?: string | null
-          updated_at?: string
           user_id?: string
+          stripe_checkout_session_id?: string
+          stripe_payment_intent_id?: string | null
+          amount?: number
+          status?: 'pending' | 'completed' | 'failed'
+          verification_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+          used_at?: string | null
+        }
+        Relationships: []
+      }
+      stripe_customers: {
+        Row: {
+          id: string
+          stripe_customer_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          stripe_customer_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          stripe_customer_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stripe_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_subscription_id: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_usage_price_id: string | null
+          status: string
+          plan_tier: 'starter' | 'pro' | null
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_subscription_id: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_usage_price_id?: string | null
+          status: string
+          plan_tier?: 'starter' | 'pro' | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_subscription_id?: string
+          stripe_customer_id?: string
+          stripe_price_id?: string
+          stripe_usage_price_id?: string | null
+          status?: string
+          plan_tier?: 'starter' | 'pro' | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teller_webhook_events: {
+        Row: {
+          id: string
+          event_id: string
+          event_type: string
+          enrollment_id: string | null
+          account_id: string | null
+          event_data: Json
+          full_payload: Json
+          received_at: string
+          event_timestamp: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          event_type: string
+          enrollment_id?: string | null
+          account_id?: string | null
+          event_data: Json
+          full_payload: Json
+          received_at?: string
+          event_timestamp?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          event_type?: string
+          enrollment_id?: string | null
+          account_id?: string | null
+          event_data?: Json
+          full_payload?: Json
+          received_at?: string
+          event_timestamp?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      usage_ledger: {
+        Row: {
+          id: string
+          user_id: string
+          verification_id: string
+          source: 'subscription' | 'payg'
+          stripe_subscription_id: string | null
+          one_time_payment_id: string | null
+          period_start: string | null
+          period_end: string | null
+          reversed_at: string | null
+          reversal_reason: string | null
+          reversal_metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          verification_id: string
+          source: 'subscription' | 'payg'
+          stripe_subscription_id?: string | null
+          one_time_payment_id?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          reversed_at?: string | null
+          reversal_reason?: string | null
+          reversal_metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          verification_id?: string
+          source?: 'subscription' | 'payg'
+          stripe_subscription_id?: string | null
+          one_time_payment_id?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          reversed_at?: string | null
+          reversal_reason?: string | null
+          reversal_metadata?: Json
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
       users: {
         Row: {
-          avatar_url: string | null
-          billing_address: Json | null
-          company_name: string | null
-          full_name: string | null
           id: string
-          payment_method: Json | null
+          company_name: string | null
+          first_name: string | null
+          last_name: string | null
+          industry: string | null
           stripe_customer_id: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          billing_address?: Json | null
-          company_name?: string | null
-          full_name?: string | null
           id: string
-          payment_method?: Json | null
+          company_name?: string | null
+          first_name?: string | null
+          last_name?: string | null
+          industry?: string | null
           stripe_customer_id?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          billing_address?: Json | null
-          company_name?: string | null
-          full_name?: string | null
           id?: string
-          payment_method?: Json | null
+          company_name?: string | null
+          first_name?: string | null
+          last_name?: string | null
+          industry?: string | null
           stripe_customer_id?: string | null
         }
         Relationships: []
@@ -329,73 +374,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auto_delete_expired_verifications: { Args: never; Returns: number }
-      delete_expired_verifications: { Args: never; Returns: number }
-      delete_user_data: { Args: { target_user_id: string }; Returns: boolean }
-      export_user_data: { Args: { target_user_id: string }; Returns: Json }
-      mask_account_number: { Args: { account_num: string }; Returns: string }
-      reset_subscription_credits: {
-        Args: {
-          credits_included: number
-          period_end: string
-          period_start: string
-          target_user_id: string
-        }
-        Returns: undefined
-      }
-    }
-    Enums: {
-      pricing_plan_interval: "day" | "week" | "month" | "year"
-      pricing_type: "one_time" | "recurring"
-      subscription_status:
-        | "trialing"
-        | "active"
-        | "canceled"
-        | "incomplete"
-        | "incomplete_expired"
-        | "past_due"
-        | "unpaid"
-        | "paused"
-      verification_status:
-        | "pending"
-        | "in_progress"
-        | "completed"
-        | "expired"
-        | "failed"
-    }
-    CompositeTypes: {
       [_ in never]: never
     }
+    Enums: {
+      verification_status: 'pending' | 'in_progress' | 'completed' | 'expired' | 'failed' | 'canceled'
+      usage_source: 'subscription' | 'payg'
+    }
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type PublicSchema = Database[keyof Database]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  PublicTableNameOrOptions extends
+    | keyof (PublicSchema['Tables'] & PublicSchema['Views'])
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof (Database[PublicTableNameOrOptions['schema']]['Tables'] &
+        Database[PublicTableNameOrOptions['schema']]['Views'])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions['schema']]['Tables'] &
+      Database[PublicTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof (PublicSchema['Tables'] &
+        PublicSchema['Views'])
+    ? (PublicSchema['Tables'] &
+        PublicSchema['Views'])[PublicTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -403,24 +411,20 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema['Tables']
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
+    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -428,24 +432,20 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema['Tables']
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
+    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -453,61 +453,14 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  PublicEnumNameOrOptions extends
+    | keyof PublicSchema['Enums']
+    | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicEnumNameOrOptions['schema']]['Enums']
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema['Enums']
+    ? PublicSchema['Enums'][PublicEnumNameOrOptions]
     : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      pricing_plan_interval: ["day", "week", "month", "year"],
-      pricing_type: ["one_time", "recurring"],
-      subscription_status: [
-        "trialing",
-        "active",
-        "canceled",
-        "incomplete",
-        "incomplete_expired",
-        "past_due",
-        "unpaid",
-        "paused",
-      ],
-      verification_status: [
-        "pending",
-        "in_progress",
-        "completed",
-        "expired",
-        "failed",
-      ],
-    },
-  },
-} as const

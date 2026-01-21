@@ -23,7 +23,15 @@ export default async function SettingsPage({ searchParams }: PageProps) {
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single() as { data: { company_name?: string | null } | null; error: any };
+    .single() as { 
+      data: { 
+        company_name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        industry?: string | null;
+      } | null; 
+      error: any 
+    };
   
   if (profileError) {
     console.error('Settings page: Profile query error:', profileError.message, profileError);

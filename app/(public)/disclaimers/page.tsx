@@ -1,3 +1,36 @@
+import { Metadata } from 'next';
+import { getURL } from '@/utils/helpers';
+
+const siteUrl = getURL();
+const ogImage = `${siteUrl}/opengraph-image.png`;
+
+export const metadata: Metadata = {
+  title: 'Disclaimers & Limitations - IncomeChecker.com',
+  description: 'Important disclaimers and limitations for IncomeChecker.com income verification reports. Understand the scope, accuracy, and limitations of our verification service.',
+  openGraph: {
+    title: 'Disclaimers & Limitations - IncomeChecker.com',
+    description: 'Important disclaimers and limitations for IncomeChecker.com income verification reports. Understand the scope, accuracy, and limitations of our verification service.',
+    url: `${siteUrl}/disclaimers`,
+    siteName: 'IncomeChecker.com',
+    images: [
+      {
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: 'IncomeChecker.com',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Disclaimers & Limitations - IncomeChecker.com',
+    description: 'Important disclaimers and limitations for IncomeChecker.com income verification reports. Understand the scope, accuracy, and limitations of our verification service.',
+    images: [ogImage],
+  },
+};
+
 export default function DisclaimersPage() {
   return (
     <div className="min-h-screen bg-gray-50">

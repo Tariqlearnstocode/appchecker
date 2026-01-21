@@ -11,7 +11,12 @@ import { sanitizeCompanyName } from '@/utils/sanitize';
 
 interface SettingsClientProps {
   user: SupabaseUser;
-  profile: { company_name?: string | null } | null;
+  profile: { 
+    company_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    industry?: string | null;
+  } | null;
   activeTab: string;
 }
 
@@ -21,7 +26,10 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
   const { supabase } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [firstName, setFirstName] = useState(profile?.first_name || '');
+  const [lastName, setLastName] = useState(profile?.last_name || '');
   const [companyName, setCompanyName] = useState(profile?.company_name || '');
+  const [industry, setIndustry] = useState(profile?.industry || '');
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,19 +102,32 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
     setSaving(true);
 
     try {
-      // Sanitize company name before saving
+      // Sanitize inputs before saving
+      const sanitizedFirstName = firstName.trim() || null;
+      const sanitizedLastName = lastName.trim() || null;
       const sanitizedCompanyName = companyName ? sanitizeCompanyName(companyName) : null;
+      const sanitizedIndustry = industry.trim() || null;
       
       const { error } = await supabase
         .from('users')
-        .update({ company_name: sanitizedCompanyName || null })
+        .update({ 
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
+          company_name: sanitizedCompanyName,
+          industry: sanitizedIndustry
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
       // Also update auth metadata
       const { error: metadataError } = await supabase.auth.updateUser({
-        data: { company_name: sanitizedCompanyName || null }
+        data: { 
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
+          company_name: sanitizedCompanyName,
+          industry: sanitizedIndustry
+        }
       });
 
       if (metadataError) throw metadataError;
@@ -224,6 +245,35 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
                 <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="first-name" className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name
+                  </label>
+                  <input
+                    id="first-name"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="last-name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name
+                  </label>
+                  <input
+                    id="last-name"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-2">
                   Company Name
@@ -237,6 +287,26 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
                   placeholder="Your company name"
                 />
                 <p className="text-xs text-gray-500 mt-1">This will be used as the default "Requested By" name for new verifications</p>
+              </div>
+
+              <div>
+                <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-2">
+                  Industry
+                </label>
+                <select
+                  id="industry"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select an industry</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Property Management">Property Management</option>
+                  <option value="Lending">Lending</option>
+                  <option value="Financial Services">Financial Services</option>
+                  <option value="Housing Authority">Housing Authority</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div className="flex justify-end">

@@ -14,14 +14,20 @@ interface AuthModalProps {
   onAuthSuccess?: () => void | Promise<void>;
   initialEmail?: string;
   initialCompanyName?: string;
+  initialFirstName?: string;
+  initialLastName?: string;
+  initialIndustry?: string;
 }
 
-export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSuccess, initialEmail = '', initialCompanyName = '' }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSuccess, initialEmail = '', initialCompanyName = '', initialFirstName = '', initialLastName = '', initialIndustry = '' }: AuthModalProps) {
   const { supabase } = useAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetEmailSent, setResetEmailSent] = useState(false);
@@ -32,15 +38,24 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
       setMode(initialMode);
       setError('');
       setResetEmailSent(false);
-      // Pre-populate email and company name from initial values
+      // Pre-populate fields from initial values
       if (initialEmail) {
         setEmail(initialEmail);
       }
       if (initialCompanyName) {
         setCompanyName(initialCompanyName);
       }
+      if (initialFirstName) {
+        setFirstName(initialFirstName);
+      }
+      if (initialLastName) {
+        setLastName(initialLastName);
+      }
+      if (initialIndustry) {
+        setIndustry(initialIndustry);
+      }
     }
-  }, [isOpen, initialMode, initialEmail, initialCompanyName]);
+  }, [isOpen, initialMode, initialEmail, initialCompanyName, initialFirstName, initialLastName, initialIndustry]);
 
   if (!isOpen) return null;
 
@@ -50,15 +65,21 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setLoading(true);
 
     try {
-      // Sanitize company name before signup
+      // Sanitize inputs before signup
       const sanitizedCompanyName = companyName ? sanitizeCompanyName(companyName) : null;
+      const sanitizedFirstName = firstName.trim() || null;
+      const sanitizedLastName = lastName.trim() || null;
+      const sanitizedIndustry = industry.trim() || null;
       
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            company_name: sanitizedCompanyName
+            company_name: sanitizedCompanyName,
+            first_name: sanitizedFirstName,
+            last_name: sanitizedLastName,
+            industry: sanitizedIndustry
           }
         }
       });
@@ -153,7 +174,10 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setError('');
     setEmail('');
     setPassword('');
+    setFirstName('');
+    setLastName('');
     setCompanyName('');
+    setIndustry('');
     setResetEmailSent(false);
     setMode(initialMode);
     onClose();
@@ -201,19 +225,68 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
           )}
           
           {mode === 'signup' && (
-            <div>
-              <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name (optional)
-              </label>
-              <input
-                id="company-name"
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder="ABC Properties"
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="first-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name (optional)
+                  </label>
+                  <input
+                    id="first-name"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="last-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name (optional)
+                  </label>
+                  <input
+                    id="last-name"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Company Name (optional)
+                </label>
+                <input
+                  id="company-name"
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="ABC Properties"
+                />
+              </div>
+              <div>
+                <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
+                  Industry (optional)
+                </label>
+                <select
+                  id="industry"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select an industry</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Property Management">Property Management</option>
+                  <option value="Lending">Lending</option>
+                  <option value="Financial Services">Financial Services</option>
+                  <option value="Housing Authority">Housing Authority</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </>
           )}
           
           <div>
