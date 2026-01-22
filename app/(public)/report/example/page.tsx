@@ -46,7 +46,7 @@ const generateSampleTransactions = () => {
   while (currentDate <= now) {
     const isNewJob = currentDate >= jobChangeDate;
     const amount = isNewJob ? newJobAmount : oldJobAmount;
-    const employerName = isNewJob ? 'TechCorp Solutions Payroll' : 'ACME Corporation Payroll';
+    const employerName = isNewJob ? 'TechCorp Solutions' : 'ACME Corporation';
     const payFrequency = isNewJob ? 7 : 14; // Weekly for new job, bi-weekly for old job
     
     transactions.push({
@@ -177,8 +177,8 @@ const generateSampleTransactions = () => {
   twelveMonthsAgo.setDate(1);
   twelveMonthsAgo.setHours(0, 0, 0, 0);
   
-  // Randomly distribute 70 debit transactions per month across 12 complete months
-  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+  // Randomly distribute 70 debit transactions per month across 12 complete months + current month
+  for (let monthOffset = 0; monthOffset <= 12; monthOffset++) {
     // Create a copy of the pool and shuffle it
     const shuffled = [...debitTransactionPool].sort(() => Math.random() - 0.5);
     
@@ -189,14 +189,14 @@ const generateSampleTransactions = () => {
     const targetMonth = new Date(twelveMonthsAgo);
     targetMonth.setMonth(targetMonth.getMonth() + monthOffset);
     
-    // Distribute them randomly throughout the month
+    const isCurrentMonth = targetMonth.getMonth() === now.getMonth() && targetMonth.getFullYear() === now.getFullYear();
+    const maxDay = isCurrentMonth ? Math.min(28, now.getDate()) : 28;
+
     selectedDebits.forEach((debit) => {
       const date = new Date(targetMonth);
-      // Random day of the month (1-28 to avoid month boundary issues)
-      const randomDay = Math.floor(Math.random() * 28) + 1;
+      const randomDay = Math.floor(Math.random() * maxDay) + 1;
       date.setDate(randomDay);
       
-      // Skip if date is in the future
       if (date > now) return;
       
       // Add some random variation to the amount (±20%)
@@ -230,9 +230,8 @@ const generateSampleTransactions = () => {
     { name: 'WISE', category: 'P2P' },
   ];
   
-  // Add P2P transactions throughout the 12 months
-  // Mix of incoming and outgoing
-  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+  // Add P2P transactions throughout the 12 months + current month
+  for (let monthOffset = 0; monthOffset <= 12; monthOffset++) {
     // Add 3-8 P2P transactions per month
     const p2pCount = 3 + Math.floor(Math.random() * 6); // 3-8 transactions
     
@@ -240,12 +239,12 @@ const generateSampleTransactions = () => {
       const targetMonth = new Date(twelveMonthsAgo);
       targetMonth.setMonth(targetMonth.getMonth() + monthOffset);
       
-      // Random day of the month (1-28)
-      const randomDay = Math.floor(Math.random() * 28) + 1;
+      const isCurrentMonth = targetMonth.getMonth() === now.getMonth() && targetMonth.getFullYear() === now.getFullYear();
+      const maxDay = isCurrentMonth ? Math.min(28, now.getDate()) : 28;
+      const randomDay = Math.floor(Math.random() * maxDay) + 1;
       const date = new Date(targetMonth);
       date.setDate(randomDay);
       
-      // Skip if date is in the future
       if (date > now) continue;
       
       // Random P2P service
@@ -422,7 +421,7 @@ const sampleReportData: IncomeReport = {
     }));
     
     // Current employer (most recent)
-    const currentEmployer = deposits3Mo[0]?.name || 'TechCorp Solutions Payroll';
+    const currentEmployer = deposits3Mo[0]?.name || 'TechCorp Solutions';
     const currentAmount = deposits3Mo[0]?.amount || 6500;
     
     return {

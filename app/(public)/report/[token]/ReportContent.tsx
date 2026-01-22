@@ -195,7 +195,8 @@ function TransactionHistory({ transactions }: { transactions: Array<{
     'paycor', 'bamboohr', 'namely', 'rippling', 'justworks',
     'quickbooks payroll', 'square payroll', 'intuit', 'wage',
     'employer', 'compensation', 'net pay', 'gross pay',
-    'ach payment', 'ach credit', 'ach deposit', 'direct deposit'
+    'ach payment', 'ach credit', 'ach deposit', 'direct deposit',
+    'techcorp solutions', 'acme corporation'
   ];
   const EXCLUDE_KEYWORDS = [
     'venmo', 'zelle', 'cash app', 'cashapp', 'paypal', 'apple cash',
@@ -357,8 +358,7 @@ function TransactionHistory({ transactions }: { transactions: Array<{
               : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
           }`}
         >
-          Payroll Only
-        </button>
+Reccuring Income Only        </button>
       </div>
       
       {/* Table Header */}
@@ -474,7 +474,7 @@ function IncomeTypeBadge({ type }: { type: string }) {
     other: 'bg-gray-100 text-gray-600',
   };
   const labels: Record<string, string> = {
-    payroll: 'Payroll',
+    payroll: 'Recurring Income',
     government: 'Government',
     p2p: 'P2P',
     transfer: 'Transfer',
@@ -500,7 +500,8 @@ export default function ReportContent({ verification, reportData, isCalculated }
     'paycor', 'bamboohr', 'namely', 'rippling', 'justworks',
     'quickbooks payroll', 'square payroll', 'intuit', 'wage',
     'employer', 'compensation', 'net pay', 'gross pay',
-    'ach payment', 'ach credit', 'ach deposit', 'direct deposit'
+    'ach payment', 'ach credit', 'ach deposit', 'direct deposit',
+    'techcorp solutions', 'acme corporation'
   ];
   const EXCLUDE_KEYWORDS = [
     'venmo', 'zelle', 'cash app', 'cashapp', 'paypal', 'apple cash',
@@ -590,12 +591,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
           <div className="flex-1 h-[2px] bg-emerald-600"></div>
         </div>
         
-        {/* Data Availability Notice - Example Report Only */}
-        {verification.requested_by_name === 'LLM Income Group' && (
-          <div className="text-center text-sm text-gray-600 mb-4">
-            12 months data available
-          </div>
-        )}
+      
         
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
           <div className="flex gap-2">
@@ -747,13 +743,13 @@ export default function ReportContent({ verification, reportData, isCalculated }
                     <span className="font-medium text-gray-900">{formatCurrency(primarySourceTotal90Days)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Payroll Deposits</span>
+                    <span className="text-gray-600"></span>
                     <span className="font-medium text-gray-900">{primarySourceOccurrences} deposits</span>
                   </div>
                 </div>
               </>
             ) : (
-              <p className="text-gray-500 text-sm">No payroll deposits identified</p>
+                <p className="text-gray-500 text-sm">No Deposits Identified as Recurring Income Patterns</p>
             )}
           </div>
         </div>
@@ -761,8 +757,8 @@ export default function ReportContent({ verification, reportData, isCalculated }
         {/* Recent Payroll Deposits */}
         <div className="bg-white border border-gray-200 rounded mb-6">
           <div className="px-5 py-3 border-b border-gray-200">
-            <span className="font-semibold text-gray-900">Recent Payroll Deposits</span>
-            <span className="text-gray-500 text-sm ml-2">(Last 90 Days)</span>
+            <span className="font-semibold text-gray-900">Recent Deposits Identified as Recurring Income Patterns</span>
+            <span className="text-gray-500 text-sm ml-2">(Last 90 Days)</span>  
           </div>
           
           {/* Table Header */}
@@ -790,7 +786,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
             if (payrollDeposits.length === 0) {
               return (
                 <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
-                  No payroll deposits identified. Income may come from other sources.
+                    No Deposits Identified as Recurring Income Patterns. Income may come from other sources.
                 </div>
               );
             }
@@ -855,8 +851,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
         {/* Footer */}
         <div className="text-center text-xs text-gray-500 mt-8 pt-6 border-t border-gray-300">
           <p className="mb-2">
-            This report is confidential and is not to be discussed except for persons who have permissible purposes as defined in the Fair Credit Reporting Act and other applicable Federal and State regulations.
-          </p>
+          This report was generated based on consumer-authorized transaction data. Recipients should use this for informational review only.          </p>
           <p className="mb-2">
             Report generated {formatDate(data.generatedAt)} • Verification for {verification.requested_by_name || verification.individual_email}
           </p>
