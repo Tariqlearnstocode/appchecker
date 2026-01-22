@@ -211,168 +211,99 @@ function TransactionHistory({ transactions }: { transactions: Array<{
     return PAYROLL_KEYWORDS.some(kw => lower.includes(kw));
   };
 
-  // Group transactions by month
-  const monthlyData = useMemo(() => {
-    const grouped: Record<string, typeof transactions> = {};
-    
-    transactions.forEach((txn) => {
-      const date = new Date(txn.date);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(txn);
-    });
-    
-    // Sort months (newest first)
-    const sortedMonths = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-    
-    return { grouped, sortedMonths };
-  }, [transactions]);
+  const [filter, setFilter] = useState<'credits' | 'payroll'>('credits');
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 20;
 
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
-  const [filter, setFilter] = useState<'all' | 'debits' | 'credits' | 'payroll'>('all');
-  
-  const selectedMonth = monthlyData.sortedMonths[selectedMonthIndex];
-  const allTransactionsForMonth = monthlyData.grouped[selectedMonth] || [];
-  
-  // Apply filter
-  const selectedTransactions = useMemo(() => {
-    if (filter === 'debits') {
-      return allTransactionsForMonth.filter(t => !t.isIncome);
-    } else if (filter === 'credits') {
-      return allTransactionsForMonth.filter(t => t.isIncome);
-    } else if (filter === 'payroll') {
-      return allTransactionsForMonth.filter(t => t.isIncome && isPayroll(t.name));
-    }
-    return allTransactionsForMonth;
-  }, [allTransactionsForMonth, filter]);
-  
-  // Calculate month totals (always from all transactions, not filtered)
-  const monthTotals = useMemo(() => {
-    const credits = allTransactionsForMonth.filter(t => t.isIncome).reduce((sum, t) => sum + t.amount, 0);
-    const debits = allTransactionsForMonth.filter(t => !t.isIncome).reduce((sum, t) => sum + t.amount, 0);
-    return { credits, debits };
-  }, [allTransactionsForMonth]);
+  const filteredAndSorted = useMemo(() => {
+    const filtered = filter === 'payroll'
+      ? transactions.filter(t => t.isIncome && isPayroll(t.name))
+      : transactions.filter(t => t.isIncome);
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, filter]);
 
-  const formatMonthLabel = (monthKey: string | undefined) => {
-    if (!monthKey) return '';
-    const [year, month] = monthKey.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
+  const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PER_PAGE;
+    return filteredAndSorted.slice(start, start + PER_PAGE);
+  }, [filteredAndSorted, currentPage]);
 
-  // Early return if no months to display
-  if (monthlyData.sortedMonths.length === 0) {
+  const start = (currentPage - 1) * PER_PAGE;
+  const end = Math.min(start + PER_PAGE, filteredAndSorted.length);
+
+  if (filteredAndSorted.length === 0) {
     return null;
   }
 
   return (
     <div className="bg-white border border-gray-200 rounded mb-6 print:hidden">
-      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
-        <div>
-          <span className="font-semibold text-gray-900">Transaction History</span>
-          <span className="text-gray-500 text-sm ml-2">Provided by Teller</span>
-        </div>
+      <div className="px-5 py-3 border-b border-gray-200">
+        <div className="font-semibold text-gray-900">Other Incoming Deposits</div>
+        <p className="text-gray-500 text-sm mt-1">
+          Incoming deposits authorized by the applicant that were not identified as recurring income. These may include peer-to-peer transfers or irregular payments.
+        </p>
       </div>
       
-      {/* Month Navigation */}
-      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <button
-          onClick={() => setSelectedMonthIndex(Math.min(selectedMonthIndex + 1, monthlyData.sortedMonths.length - 1))}
-          disabled={selectedMonthIndex >= monthlyData.sortedMonths.length - 1}
-          className="p-2 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        
-        <div className="text-center">
-          <div className="font-semibold text-gray-900">{formatMonthLabel(selectedMonth)}</div>
-          <div className="text-xs text-gray-500">
-            {selectedTransactions.length} transactions
-          </div>
-        </div>
-        
-        <button
-          onClick={() => setSelectedMonthIndex(Math.max(selectedMonthIndex - 1, 0))}
-          disabled={selectedMonthIndex <= 0}
-          className="p-2 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronRight className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-
-      {/* Month Pills */}
-      <div className="px-5 py-2 border-b border-gray-200 flex gap-2 overflow-x-auto">
-        {monthlyData.sortedMonths.map((month, idx) => (
+      {/* Filter + Pagination */}
+      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show:</span>
           <button
-            key={month}
-            onClick={() => setSelectedMonthIndex(idx)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
-              idx === selectedMonthIndex
+            onClick={() => { setFilter('credits'); setPage(1); }}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              filter === 'credits'
                 ? 'bg-black text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
             }`}
           >
-            {new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+            Incoming Deposits
           </button>
-        ))}
-      </div>
-
-      {/* Filter Buttons */}
-      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex gap-2">
-        <span className="text-sm text-gray-600 mr-2 self-center">Show:</span>
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-            filter === 'all'
-              ? 'bg-black text-white'
-              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setFilter('debits')}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-            filter === 'debits'
-              ? 'bg-black text-white'
-              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-          Debits Only
-        </button>
-        <button
-          onClick={() => setFilter('credits')}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-            filter === 'credits'
-              ? 'bg-black text-white'
-              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-          Credits Only
-        </button>
-        <button
-          onClick={() => setFilter('payroll')}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-            filter === 'payroll'
-              ? 'bg-black text-white'
-              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-          }`}
-        >
-Reccuring Income Only        </button>
+          <button
+            onClick={() => { setFilter('payroll'); setPage(1); }}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              filter === 'payroll'
+                ? 'bg-black text-white'
+                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+            }`}
+          >
+            Recurring Income
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span>Showing {start + 1}–{end} of {filteredAndSorted.length}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-1.5">Page {currentPage} of {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
       
       {/* Table Header */}
-      <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+      <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
         <div className="col-span-2">Date</div>
         <div className="col-span-4">Description</div>
-        <div className="col-span-2 text-right">Debit</div>
         <div className="col-span-2 text-right">Credit</div>
-        <div className="col-span-2 text-right">Balance</div>
       </div>
       
       {/* Table Rows */}
-      <div className="max-h-[400px] overflow-y-auto">
-        {selectedTransactions.map((txn, i) => (
+      <div className="max-h-[1000px] overflow-y-auto">
+        {paginated.map((txn, i) => (
           <React.Fragment key={i}>
             {/* Mobile Card View */}
             <div 
@@ -388,9 +319,6 @@ Reccuring Income Only        </button>
                   ) : (
                     <div className="text-gray-900 font-medium">{formatCurrency(txn.amount)}</div>
                   )}
-                  {txn.runningBalance !== null && (
-                    <div className="text-xs text-gray-500 mt-0.5">Balance: {formatCurrency(txn.runningBalance)}</div>
-                  )}
                 </div>
               </div>
               <div className="text-gray-900 truncate cursor-help" title={txn.name}>
@@ -400,7 +328,7 @@ Reccuring Income Only        </button>
             </div>
             {/* Desktop Grid View */}
             <div 
-              className={`hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
+              className={`hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
             >
               <div className="col-span-2 text-emerald-600 text-xs">
                 {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
@@ -409,36 +337,14 @@ Reccuring Income Only        </button>
                 {txn.name}
                 {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
               </div>
-              <div className="col-span-2 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
-                {!txn.isIncome && formatCurrency(txn.amount)}
-              </div>
-              <div className="col-span-2 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
+              <div className="col-span-2 text-right text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
                 {txn.isIncome && formatCurrency(txn.amount)}
-              </div>
-              <div className="col-span-2 text-right text-gray-500 text-xs sm:text-sm whitespace-nowrap">
-                {txn.runningBalance !== null ? formatCurrency(txn.runningBalance) : '—'}
               </div>
             </div>
           </React.Fragment>
         ))}
       </div>
       
-      {/* Month Summary */}
-      <div className="px-3 sm:px-5 py-3 bg-gray-50 border-t border-gray-200">
-        <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 text-sm font-medium">
-          <div className="col-span-6 text-gray-700">Month Total</div>
-          <div className="col-span-2 text-right text-gray-900">{formatCurrency(monthTotals.debits)}</div>
-          <div className="col-span-2 text-right text-emerald-600">{formatCurrency(monthTotals.credits)}</div>
-          <div className="col-span-2"></div>
-        </div>
-        <div className="sm:hidden flex justify-between text-sm font-medium">
-          <div className="text-gray-700">Month Total</div>
-          <div className="text-right">
-            <div className="text-gray-900">Debit: {formatCurrency(monthTotals.debits)}</div>
-            <div className="text-emerald-600">Credit: {formatCurrency(monthTotals.credits)}</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -637,7 +543,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
         <div className="bg-white border border-gray-200 rounded mb-6">
           <div className="px-5 py-3 border-b border-gray-200">
             <span className="font-semibold text-gray-900">Income Summary</span>
-            <span className="text-gray-500 text-sm ml-2">Provided by Teller • {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data available</span>
+            <span className="text-gray-500 text-sm ml-2">Provided by Plaid • {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data available</span>
               </div>
 
           <div className="p-5">
@@ -762,10 +668,9 @@ export default function ReportContent({ verification, reportData, isCalculated }
           </div>
           
           {/* Table Header */}
-          <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
+          <div className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
             <div className="col-span-2">Pay Date</div>
             <div className="col-span-4">Source</div>
-            <div className="col-span-2">Type</div>
             <div className="col-span-2 text-right">Amount</div>
             <div className="col-span-2 text-right">Running Total</div>
           </div>
@@ -813,25 +718,19 @@ export default function ReportContent({ verification, reportData, isCalculated }
                       <div className="text-xs text-gray-500 mt-0.5">Total: {formatCurrency(deposit.runningTotal)}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <IncomeTypeBadge type="payroll" />
-                    <div className="text-gray-900 truncate cursor-help flex-1" title={deposit.name}>
-                      {deposit.name}
-                    </div>
+                  <div className="text-gray-900 truncate cursor-help mt-1" title={deposit.name}>
+                    {deposit.name}
                   </div>
                 </div>
                 {/* Desktop Grid View */}
                 <div 
-                  className="hidden sm:grid grid-cols-12 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm"
+                  className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm"
                 >
                   <div className="col-span-2 text-emerald-600 text-xs">
                     {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
                   </div>
                   <div className="col-span-4 text-gray-900 truncate cursor-help text-xs sm:text-sm" title={deposit.name}>
                     {deposit.name}
-                  </div>
-                  <div className="col-span-2">
-                    <IncomeTypeBadge type="payroll" />
                   </div>
                   <div className="col-span-2 text-right text-gray-900 font-medium text-xs sm:text-sm whitespace-nowrap">
                     {formatCurrency(deposit.amount)}
