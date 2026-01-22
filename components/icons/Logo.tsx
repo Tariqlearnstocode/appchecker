@@ -7,12 +7,30 @@ const Logo = ({ ...props }) => (
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
-    <rect width="100%" height="100%" rx="16" fill="white" />
+    <rect width="32" height="32" rx="6" fill="#10b981" />
+    {/* FileCheck icon: document with checkmark */}
     <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M17.6482 10.1305L15.8785 7.02583L7.02979 22.5499H10.5278L17.6482 10.1305ZM19.8798 14.0457L18.11 17.1983L19.394 19.4511H16.8453L15.1056 22.5499H24.7272L19.8798 14.0457Z"
-      fill="black"
+      d="M14.5 9.5H10C9.44772 9.5 9 9.94772 9 10.5V21.5C9 22.0523 9.44772 22.5 10 22.5H18C18.5523 22.5 19 22.0523 19 21.5V13.5L14.5 9.5Z"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+    <path
+      d="M14.5 9.5V13.5H19"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+    <path
+      d="M12 17L13.5 18.5L16 16"
+      stroke="white"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 );

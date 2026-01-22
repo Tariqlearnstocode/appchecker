@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toasts/use-toast';
-import { Settings, User, CreditCard, Shield, Save, Loader2, Download, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Settings, User, CreditCard, Shield, Save, Loader2, Download, Trash2, AlertTriangle, ExternalLink, QrCode, CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { sanitizeCompanyName } from '@/utils/sanitize';
@@ -34,8 +34,17 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [error, setError] = useState('');
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
+  
+  // MFA state
+  const [mfaFactors, setMfaFactors] = useState<any[]>([]);
+  const [loadingMfa, setLoadingMfa] = useState(false);
+  const [enrollingMfa, setEnrollingMfa] = useState(false);
+  const [mfaEnrollmentData, setMfaEnrollmentData] = useState<{ id: string; qr_code: string; secret: string } | null>(null);
+  const [mfaVerificationCode, setMfaVerificationCode] = useState('');
+  const [verifyingMfa, setVerifyingMfa] = useState(false);
 
   const tabs: { id: Tab; label: string; icon: typeof User }[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -53,6 +62,13 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
     }
   }, [currentTab]);
 
+  // Load MFA factors
+  useEffect(() => {
+    if (currentTab === 'account') {
+      loadMfaFactors();
+    }
+  }, [currentTab]);
+
   async function loadSubscriptionStatus() {
     setLoadingSubscription(true);
     try {
@@ -66,6 +82,136 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
     } finally {
       setLoadingSubscription(false);
     }
+  }
+
+  async function loadMfaFactors() {
+    setLoadingMfa(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      setMfaFactors(data?.totp || []);
+    } catch (error: any) {
+      console.error('Error loading MFA factors:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load MFA factors',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingMfa(false);
+    }
+  }
+
+  async function startMfaEnrollment() {
+    setEnrollingMfa(true);
+    setError('');
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'Authenticator App',
+      });
+      
+      if (error) throw error;
+      
+      if (!data || !data.totp) {
+        throw new Error('Invalid enrollment data received');
+      }
+      
+      setMfaEnrollmentData({
+        id: data.id,
+        qr_code: data.totp.qr_code,
+        secret: data.totp.secret,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to start MFA enrollment',
+        variant: 'destructive',
+      });
+    } finally {
+      setEnrollingMfa(false);
+    }
+  }
+
+  async function verifyMfaEnrollment() {
+    if (!mfaEnrollmentData || !mfaVerificationCode) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a verification code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setVerifyingMfa(true);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: mfaEnrollmentData.id,
+      });
+      
+      if (challengeError) throw challengeError;
+      
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaEnrollmentData.id,
+        challengeId: challengeData.id,
+        code: mfaVerificationCode,
+      });
+      
+      if (verifyError) throw verifyError;
+      
+      toast({
+        title: 'MFA enabled',
+        description: 'Multi-factor authentication has been successfully enabled.',
+      });
+      
+      // Reset enrollment state
+      setMfaEnrollmentData(null);
+      setMfaVerificationCode('');
+      
+      // Reload factors
+      await loadMfaFactors();
+    } catch (error: any) {
+      toast({
+        title: 'Verification failed',
+        description: error.message || 'Invalid verification code. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setVerifyingMfa(false);
+    }
+  }
+
+  async function unenrollMfa(factorId: string) {
+    if (!confirm('Are you sure you want to disable multi-factor authentication? This will make your account less secure.')) {
+      return;
+    }
+
+    setLoadingMfa(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId });
+      if (error) throw error;
+      
+      toast({
+        title: 'MFA disabled',
+        description: 'Multi-factor authentication has been disabled.',
+      });
+      
+      // Reload factors
+      await loadMfaFactors();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to disable MFA',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingMfa(false);
+    }
+  }
+
+  function cancelMfaEnrollment() {
+    setMfaEnrollmentData(null);
+    setMfaVerificationCode('');
   }
 
   async function openCustomerPortal() {
@@ -429,6 +575,123 @@ export default function SettingsClient({ user, profile, activeTab }: SettingsCli
             <p className="text-gray-600 mb-6">Manage your account and data</p>
 
             <div className="space-y-6">
+              {/* MFA Section */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Multi-Factor Authentication</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Add an extra layer of security to your account by requiring a code from your authenticator app when signing in.
+                </p>
+
+                {loadingMfa ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  </div>
+                ) : mfaEnrollmentData ? (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-900 mb-3">
+                        Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):
+                      </p>
+                      <div className="flex justify-center mb-3">
+                        <img 
+                          src={mfaEnrollmentData.qr_code} 
+                          alt="MFA QR Code" 
+                          className="border border-gray-300 rounded-lg"
+                        />
+                      </div>
+                      <p className="text-xs text-blue-700 mb-2">
+                        Or enter this code manually: <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono text-xs">{mfaEnrollmentData.secret}</code>
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        After scanning, enter the 6-digit code from your app to complete setup.
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="mfa-code" className="block text-sm font-medium text-gray-700 mb-2">
+                        Verification Code
+                      </label>
+                      <input
+                        id="mfa-code"
+                        type="text"
+                        value={mfaVerificationCode}
+                        onChange={(e) => setMfaVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        maxLength={6}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-center text-lg tracking-widest"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={verifyMfaEnrollment}
+                        disabled={verifyingMfa || mfaVerificationCode.length !== 6}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
+                      >
+                        {verifyingMfa ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Verify & Enable
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={cancelMfaEnrollment}
+                        disabled={verifyingMfa}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : mfaFactors.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-medium">MFA is enabled</span>
+                    </div>
+                    <div className="space-y-2">
+                      {mfaFactors.map((factor) => (
+                        <div key={factor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{factor.friendly_name || 'Authenticator App'}</p>
+                            <p className="text-xs text-gray-500">Enrolled {new Date(factor.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <button
+                            onClick={() => unenrollMfa(factor.id)}
+                            disabled={loadingMfa}
+                            className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={startMfaEnrollment}
+                    disabled={enrollingMfa}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
+                  >
+                    {enrollingMfa ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="w-4 h-4" />
+                        Enable MFA
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
               {/* Account Info */}
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>

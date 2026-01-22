@@ -31,6 +31,14 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  
+  // MFA state
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState<any[]>([]);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [verifyingMfa, setVerifyingMfa] = useState(false);
+  const [pendingPassword, setPendingPassword] = useState<string>('');
 
   // Reset mode and populate initial values when modal opens or initialMode changes
   useEffect(() => {
@@ -38,6 +46,10 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
       setMode(initialMode);
       setError('');
       setResetEmailSent(false);
+      setMfaRequired(false);
+      setMfaCode('');
+      setMfaChallengeId(null);
+      setMfaFactors([]);
       // Pre-populate fields from initial values
       if (initialEmail) {
         setEmail(initialEmail);
@@ -130,12 +142,64 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setLoading(true);
 
     try {
+      // Store password for potential MFA flow
+      setPendingPassword(password);
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        setPendingPassword('');
+        throw signInError;
+      }
+
+      // If we have a session, immediately check for MFA factors
+      if (data.session) {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactors = factorsData?.totp || [];
+        
+        // If user has MFA factors, sign out IMMEDIATELY before AuthContext can react
+        if (totpFactors.length > 0) {
+          // Sign out immediately - this must happen before any state updates
+          await supabase.auth.signOut();
+          
+          // Now re-authenticate to get a session for MFA challenge
+          const { data: reAuthData, error: reAuthError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (reAuthError || !reAuthData.session) {
+            setPendingPassword('');
+            throw reAuthError || new Error('Failed to re-authenticate for MFA');
+          }
+          
+          const factor = totpFactors[0];
+          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+            factorId: factor.id,
+          });
+          
+          if (challengeError) {
+            await supabase.auth.signOut();
+            setPendingPassword('');
+            throw challengeError;
+          }
+          
+          // Sign out again - user should NOT be authenticated until MFA is verified
+          await supabase.auth.signOut();
+          
+          setMfaRequired(true);
+          setMfaFactors(totpFactors);
+          setMfaChallengeId(challengeData.id);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // No MFA required - clear pending password and proceed
+      setPendingPassword('');
 
       // Success - modal will close via onAuthStateChange in AuthContext
       onClose();
@@ -146,7 +210,66 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     } catch (err: any) {
       console.error('Sign in error:', err);
       setError(err.message || 'Failed to sign in');
+      setPendingPassword('');
       setLoading(false);
+    }
+  };
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setVerifyingMfa(true);
+
+    try {
+      if (!mfaChallengeId || !mfaCode || mfaFactors.length === 0 || !pendingPassword) {
+        throw new Error('Missing MFA information');
+      }
+
+      // Re-authenticate with password to get a session for MFA verification
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: pendingPassword,
+      });
+
+      if (signInError || !signInData.session) {
+        throw signInError || new Error('Failed to authenticate for MFA verification');
+      }
+
+      const factor = mfaFactors[0];
+      const { data, error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: factor.id,
+        challengeId: mfaChallengeId,
+        code: mfaCode,
+      });
+
+      if (verifyError) {
+        // Sign out on verification failure - this is expected, not an error
+        await supabase.auth.signOut();
+        // Don't show error message - just reset and let user try again
+        setMfaCode('');
+        setVerifyingMfa(false);
+        return;
+      }
+
+      // Clear pending password - user is now fully authenticated
+      setPendingPassword('');
+
+      // Success - modal will close via onAuthStateChange in AuthContext
+      onClose();
+      // Call onAuthSuccess callback if provided
+      if (onAuthSuccess) {
+        await onAuthSuccess();
+      }
+    } catch (err: any) {
+      // Only handle unexpected errors, not MFA verification failures
+      if (err.message && !err.message.includes('verification') && !err.message.includes('code') && !err.message.includes('MFA')) {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      } else {
+        // Don't show error for MFA verification failures - just reset
+        setMfaCode('');
+      }
+      await supabase.auth.signOut();
+      setVerifyingMfa(false);
     }
   };
 
@@ -171,6 +294,12 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
   };
 
   const handleClose = () => {
+    // If MFA is required, don't allow closing the modal - user must complete MFA or sign out
+    if (mfaRequired) {
+      // Sign out the user if they try to close during MFA
+      supabase.auth.signOut();
+    }
+    
     setError('');
     setEmail('');
     setPassword('');
@@ -179,6 +308,11 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
     setCompanyName('');
     setIndustry('');
     setResetEmailSent(false);
+    setMfaRequired(false);
+    setMfaCode('');
+    setMfaChallengeId(null);
+    setMfaFactors([]);
+    setPendingPassword('');
     setMode(initialMode);
     onClose();
   };
@@ -189,26 +323,40 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
         <div className="p-6 border-b border-gray-100 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              {mode === 'signup' ? 'Create your account' : mode === 'signin' ? 'Welcome back' : 'Reset password'}
+              {mfaRequired 
+                ? 'Enter verification code' 
+                : mode === 'signup' 
+                ? 'Create your account' 
+                : mode === 'signin' 
+                ? 'Welcome back' 
+                : 'Reset password'}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              {mode === 'signup' 
+              {mfaRequired
+                ? 'Enter the 6-digit code from your authenticator app'
+                : mode === 'signup' 
                 ? 'Sign up to create your verification request' 
                 : mode === 'signin'
                 ? 'Sign in to continue'
                 : 'Enter your email to receive a password reset link'}
             </p>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
+          {!mfaRequired && (
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <form 
           onSubmit={
-            mode === 'signup' ? handleSignUp : 
-            mode === 'signin' ? handleSignIn : 
-            handlePasswordReset
+            mfaRequired 
+              ? handleMfaVerify
+              : mode === 'signup' 
+              ? handleSignUp 
+              : mode === 'signin' 
+              ? handleSignIn 
+              : handlePasswordReset
           } 
           className="p-6 space-y-4"
         >
@@ -223,8 +371,56 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
               Password reset email sent! Check your inbox and click the link to reset your password.
             </div>
           )}
-          
-          {mode === 'signup' && (
+
+          {mfaRequired ? (
+            <>
+              <div>
+                <label htmlFor="mfa-code" className="block text-sm font-medium text-gray-700 mb-1">
+                  Verification Code
+                </label>
+                <input
+                  id="mfa-code"
+                  type="text"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-center text-lg tracking-widest"
+                  autoComplete="one-time-code"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter the 6-digit code from your authenticator app</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={verifyingMfa || mfaCode.length !== 6}
+                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {verifyingMfa && <Loader2 className="w-4 h-4 animate-spin" />}
+                {verifyingMfa ? 'Verifying...' : 'Verify & Sign In'}
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  // Sign out if user goes back
+                  await supabase.auth.signOut();
+                  setMfaRequired(false);
+                  setMfaCode('');
+                  setMfaChallengeId(null);
+                  setMfaFactors([]);
+                  setPendingPassword('');
+                  setError('');
+                }}
+                className="w-full py-2 px-4 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel and sign out
+              </button>
+            </>
+          ) : (
+            <>
+              {mode === 'signup' && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -331,14 +527,16 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || resetEmailSent}
-            className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {mode === 'signup' ? 'Create Account' : mode === 'signin' ? 'Sign In' : 'Send Reset Link'}
-          </button>
+              <button
+                type="submit"
+                disabled={loading || resetEmailSent}
+                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {mode === 'signup' ? 'Create Account' : mode === 'signin' ? 'Sign In' : 'Send Reset Link'}
+              </button>
+            </>
+          )}
         </form>
 
         <div className="px-6 pb-6 text-center">
