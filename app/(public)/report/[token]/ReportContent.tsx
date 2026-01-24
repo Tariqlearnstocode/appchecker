@@ -232,10 +232,6 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   const start = (currentPage - 1) * PER_PAGE;
   const end = Math.min(start + PER_PAGE, filteredAndSorted.length);
 
-  if (filteredAndSorted.length === 0) {
-    return null;
-  }
-
   return (
     <div className="bg-white border border-gray-200 rounded mb-6 print:hidden">
       <div className="px-5 py-3 border-b border-gray-200">
@@ -270,40 +266,51 @@ function TransactionHistory({ transactions }: { transactions: Array<{
             Recurring Income
           </button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span>Showing {start + 1}–{end} of {filteredAndSorted.length}</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-1.5">Page {currentPage} of {totalPages}</span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Next page"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+        {filteredAndSorted.length > 0 && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>Showing {start + 1}–{end} of {filteredAndSorted.length}</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-1.5">Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       {/* Table Header */}
-      <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-        <div className="col-span-2">Date</div>
-        <div className="col-span-4">Description</div>
-        <div className="col-span-2 text-right">Credit</div>
-      </div>
+      {filteredAndSorted.length > 0 && (
+        <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+          <div className="col-span-2">Date</div>
+          <div className="col-span-4">Description</div>
+          <div className="col-span-2 text-right">Credit</div>
+        </div>
+      )}
       
-      {/* Table Rows */}
+      {/* Table Rows or Empty State */}
       <div className="max-h-[1000px] overflow-y-auto">
-        {paginated.map((txn, i) => (
+        {paginated.length === 0 ? (
+          <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
+            {filter === 'payroll' 
+              ? 'No deposits identified as recurring income patterns.'
+              : 'No incoming deposits found.'}
+          </div>
+        ) : (
+          paginated.map((txn, i) => (
           <React.Fragment key={i}>
             {/* Mobile Card View */}
             <div 
@@ -342,7 +349,8 @@ function TransactionHistory({ transactions }: { transactions: Array<{
               </div>
             </div>
           </React.Fragment>
-        ))}
+          ))
+        )}
       </div>
       
     </div>
