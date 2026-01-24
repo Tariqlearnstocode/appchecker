@@ -34,25 +34,25 @@ export default function GlobalNavbar() {
   };
 
   return (
-    <header className="bg-gray-50 border-b border-gray-200 sticky top-0 z-40">
+    <header className="bg-[#fafafa] border-b border-neutral-200/60 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between h-14">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-gray-900">IncomeChecker.com</span>
+            <span className="font-semibold text-neutral-900">IncomeChecker.com</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {user ? (
               <>
-                <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 text-sm text-gray-600 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-sm text-neutral-600 bg-white rounded-lg border border-neutral-200/80">
                   <User className="w-4 h-4 flex-shrink-0" />
                   <span className="hidden sm:inline truncate max-w-[120px] md:max-w-none">{user.email}</span>
                 </div>
                 <Link
                   href="/settings"
-                  className="flex items-center justify-center w-9 h-9 text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex-shrink-0"
+                  className="flex items-center justify-center w-9 h-9 text-neutral-500 hover:text-neutral-700 hover:bg-white rounded-lg border border-neutral-200/80 transition-colors flex-shrink-0"
                   aria-label="Settings"
                 >
                   <Settings className="w-4 h-4" />
@@ -60,7 +60,7 @@ export default function GlobalNavbar() {
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-white rounded-lg border border-neutral-200/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   aria-label={signingOut ? 'Signing out' : 'Sign Out'}
                 >
                   <LogOut className="w-4 h-4 flex-shrink-0" />
@@ -71,13 +71,13 @@ export default function GlobalNavbar() {
               <>
                 <button
                   onClick={() => handleOpenAuthModal('signin')}
-                  className="hidden sm:inline-block px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+                  className="hidden sm:inline-block px-4 py-1.5 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => handleOpenAuthModal('signup')}
-                  className="px-3 sm:px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 sm:bg-emerald-500 sm:hover:bg-emerald-600 sm:text-white sm:border-transparent font-medium transition-colors"
+                  className="px-4 py-2 text-sm bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg font-medium transition-colors"
                 >
                   Get Started
                 </button>

@@ -182,8 +182,10 @@ async function fetchTransactionsInChunks(
           chunkFetched = true;
           
           // Handle pagination if needed
-          if (chunkResponse.data.has_more && chunkResponse.data.next_cursor) {
-            chunkCursor = chunkResponse.data.next_cursor;
+          // Plaid response may have has_more and next_cursor for pagination
+          const responseData = chunkResponse.data as any;
+          if (responseData.has_more && responseData.next_cursor) {
+            chunkCursor = responseData.next_cursor;
             // Continue paginating this chunk
             continue;
           } else {
@@ -301,8 +303,10 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
       transactionsFetched = true;
       
       // Check if there are more pages
-      if (transactionsResponse.data.has_more && transactionsResponse.data.next_cursor) {
-        cursor = transactionsResponse.data.next_cursor;
+      // Plaid response may have has_more and next_cursor for pagination
+      const responseData = transactionsResponse.data as any;
+      if (responseData.has_more && responseData.next_cursor) {
+        cursor = responseData.next_cursor;
         hasMore = true;
       } else {
         hasMore = false;
