@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
       products: [Products.Transactions], // Only transactions - we don't need Auth (routing numbers)
       country_codes: [CountryCode.Us],
       language: 'en',
+      transactions: {
+        days_requested: 365, // Request 12 months (365 days) of transaction history
+      },
+      // Note: Data Transparency Messaging (DTM) use cases must be configured in Plaid Dashboard
+      // Go to: https://dashboard.plaid.com/link/data-transparency-v5
+      // Required for production: Select at least one use case (e.g., "Verify your income")
     });
 
     return NextResponse.json({ link_token: response.data.link_token });
