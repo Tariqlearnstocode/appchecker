@@ -179,6 +179,17 @@ async function fetchTransactionsInChunks(
             },
           });
           
+          // Debug: Log raw response for first chunk
+          if (chunkResponse.data.transactions.length > 0 && !chunkCursor && i === 0) {
+            const rawTxn = chunkResponse.data.transactions[0];
+            console.log(`RAW Plaid response (chunk ${i + 1}, first transaction):`, {
+              transaction_id: rawTxn.transaction_id,
+              original_description: rawTxn.original_description,
+              name: rawTxn.name,
+              merchant_name: rawTxn.merchant_name,
+            });
+          }
+          
           chunkTransactions.push(...chunkResponse.data.transactions);
           chunkFetched = true;
           
@@ -275,6 +286,23 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
               ...(cursor ? { cursor } : {}),
             },
           });
+          
+          // Immediately log raw response structure for first transaction to debug
+          if (transactionsResponse.data.transactions?.length > 0 && !cursor && attempt === 1) {
+            const rawTxn = transactionsResponse.data.transactions[0];
+            console.log('RAW Plaid response (first transaction):', {
+              transaction_id: rawTxn.transaction_id,
+              original_description: rawTxn.original_description,
+              original_description_type: typeof rawTxn.original_description,
+              name: rawTxn.name,
+              merchant_name: rawTxn.merchant_name,
+              all_description_fields: {
+                original_description: rawTxn.original_description,
+                name: rawTxn.name,
+                merchant_name: rawTxn.merchant_name,
+              },
+            });
+          }
           break; // Success - exit retry loop
         } catch (error: any) {
           lastError = error;
@@ -301,6 +329,28 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
         console.warn(`WARNING: Empty transaction array returned. This may indicate the date range exceeds bank's available history.`);
       }
       
+      // Debug: Log a sample transaction to verify original_description is being returned
+      if (txnCount > 0 && !cursor) {
+        const sampleTxn = transactionsResponse.data.transactions[0];
+        console.log('Sample transaction (first fetch):', {
+          has_original_description: !!sampleTxn.original_description,
+          original_description: sampleTxn.original_description,
+          original_description_length: sampleTxn.original_description?.length,
+          name: sampleTxn.name,
+          name_length: sampleTxn.name?.length,
+          merchant_name: sampleTxn.merchant_name,
+          counterparties_count: sampleTxn.counterparties?.length || 0,
+          // Log full transaction to see all fields
+          full_transaction_keys: Object.keys(sampleTxn),
+        });
+        // If original_description exists but seems truncated, log the full object
+        if (sampleTxn.original_description && sampleTxn.original_description === sampleTxn.name) {
+          console.warn('WARNING: original_description matches name - may be truncated by Plaid or bank');
+          console.log('Full transaction object:', JSON.stringify(sampleTxn, null, 2));
+        }
+      }
+      
+      // Store transactions directly - no processing
       allTransactions.push(...transactionsResponse.data.transactions);
       transactionsFetched = true;
       
@@ -340,12 +390,31 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
   }
   
   console.log(`Total transactions fetched: ${allTransactions.length}`);
+  
+  // Final check: Log a transaction that should have full original_description
+  // Look for income transactions (negative amount in Plaid) that might have payroll keywords
+  const incomeTxns = allTransactions.filter((t: any) => t.amount < 0).slice(0, 3);
+  if (incomeTxns.length > 0) {
+    console.log('Sample income transactions (checking original_description):');
+    incomeTxns.forEach((txn: any, idx: number) => {
+      console.log(`  Transaction ${idx + 1}:`, {
+        transaction_id: txn.transaction_id,
+        date: txn.date,
+        amount: txn.amount,
+        original_description: txn.original_description,
+        original_description_length: txn.original_description?.length,
+        name: txn.name,
+        name_length: txn.name?.length,
+        are_equal: txn.original_description === txn.name,
+      });
+    });
+  }
 
-  // Store raw responses with provider field
+  // Store raw responses with provider field - NO PROCESSING, store exactly as Plaid returns
   return {
     accounts: accountsResponse.data.accounts,
     item: accountsResponse.data.item,
-    transactions: allTransactions,
+    transactions: allTransactions, // Raw Plaid transactions, unmodified
     total_transactions: allTransactions.length,
     fetched_at: new Date().toISOString(),
     date_range: {

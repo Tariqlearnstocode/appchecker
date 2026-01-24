@@ -250,9 +250,13 @@ function normalizeTransactions(transactions: any[], provider: 'plaid' | 'teller'
       date: t.date,
       // CRITICAL: Use original_description first - it contains the FULL raw transaction text from bank
       // e.g., "Deposit from Great Lakes Prop PAYROLL" vs just "Great Lakes Prop"
+      // Note: Some banks only provide minimal descriptions, so original_description may be the same as name
+      // If counterparties are available, they may provide additional context
       // merchant_name may be null for direct deposits, payroll, transfers, etc.
       // name is deprecated - use original_description if available, fall back to name, then merchant_name
-      name: t.original_description || t.name || t.merchant_name || 'Unknown',
+      name: t.original_description || t.name || t.merchant_name || 
+            (t.counterparties && t.counterparties.length > 0 ? t.counterparties[0].name : null) || 
+            'Unknown',
       category: t.category?.[0] || null,
       pending: t.pending || false,
       isIncome,
