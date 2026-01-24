@@ -115,6 +115,8 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
     pending: t.pending,
     isIncome: t.amount < 0,
     runningBalance: null as number | null,
+    incomeType: undefined as string | undefined,
+    isRecurringIncome: false,
   }));
   
   return {
@@ -160,6 +162,7 @@ function normalizeReportData(data: IncomeReport | LegacyReportData) {
         likelySource: r.likely_source,
         incomeType: 'other' as const,
         confidence: 'low' as const,
+        transactionIds: [],
       })),
       allDeposits: d.income.all_deposits.map(dep => ({
         date: dep.date,
@@ -187,37 +190,17 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   pending: boolean;
   isIncome: boolean;
   runningBalance: number | null;
+  incomeType?: string;
+  /** True if INCOME + recurring (recurring tab). */
+  isRecurringIncome?: boolean;
 }> }) {
-  // Payroll detection logic
-  const PAYROLL_KEYWORDS = [
-    'payroll', 'salary', 'direct dep', 'dir dep', 'paycheck',
-    'adp', 'gusto', 'paychex', 'workday', 'ceridian', 'paylocity',
-    'paycor', 'bamboohr', 'namely', 'rippling', 'justworks',
-    'quickbooks payroll', 'square payroll', 'intuit', 'wage',
-    'employer', 'compensation', 'net pay', 'gross pay',
-    'ach payment', 'ach credit', 'ach deposit', 'direct deposit',
-    'techcorp solutions', 'acme corporation'
-  ];
-  const EXCLUDE_KEYWORDS = [
-    'venmo', 'zelle', 'cash app', 'cashapp', 'paypal', 'apple cash',
-    'google pay', 'gpay', 'square cash', 'transfer', 'xfer',
-    'savings', 'checking', '360 performance', 'money market',
-    'brokerage', 'investment', 'refund', 'return', 'rebate',
-    'wise', 'remitly', 'western union', 'moneygram'
-  ];
-  const isPayroll = (name: string) => {
-    const lower = name.toLowerCase();
-    if (EXCLUDE_KEYWORDS.some(kw => lower.includes(kw))) return false;
-    return PAYROLL_KEYWORDS.some(kw => lower.includes(kw));
-  };
-
   const [filter, setFilter] = useState<'credits' | 'payroll'>('credits');
   const [page, setPage] = useState(1);
   const PER_PAGE = 20;
 
   const filteredAndSorted = useMemo(() => {
     const filtered = filter === 'payroll'
-      ? transactions.filter(t => t.isIncome && isPayroll(t.name))
+      ? transactions.filter(t => t.isIncome && (t.incomeType === 'payroll' || t.incomeType === 'government'))
       : transactions.filter(t => t.isIncome);
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, filter]);
@@ -407,7 +390,6 @@ export default function ReportContent({ verification, reportData, isCalculated }
   const data = normalizeReportData(reportData);
   const { summary, income, transactions, accounts } = data;
   
-  // Payroll filter keywords
   const PAYROLL_KEYWORDS = [
     'payroll', 'salary', 'direct dep', 'dir dep', 'paycheck',
     'adp', 'gusto', 'paychex', 'workday', 'ceridian', 'paylocity',
@@ -424,24 +406,28 @@ export default function ReportContent({ verification, reportData, isCalculated }
     'brokerage', 'investment', 'refund', 'return', 'rebate',
     'wise', 'remitly', 'western union', 'moneygram'
   ];
-  const isPayroll = (name: string) => {
+  const isPayrollByName = (name: string) => {
     const lower = name.toLowerCase();
     if (EXCLUDE_KEYWORDS.some(kw => lower.includes(kw))) return false;
     return PAYROLL_KEYWORDS.some(kw => lower.includes(kw));
   };
-  
-  // Get payroll deposits from full 12-month transaction history
-  const payrollTransactions12Mo = transactions.filter(t => t.isIncome && isPayroll(t.name));
-  const historicalAnnual = payrollTransactions12Mo.reduce((sum, t) => sum + t.amount, 0);
-  const historicalMonthly = historicalAnnual / 12;
-  
-  // Get payroll deposits from last 3 months (for projected)
+  type Txn = { isIncome: boolean; name: string; incomeType?: string; date: string; amount: number };
+  const isPayrollTxn = (t: Txn) =>
+    t.incomeType === 'payroll' || t.incomeType === 'government'
+      ? true
+      : t.incomeType != null
+        ? false
+        : isPayrollByName(t.name);
+
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-  const payrollDeposits3Mo = transactions.filter(t => 
-    t.isIncome && 
-    isPayroll(t.name) && 
-    new Date(t.date) >= threeMonthsAgo
+
+  const payrollTransactions12Mo = transactions.filter(t => t.isIncome && isPayrollTxn(t));
+  const historicalAnnual = payrollTransactions12Mo.reduce((sum, t) => sum + t.amount, 0);
+  const historicalMonthly = historicalAnnual / 12;
+
+  const payrollDeposits3Mo = transactions.filter(t =>
+    t.isIncome && isPayrollTxn(t) && new Date(t.date) >= threeMonthsAgo
   );
   const projectedTotal3Mo = payrollDeposits3Mo.reduce((sum, t) => sum + t.amount, 0);
   const projectedMonthly = projectedTotal3Mo / 3;
@@ -685,14 +671,18 @@ export default function ReportContent({ verification, reportData, isCalculated }
           
           {/* Payroll Deposit Rows */}
           {(() => {
-            // Filter to only actual payroll deposits from last 90 days (using isPayroll from above)
             const threeMonthsAgo = new Date();
             threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            
+            const isPayrollDeposit = (d: { name: string; incomeType?: string }) =>
+              d.incomeType === 'payroll' || d.incomeType === 'government'
+                ? true
+                : d.incomeType != null
+                  ? false
+                  : isPayrollByName(d.name);
             const payrollDeposits = income.allDeposits
               .filter(d => {
                 const depositDate = new Date(d.date);
-                return isPayroll(d.name) && depositDate >= threeMonthsAgo;
+                return isPayrollDeposit(d) && depositDate >= threeMonthsAgo;
               })
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             

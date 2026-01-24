@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
+import { Configuration, PlaidApi, PlaidEnvironments, PersonalFinanceCategoryVersion } from 'plaid';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { sendCompletionEmail } from '@/utils/email';
 
@@ -174,7 +174,8 @@ async function fetchTransactionsInChunks(
             end_date: chunkEndStr,
             options: {
               count: 500,
-              include_original_description: true, // Request original_description from bank
+              include_original_description: true,
+              personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
               ...(chunkCursor ? { cursor: chunkCursor } : {}),
             },
           });
@@ -282,7 +283,8 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
             end_date: endDate,
             options: {
               count: 500,
-              include_original_description: true, // Request original_description from bank
+              include_original_description: true,
+              personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
               ...(cursor ? { cursor } : {}),
             },
           });

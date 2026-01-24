@@ -418,6 +418,7 @@ const sampleReportData: IncomeReport = {
       likelySource: name,
       incomeType: 'payroll' as const,
       confidence: 'high' as const,
+      transactionIds: deps.map((_, i) => `example-${name}-${i}`),
     }));
     
     // Current employer (most recent)

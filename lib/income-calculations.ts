@@ -74,6 +74,13 @@ export interface NormalizedAccount {
   institution?: string;
 }
 
+/** Plaid personal_finance_category (PFC) – used for classification when available */
+export interface PlaidPFC {
+  primary: string;
+  detailed: string;
+  confidence_level?: string | null;
+}
+
 export interface NormalizedTransaction {
   id: string;
   accountId: string;
@@ -84,6 +91,10 @@ export interface NormalizedTransaction {
   pending: boolean;
   isIncome: boolean;
   runningBalance: number | null;
+  /** Plaid only: PFC for classification. Omitted for Teller. */
+  plaidCategory?: PlaidPFC | null;
+  /** Set during classification (PFC-first for Plaid, name fallback for Teller). */
+  incomeType?: IncomeType;
 }
 
 // ============ REPORT TYPES ============
@@ -137,6 +148,8 @@ export interface RecurringDeposit {
   likelySource: string;
   incomeType: IncomeType;
   confidence: IncomeConfidence;
+  /** Transaction ids in this recurring group (for recurring tab). Omitted in legacy/example data. */
+  transactionIds?: string[];
 }
 
 export interface Deposit {
@@ -144,6 +157,8 @@ export interface Deposit {
   amount: number;
   name: string;
   category: string | null;
+  /** Classification (PFC or name-based). Used for "Recurring Income Patterns" filter. */
+  incomeType?: IncomeType;
 }
 
 export interface CategoryTotal {
@@ -159,6 +174,9 @@ export interface TransactionDisplay {
   pending: boolean;
   isIncome: boolean;
   runningBalance: number | null;
+  incomeType?: IncomeType;
+  /** True if this txn is part of a recurring INCOME deposit group (recurring tab). */
+  isRecurringIncome?: boolean;
 }
 
 // ============ NORMALIZATION FUNCTIONS ============
@@ -242,25 +260,24 @@ function normalizeTransactions(transactions: any[], provider: 'plaid' | 'teller'
   return transactions.map((t) => {
     // In Plaid: positive amount = money out, negative amount = money in
     const isIncome = t.amount < 0;
-    
+    const pfc = t.personal_finance_category;
+    const plaidCategory: PlaidPFC | undefined =
+      pfc?.primary && pfc?.detailed
+        ? { primary: pfc.primary, detailed: pfc.detailed, confidence_level: pfc.confidence_level ?? null }
+        : undefined;
+
     return {
       id: t.transaction_id,
       accountId: t.account_id,
       amount: Math.abs(t.amount),
       date: t.date,
-      // CRITICAL: Use original_description first - it contains the FULL raw transaction text from bank
-      // e.g., "Deposit from Great Lakes Prop PAYROLL" vs just "Great Lakes Prop"
-      // Note: Some banks only provide minimal descriptions, so original_description may be the same as name
-      // If counterparties are available, they may provide additional context
-      // merchant_name may be null for direct deposits, payroll, transfers, etc.
-      // name is deprecated - use original_description if available, fall back to name, then merchant_name
-      name: t.original_description || t.name || t.merchant_name || 
-            (t.counterparties && t.counterparties.length > 0 ? t.counterparties[0].name : null) || 
-            'Unknown',
+      name: t.original_description || t.name || t.merchant_name ||
+            (t.counterparties?.length ? t.counterparties[0].name : null) || 'Unknown',
       category: t.category?.[0] || null,
       pending: t.pending || false,
       isIncome,
-      runningBalance: null, // Plaid doesn't provide running balance in transactions
+      runningBalance: null,
+      plaidCategory: plaidCategory ?? null,
     };
   });
 }
@@ -295,16 +312,19 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
   const incomeTransactions3Mo = incomeTransactions.filter((t) => new Date(t.date) >= threeMonthsAgo);
   const expenseTransactions3Mo = expenseTransactions.filter((t) => new Date(t.date) >= threeMonthsAgo);
 
-  // Classify ALL income transactions (both 12mo and 3mo)
-  const classifiedIncome12Mo = incomeTransactions.map(t => ({
-    ...t,
-    incomeType: classifyIncomeType(t.name),
-  }));
-  
-  const classifiedIncome3Mo = incomeTransactions3Mo.map(t => ({
-    ...t,
-    incomeType: classifyIncomeType(t.name),
-  }));
+  // Classify: PFC-first for Plaid, name fallback for Teller / missing PFC
+  const classifiedIncome12Mo = incomeTransactions.map(t => {
+    const incomeType = classifyTransaction(t, provider);
+    return { ...t, incomeType };
+  });
+  const classifiedIncome3Mo = incomeTransactions3Mo.map(t => {
+    const incomeType = classifyTransaction(t, provider);
+    return { ...t, incomeType };
+  });
+
+  const incomeTypeById = new Map<string, IncomeType>(
+    classifiedIncome12Mo.map((t) => [t.id, t.incomeType!])
+  );
 
   // Separate 3-month income by classification
   const payrollTransactions3Mo = classifiedIncome3Mo.filter(t => t.incomeType === 'payroll' || t.incomeType === 'government');
@@ -331,14 +351,18 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
   const transferIncome3Mo = transferTransactions3Mo.reduce((sum, t) => sum + t.amount, 0);
   const refundIncome3Mo = refundTransactions3Mo.reduce((sum, t) => sum + t.amount, 0);
 
-  // Find recurring deposits from PAYROLL transactions only (3 months for accurate count)
   const recurringPayrollDeposits = identifyRecurringDeposits(payrollTransactions3Mo);
-  
-  // Also get all recurring deposits for reference
   const allRecurringDeposits = identifyRecurringDeposits(classifiedIncome3Mo);
-  
-  // Verified sources are only payroll recurring deposits
-  const verifiedSources = recurringPayrollDeposits.filter(d => 
+
+  // Recurring tab = INCOME + recurring (payroll | government | other). Exclude transfer, refund, p2p.
+  const recurringIncomeIds = new Set<string>();
+  for (const d of allRecurringDeposits) {
+    if (INCOME_TYPES_FOR_RECURRING.includes(d.incomeType)) {
+      (d.transactionIds ?? []).forEach((id) => recurringIncomeIds.add(id));
+    }
+  }
+
+  const verifiedSources = recurringPayrollDeposits.filter(d =>
     d.incomeType === 'payroll' || d.incomeType === 'government'
   );
 
@@ -374,7 +398,6 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
   // Categorize expenses (3 months)
   const expensesByCategory = categorizeTransactions(expenseTransactions3Mo);
 
-  // Map transaction to display format
   const mapToDisplay = (t: NormalizedTransaction): TransactionDisplay => ({
     date: t.date,
     amount: t.amount,
@@ -383,6 +406,8 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
     pending: t.pending,
     isIncome: t.isIncome,
     runningBalance: t.runningBalance,
+    incomeType: incomeTypeById.get(t.id),
+    isRecurringIncome: !!(t.isIncome && recurringIncomeIds.has(t.id)),
   });
 
   return {
@@ -415,11 +440,12 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
         refunds: refundIncome3Mo,
       },
       recurringDeposits: allRecurringDeposits,
-      allDeposits: incomeTransactions3Mo.map((t) => ({
+      allDeposits: classifiedIncome3Mo.map((t) => ({
         date: t.date,
         amount: t.amount,
         name: t.name,
         category: t.category,
+        incomeType: t.incomeType,
       })),
     },
     expenses: {
@@ -442,37 +468,43 @@ export function calculateIncomeReport(rawData: RawFinancialData): IncomeReport {
 // ============ HELPER FUNCTIONS ============
 
 /**
- * Classify an income transaction by type
+ * PFC primary/detailed → IncomeType. Use when personal_finance_category is present (Plaid).
+ * Chart: INCOME+WAGES/PAYROLL→payroll, INCOME+ govt→government, INCOME+*→other, TRANSFER→transfer, etc.
+ */
+function classifyIncomeTypeFromPFC(pfc: PlaidPFC): IncomeType {
+  const p = pfc.primary.toUpperCase();
+  const d = (pfc.detailed || '').toUpperCase();
+
+  if (p === 'TRANSFER') return 'transfer';
+  if (p === 'REFUND' || d.includes('REFUND')) return 'refund';
+  if (d === 'INCOME_WAGES' || d === 'INCOME_PAYROLL' || d === 'INCOME_RENTAL') return 'payroll';
+  if (d.startsWith('INCOME_') && (d.includes('GOVERNMENT') || d.includes('BENEFIT') || d.includes('UNEMPLOYMENT') || d.includes('SOCIAL'))) return 'government';
+  if (p === 'INCOME') return 'other'; // INCOME_DIVIDENDS, etc.
+
+  return 'other';
+}
+
+/**
+ * Classify an income transaction by type (name-based fallback for Teller or missing PFC).
  */
 function classifyIncomeType(name: string): IncomeType {
   const lowerName = name.toLowerCase();
-  
-  // Check for transfers first (should be excluded from income)
-  if (TRANSFER_INDICATORS.some(ind => lowerName.includes(ind))) {
-    return 'transfer';
-  }
-  
-  // Check for refunds
-  if (REFUND_INDICATORS.some(ind => lowerName.includes(ind))) {
-    return 'refund';
-  }
-  
-  // Check for payroll (high confidence income)
-  if (PAYROLL_INDICATORS.some(ind => lowerName.includes(ind))) {
-    return 'payroll';
-  }
-  
-  // Check for government benefits
-  if (GOVERNMENT_INDICATORS.some(ind => lowerName.includes(ind))) {
-    return 'government';
-  }
-  
-  // Check for P2P (lower confidence)
-  if (P2P_SERVICES.some(ind => lowerName.includes(ind))) {
-    return 'p2p';
-  }
-  
+  if (TRANSFER_INDICATORS.some(ind => lowerName.includes(ind))) return 'transfer';
+  if (REFUND_INDICATORS.some(ind => lowerName.includes(ind))) return 'refund';
+  if (PAYROLL_INDICATORS.some(ind => lowerName.includes(ind))) return 'payroll';
+  if (GOVERNMENT_INDICATORS.some(ind => lowerName.includes(ind))) return 'government';
+  if (P2P_SERVICES.some(ind => lowerName.includes(ind))) return 'p2p';
   return 'other';
+}
+
+/**
+ * Classify a normalized transaction: PFC-first for Plaid when available, else name-based.
+ */
+function classifyTransaction(t: NormalizedTransaction, provider: 'plaid' | 'teller'): IncomeType {
+  if (provider === 'plaid' && t.plaidCategory?.primary) {
+    return classifyIncomeTypeFromPFC(t.plaidCategory);
+  }
+  return classifyIncomeType(t.name);
 }
 
 /**
@@ -498,15 +530,16 @@ function determineConfidence(incomeType: IncomeType, occurrences: number, isRecu
   return 'low';
 }
 
+const INCOME_TYPES_FOR_RECURRING: IncomeType[] = ['payroll', 'government', 'other'];
+
 /**
- * Identify recurring deposits (potential paychecks) with classification
+ * Identify recurring deposits. Uses pre-attached incomeType.
+ * Recurring tab = INCOME + recurring (payroll | government | other).
  */
 function identifyRecurringDeposits(incomeTransactions: NormalizedTransaction[]): RecurringDeposit[] {
-  // Group by source name AND approximate amount (within $50)
   const groups: Record<string, NormalizedTransaction[]> = {};
 
   incomeTransactions.forEach((t) => {
-    // Create key from normalized name + approximate amount
     const amountKey = Math.round(t.amount / 50) * 50;
     const nameKey = t.name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
     const key = `${nameKey}-${amountKey}`;
@@ -514,15 +547,14 @@ function identifyRecurringDeposits(incomeTransactions: NormalizedTransaction[]):
     groups[key].push(t);
   });
 
-  // Find groups with 2+ transactions (potentially recurring)
   const recurring = Object.entries(groups)
     .filter(([_, txns]) => txns.length >= 2)
     .map(([_, txns]) => {
       const avgAmount = txns.reduce((sum, t) => sum + t.amount, 0) / txns.length;
       const sourceName = txns[0]?.name || 'Unknown';
-      const incomeType = classifyIncomeType(sourceName);
+      const incomeType = txns[0]?.incomeType ?? classifyIncomeType(sourceName);
       const confidence = determineConfidence(incomeType, txns.length, true);
-      
+      const transactionIds = txns.map((t) => t.id);
       return {
         approximateAmount: avgAmount,
         occurrences: txns.length,
@@ -530,10 +562,10 @@ function identifyRecurringDeposits(incomeTransactions: NormalizedTransaction[]):
         likelySource: sourceName,
         incomeType,
         confidence,
+        transactionIds,
       };
     })
     .sort((a, b) => {
-      // Sort by confidence first (high > medium > low), then by amount
       const confOrder = { high: 0, medium: 1, low: 2 };
       if (confOrder[a.confidence] !== confOrder[b.confidence]) {
         return confOrder[a.confidence] - confOrder[b.confidence];
