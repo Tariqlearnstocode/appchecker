@@ -101,15 +101,8 @@ export default async function ReportPage({ params }: PageProps) {
     },
   });
 
-  // Calculate report from raw data (or use legacy data for old verifications)
-  let reportData;
-  if (rawData) {
-    // New format: calculate from raw Plaid data
-    reportData = calculateIncomeReport(rawData);
-  } else {
-    // Legacy format: use pre-calculated data (for backwards compatibility)
-    reportData = legacyData;
-  }
+  // Calculate report from raw data
+  const reportData = calculateIncomeReport(rawData);
 
   return (
     <ReportContent

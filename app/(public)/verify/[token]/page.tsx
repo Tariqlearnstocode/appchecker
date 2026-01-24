@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { CheckCircle, Loader2, AlertCircle, ArrowRight, Shield } from 'lucide-react';
 
@@ -21,11 +21,7 @@ interface Verification {
 
 export default function ApplicantVerificationPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const token = params.token as string;
-
-  // Preview mode for testing states: ?preview=success or ?preview=error
-  const previewMode = searchParams.get('preview');
 
   const [verification, setVerification] = useState<Verification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,20 +132,8 @@ export default function ApplicantVerificationPage() {
     },
   });
 
-  // Mock data for preview mode
-  const previewVerification: Verification = {
-    id: 'preview',
-    individual_name: 'John Smith',
-    individual_email: 'john.smith@email.com',
-    status: 'completed',
-    expires_at: new Date(Date.now() + 86400000).toISOString(),
-    requested_by_name: 'Sunrise Properties',
-    requested_by_email: 'leasing@sunriseproperties.com',
-    purpose: 'Rental Application - Unit 4B',
-  };
-
   // Loading state
-  if (loading && !previewMode) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="text-center">
@@ -163,7 +147,7 @@ export default function ApplicantVerificationPage() {
   }
 
   // Error state
-  if (error && previewMode !== 'error') {
+  if (error) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
         <div className="max-w-sm w-full">
@@ -179,41 +163,8 @@ export default function ApplicantVerificationPage() {
     );
   }
 
-  // Error preview
-  if (previewMode === 'error') {
-    return (
-      <div className="min-h-screen bg-[#fafafa]">
-        <div className="h-1 bg-gradient-to-r from-red-400 via-red-500 to-orange-500" />
-        <div className="max-w-md mx-auto px-5 py-10">
-          <div className="flex items-center justify-center gap-2.5 mb-8">
-            <Image src="/logo-1024.svg" alt="IncomeChecker" width={36} height={36} className="rounded-lg" />
-            <span className="text-xl font-semibold text-neutral-900">IncomeChecker.com</span>
-          </div>
-          <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-sm overflow-hidden">
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-5 bg-red-50 rounded-2xl flex items-center justify-center">
-                <AlertCircle className="w-8 h-8 text-red-500" />
-              </div>
-              <h1 className="text-xl font-semibold text-neutral-900 mb-2">Link Expired</h1>
-              <p className="text-neutral-500 text-sm leading-relaxed mb-6">
-                This verification link is no longer valid.
-                <span className="block mt-2 text-neutral-600">
-                  Please contact the requester for a new link.
-                </span>
-              </p>
-            </div>
-          </div>
-          <p className="mt-6 text-xs text-center text-neutral-400">
-            Questions? Visit <a href="/faq" className="text-emerald-600 hover:underline">our FAQ</a>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Success state
-  if (success || previewMode === 'success') {
-    const displayVerification = verification || previewVerification;
+  if (success) {
     return (
       <div className="min-h-screen bg-[#fafafa]">
         <div className="h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" />
@@ -240,7 +191,7 @@ export default function ApplicantVerificationPage() {
             {/* What happens next */}
             <div className="px-6 py-5 bg-neutral-50/50">
               <p className="text-sm text-neutral-600">
-                <span className="font-medium text-neutral-900">{displayVerification?.requested_by_name || 'The requester'}</span>
+                <span className="font-medium text-neutral-900">{verification?.requested_by_name || 'The requester'}</span>
                 {' '}can now review your income verification report.
               </p>
             </div>
