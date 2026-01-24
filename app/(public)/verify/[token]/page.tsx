@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useTellerConnect } from 'teller-connect-react';
+import { usePlaidLink } from 'react-plaid-link';
 import { useParams } from 'next/navigation';
 import { CheckCircle, Loader2, AlertCircle, Lock, Building, Mail, MapPin, ShieldCheck } from 'lucide-react';
 
@@ -27,28 +27,39 @@ export default function ApplicantVerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [tellerConfig, setTellerConfig] = useState<{ applicationId: string; environment: string } | null>(null);
-  const [configError, setConfigError] = useState<string | null>(null);
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVerification();
-    fetchTellerConfig();
   }, [token]);
 
-  async function fetchTellerConfig() {
+  useEffect(() => {
+    if (verification && !success && !error) {
+      fetchPlaidLinkToken();
+    }
+  }, [verification, success, error, token]);
+
+  async function fetchPlaidLinkToken() {
+    if (!verification) return;
+    
     try {
-      const response = await fetch('/api/teller/init-connect');
+      const response = await fetch('/api/plaid/create-link-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verification_token: token,
+          applicant_name: verification.individual_name,
+        }),
+      });
       if (!response.ok) {
-        setConfigError('Failed to load Teller configuration');
+        setTokenError('Failed to load Plaid configuration');
         return;
       }
       const data = await response.json();
-      setTellerConfig({
-        applicationId: data.applicationId,
-        environment: data.environment,
-      });
+      setLinkToken(data.link_token);
     } catch (err) {
-      setConfigError('Failed to load Teller configuration');
+      setTokenError('Failed to load Plaid configuration');
     }
   }
 
@@ -87,15 +98,15 @@ export default function ApplicantVerificationPage() {
     }
   }
 
-  // Handle Teller Connect success
-  const onTellerSuccess = useCallback(async (enrollment: { accessToken: string }) => {
+  // Handle Plaid Link success
+  const onPlaidSuccess = useCallback(async (publicToken: string, metadata: any) => {
     setConnecting(true);
     try {
-      const response = await fetch('/api/teller/fetch-data', {
+      const response = await fetch('/api/plaid/exchange-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          access_token: enrollment.accessToken,
+          public_token: publicToken,
           verification_token: token,
         }),
       });
@@ -112,16 +123,13 @@ export default function ApplicantVerificationPage() {
     setConnecting(false);
   }, [token]);
 
-  // Teller Connect hook
-  const { open, ready } = useTellerConnect({
-    applicationId: tellerConfig?.applicationId || '',
-    environment: (tellerConfig?.environment || 'sandbox') as 'sandbox' | 'development' | 'production',
-    onSuccess: onTellerSuccess,
+  // Plaid Link hook
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess: onPlaidSuccess,
     onExit: () => {
       // User closed without completing
     },
-    selectAccount: 'multiple', // Allow selecting multiple accounts
-    products: ['transactions', 'balance'], // Request transactions and balance
   });
 
   // Loading state
@@ -183,7 +191,7 @@ export default function ApplicantVerificationPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">IncomeChecker.com</h1>
-          <p className="text-gray-500">Secure bank connection powered by Teller</p>
+          <p className="text-gray-500">Secure bank connection powered by Plaid</p>
         </div>
 
         {/* Requester Card - Who's asking */}
@@ -237,7 +245,7 @@ export default function ApplicantVerificationPage() {
             {[
               'Account balances (checking, savings)',
               'Income deposits & paychecks',
-              'Transaction history (last 3 months)',
+              'Transaction history (last 12 months)',
               'Estimated monthly income',
             ].map((item, i) => (
               <li key={i} className="flex items-center gap-3 text-gray-700">
@@ -253,7 +261,7 @@ export default function ApplicantVerificationPage() {
         {/* Connect Button */}
         <button
           onClick={() => open()}
-          disabled={!ready || connecting}
+          disabled={!ready || connecting || !linkToken}
           className="w-full py-4 px-6 bg-black hover:bg-gray-800 disabled:bg-gray-300 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-3"
         >
           {connecting ? (
@@ -263,10 +271,6 @@ export default function ApplicantVerificationPage() {
             </>
           ) : (
             <>
-              {/* Teller Logo */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.08 5.1 7.63 12 4.18zM4 8.9l7 3.5v7.7l-7-3.5V8.9zm9 11.2v-7.7l7-3.5v7.7l-7 3.5z"/>
-              </svg>
               Connect Your Bank
             </>
           )}
@@ -280,7 +284,7 @@ export default function ApplicantVerificationPage() {
             <div>
               <p className="text-sm font-medium text-emerald-900">Bank-level security</p>
               <p className="text-sm text-emerald-700">
-                Teller uses 256-bit encryption. Your bank login is never stored or shared.
+                Plaid uses 256-bit encryption. Your bank login is never stored or shared.
               </p>
             </div>
           </div>
@@ -288,10 +292,7 @@ export default function ApplicantVerificationPage() {
           {/* Trust badge */}
           <div className="flex items-center justify-center gap-3 py-4">
             <div className="flex items-center gap-2 text-gray-400">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="opacity-60">
-                <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.08 5.1 7.63 12 4.18zM4 8.9l7 3.5v7.7l-7-3.5V8.9zm9 11.2v-7.7l7-3.5v7.7l-7 3.5z"/>
-              </svg>
-              <span className="text-xs font-medium">Powered by Teller</span>
+              <span className="text-xs font-medium">Powered by Plaid</span>
             </div>
             <span className="text-gray-300">•</span>
             <span className="text-xs text-gray-400">Direct bank connections</span>

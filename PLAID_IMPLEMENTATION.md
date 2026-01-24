@@ -127,11 +127,15 @@ git show 572adac:app/api/plaid/create-link-token/route.ts > app/api/plaid/create
 git show 572adac:app/api/plaid/exchange-token/route.ts > app/api/plaid/exchange-token/route.ts
 ```
 
-### Step 2: Install Plaid SDK
+### Step 2: Install Plaid SDK and React Component
 
 ```bash
-npm install plaid
+npm install plaid react-plaid-link
 ```
+
+**Note:** Both packages are required:
+- `plaid` - Node.js SDK for backend API routes
+- `react-plaid-link` - React component for frontend integration
 
 ### Step 3: Update Environment Variables
 
@@ -151,17 +155,20 @@ The frontend needs to:
 3. Call `/api/plaid/exchange-token` instead of `/api/teller/fetch-data`
 
 **Frontend changes needed:**
-- Replace `teller-connect-react` with `react-plaid-link` or `@plaid/link-react`
+- Replace `teller-connect-react` with `react-plaid-link` in `app/(public)/verify/[token]/page.tsx`
 - Update the verification page to use Plaid Link component
-- Update API calls to use Plaid endpoints
+- Update API calls to use Plaid endpoints (`/api/plaid/create-link-token` and `/api/plaid/exchange-token`)
 
 ### Step 5: Update Data Fetching
 
-The Plaid implementation fetches data differently:
-- **Plaid**: Fetches 3 months of transactions (configurable)
+The Plaid implementation now matches Teller's approach:
+- **Plaid**: Fetches 12 months of transactions (same as Teller)
+  - First tries 12 months in one call
+  - Falls back to 4 chunks of 3 months each if needed
+  - Handles pagination using Plaid's `cursor` field
 - **Teller**: Fetches 12 months of transactions
 
-If you want 12 months with Plaid, you'll need to modify the `fetchRawPlaidData` function to make multiple calls or use pagination.
+Both implementations use the same chunking strategy for consistency.
 
 ### Step 6: Update Webhook Handler (if needed)
 
@@ -193,13 +200,13 @@ If you're fully switching back, you can remove:
 
 | Provider | Cost per Verification | Notes |
 |----------|----------------------|-------|
-| **Plaid** | ~$1.60 | Auth + Transactions products |
+| **Plaid** | ~$0.30 | Transactions product only (Auth not used) |
 | **Teller** | ~$0.30 | Direct bank connection |
 
 **Plaid Cost Breakdown:**
 - Transactions product: ~$0.30 per API call
-- Auth product: ~$0.30 per API call (if used)
 - **Monthly per-Item fee**: ~$1.00/month per connected bank (avoided by disconnecting immediately)
+- **Note:** This implementation uses only the Transactions product (not Auth), reducing costs
 
 **Important**: The Plaid implementation disconnects Items immediately after fetching to avoid monthly charges, making it effectively pay-per-verification.
 
@@ -217,9 +224,11 @@ app/api/plaid/exchange-token/route.ts
 - ✅ Database schema supports both providers
 - ✅ Data normalization supports both formats
 - ✅ Report display works with both formats
-- ❌ Plaid API routes removed (need to restore)
-- ❌ Frontend uses Teller Connect (needs Plaid Link)
-- ❌ Plaid SDK not installed
+- ✅ Plaid API routes restored (`app/api/plaid/create-link-token` and `app/api/plaid/exchange-token`)
+- ✅ Frontend updated to use Plaid Link (`app/(public)/verify/[token]/page.tsx`)
+- ✅ Plaid SDK and React component installed
+- ✅ 12-month transaction fetching implemented (matching Teller's approach)
+- ✅ Provider field set correctly in stored data
 
 ## Quick Restore Command
 
@@ -234,8 +243,8 @@ mkdir -p app/api/plaid/exchange-token
 git show 572adac:app/api/plaid/create-link-token/route.ts > app/api/plaid/create-link-token/route.ts
 git show 572adac:app/api/plaid/exchange-token/route.ts > app/api/plaid/exchange-token/route.ts
 
-# Install Plaid SDK
-npm install plaid
+# Install Plaid SDK and React component
+npm install plaid react-plaid-link
 ```
 
 Then update the frontend to use Plaid Link instead of Teller Connect.

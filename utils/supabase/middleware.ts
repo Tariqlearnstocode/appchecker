@@ -36,6 +36,16 @@ export const createClient = (request: NextRequest) => {
 };
 
 export const updateSession = async (request: NextRequest) => {
+  // Skip auth checks for HMR and webpack endpoints (they don't need auth)
+  const pathname = request.nextUrl.pathname;
+  if (pathname.includes('__webpack_hmr') || pathname.includes('_next/webpack-hmr')) {
+    return NextResponse.next({
+      request: {
+        headers: request.headers
+      }
+    });
+  }
+
   try {
     // This `try/catch` block is only here for the interactive tutorial.
     // Feel free to remove once you have Supabase connected.
@@ -46,7 +56,17 @@ export const updateSession = async (request: NextRequest) => {
     await supabase.auth.getUser();
 
     return response;
-  } catch (e) {
+  } catch (e: any) {
+    // Handle rate limit errors gracefully (common in development with HMR)
+    if (e?.code === 'over_request_rate_limit') {
+      // Return response without refreshing session - rate limit will clear soon
+      return NextResponse.next({
+        request: {
+          headers: request.headers
+        }
+      });
+    }
+    
     // If you are here, a Supabase client could not be created!
     // This is likely because you have not set up environment variables.
     // Check out http://localhost:3000 for Next Steps.

@@ -317,6 +317,42 @@ export default function HomePageClient({
       
       if (result.verifications) {
         const verificationsData = result.verifications as Verification[];
+        
+        // Check for expired verifications and mark them
+        const now = new Date();
+        const expiredIds: string[] = [];
+        
+        verificationsData.forEach((v) => {
+          // Only check if status is pending or in_progress (not already completed/canceled/expired)
+          if ((v.status === 'pending' || v.status === 'in_progress') && v.expires_at) {
+            const expiresAt = new Date(v.expires_at);
+            if (expiresAt < now) {
+              expiredIds.push(v.id);
+            }
+          }
+        });
+        
+        // Update expired verifications in database
+        if (expiredIds.length > 0) {
+          try {
+            await fetch('/api/verifications/update-expired', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verification_ids: expiredIds }),
+            });
+            
+            // Update local state to reflect expired status
+            verificationsData.forEach((v) => {
+              if (expiredIds.includes(v.id)) {
+                v.status = 'expired';
+              }
+            });
+          } catch (error) {
+            console.error('Error updating expired verifications:', error);
+            // Continue anyway - we'll update on next load
+          }
+        }
+        
         setVerifications(verificationsData);
         return verificationsData;
       }
@@ -484,7 +520,7 @@ export default function HomePageClient({
     all: verifications.length,
     pending: verifications.filter((v) => v.status === 'pending').length,
     completed: verifications.filter((v) => v.status === 'completed').length,
-    canceled: verifications.filter((v) => v.status === 'canceled').length,
+    canceled: verifications.filter((v) => v.status === 'canceled' || v.status === 'expired').length,
   };
 
   const showHeader = (!user || verifications.length === 0) && !headerDismissed;

@@ -69,11 +69,10 @@ export default async function ReportPage({ params }: PageProps) {
     );
   }
 
-  // Check if we have data (either new raw_plaid_data or old report_data)
+  // Check if we have data in raw_plaid_data
   const rawData = verification.raw_plaid_data as any;
-  const legacyData = verification.report_data;
 
-  if (verification.status !== 'completed' || (!rawData && !legacyData)) {
+  if (verification.status !== 'completed' || !rawData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center max-w-md">

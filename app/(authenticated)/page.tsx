@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/queries';
 import HomePageClient from './HomePageClient';
 import { Verification } from '@/components/VerificationsTable';
 import { Metadata } from 'next';
@@ -14,12 +15,16 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  let user = null;
   
-  if (authError) {
-    // "Auth session missing" is expected when user is logged out - not a real error
-    if (!authError.message?.includes('Auth session missing')) {
-      console.error('HomePage: Auth error:', authError.message, authError);
+  try {
+    user = await getUser(supabase);
+  } catch (authError: any) {
+    // Rate limit errors are common in development with HMR - don't log as errors
+    if (authError?.code === 'over_request_rate_limit') {
+      // Silently handle rate limits - user will be null, which is fine
+    } else if (authError?.message && !authError.message.includes('Auth session missing')) {
+      console.error('HomePage: Auth error:', authError.message);
     }
   }
   

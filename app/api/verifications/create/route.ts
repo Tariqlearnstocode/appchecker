@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
       requested_by_name: raw_requested_by_name,
       requested_by_email: raw_requested_by_email,
       purpose: raw_purpose,
-      request_id: raw_request_id,
     } = body;
 
     // Sanitize all inputs
@@ -54,23 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for idempotency if request_id provided
-    if (raw_request_id) {
-      const { data: existingVerification } = await supabase
-        .from('income_verifications')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('request_id', raw_request_id)
-        .maybeSingle() as { data: { id: string } | null };
-        
-      if (existingVerification) {
-        return NextResponse.json({
-          success: true,
-          verification: existingVerification,
-          message: 'Verification already created (idempotent request)',
-        });
-      }
-    }
+    // Note: request_id idempotency feature removed
 
     // Get user's company name if not provided
     const { data: userProfile } = await supabase
@@ -140,7 +123,6 @@ export async function POST(request: NextRequest) {
             requested_by_email: finalRequestedByEmail,
             purpose: purpose || null,
             user_id: user.id,
-            request_id: raw_request_id || null,
           } as any)
           .select()
           .single() as { data: { id: string } | null; error: any };
@@ -246,7 +228,6 @@ export async function POST(request: NextRequest) {
           requested_by_email: finalRequestedByEmail,
           purpose: purpose || null,
           user_id: user.id,
-          request_id: raw_request_id || null,
         } as any)
         .select()
         .single() as { data: { id: string } | null; error: any };

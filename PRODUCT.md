@@ -1,4 +1,4 @@
-# Income Verifier - Product & Pricing
+# Income Checker - Product & Pricing
 
 ## Positioning
 

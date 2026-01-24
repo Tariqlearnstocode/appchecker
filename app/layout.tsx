@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import GlobalNavbar from '@/components/GlobalNavbar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/queries';
 import 'styles/main.css';
 
 const title = 'IncomeChecker.com';
@@ -62,12 +63,16 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: PropsWithChildren) {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  let user = null;
   
-  if (authError) {
-    // "Auth session missing" is expected when user is logged out - not a real error
-    if (!authError.message?.includes('Auth session missing')) {
-      console.error('RootLayout: Auth error:', authError.message, authError);
+  try {
+    user = await getUser(supabase);
+  } catch (authError: any) {
+    // Rate limit errors are common in development with HMR - don't log as errors
+    if (authError?.code === 'over_request_rate_limit') {
+      // Silently handle rate limits - user will be null, which is fine
+    } else if (authError?.message && !authError.message.includes('Auth session missing')) {
+      console.error('RootLayout: Auth error:', authError.message);
     }
   }
 

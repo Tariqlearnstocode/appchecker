@@ -33,9 +33,12 @@ export function VerificationsListTab({
   filter,
 }: VerificationsListTabProps) {
   // Filter verifications based on filter type
+  // Canceled tab shows both canceled AND expired verifications
   const filteredVerifications =
     filter === 'all'
       ? verifications
+      : filter === 'canceled'
+      ? verifications.filter((v) => v.status === 'canceled' || v.status === 'expired')
       : verifications.filter((v) => v.status === filter);
 
   return (

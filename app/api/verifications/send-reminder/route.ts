@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     // Get verification details
     const { data: verification, error: fetchError } = await supabase
       .from('income_verifications')
-      .select('id, individual_name, individual_email, requested_by_name, verification_token, expires_at, user_id, status, last_reminder_sent_at, reminder_count')
+      .select('id, individual_name, individual_email, requested_by_name, verification_token, expires_at, user_id, status')
       .eq('id', verification_id)
-      .single() as { data: { id: string; individual_name: string; individual_email: string; requested_by_name: string | null; verification_token: string; expires_at: string; user_id: string | null; status: string; last_reminder_sent_at: string | null; reminder_count: number | null } | null; error: any };
+      .single() as { data: { id: string; individual_name: string; individual_email: string; requested_by_name: string | null; verification_token: string; expires_at: string; user_id: string | null; status: string } | null; error: any };
     
     if (fetchError || !verification) {
       return NextResponse.json(
@@ -100,20 +100,10 @@ export async function POST(request: NextRequest) {
         daysRemaining,
       });
       
-      // Update last_reminder_sent_at and increment reminder_count
-      const newReminderCount = (verification.reminder_count || 0) + 1;
-      await supabaseAdmin
-        .from('income_verifications')
-        .update({ 
-          last_reminder_sent_at: new Date().toISOString(),
-          reminder_count: newReminderCount,
-        } as any)
-        .eq('id', verification_id);
-      
+      // Reminder sent successfully (reminder tracking removed)
       return NextResponse.json({ 
         success: true,
         message: 'Reminder email sent successfully',
-        reminderCount: newReminderCount,
       });
     } catch (emailError: any) {
       console.error('Failed to send reminder email:', emailError);
