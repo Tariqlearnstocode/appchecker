@@ -477,7 +477,7 @@ function classifyIncomeTypeFromPFC(pfc: PlaidPFC): IncomeType {
 
   if (p === 'TRANSFER') return 'transfer';
   if (p === 'REFUND' || d.includes('REFUND')) return 'refund';
-  if (d === 'INCOME_WAGES' || d === 'INCOME_PAYROLL' || d === 'INCOME_RENTAL') return 'payroll';
+  if (d === 'INCOME_WAGES' || d === 'INCOME_PAYROLL' || d === 'INCOME_SALARY' || d === 'INCOME_RENTAL') return 'payroll';
   if (d.startsWith('INCOME_') && (d.includes('GOVERNMENT') || d.includes('BENEFIT') || d.includes('UNEMPLOYMENT') || d.includes('SOCIAL'))) return 'government';
   if (p === 'INCOME') return 'other'; // INCOME_DIVIDENDS, etc.
 
