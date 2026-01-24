@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       country_codes: [CountryCode.Us],
       language: 'en',
       transactions: {
-        days_requested: 365, // Request 12 months (365 days) of transaction history
+        days_requested: 365, // Request 12 months (365 days) - actual availability depends on bank
       },
       // Note: Data Transparency Messaging (DTM) use cases must be configured in Plaid Dashboard
       // Go to: https://dashboard.plaid.com/link/data-transparency-v5

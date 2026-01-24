@@ -129,6 +129,65 @@ function sleep(ms: number) {
 }
 
 /**
+ * Fallback: Fetch transactions using transactions/get with date range
+ */
+async function fetchTransactionsWithGet(
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  allTransactions: any[],
+  maxRetries = 3
+): Promise<boolean> {
+  console.log(`[FALLBACK] Using transactions/get with date range: ${startDate} to ${endDate}`);
+  
+  const count = 500;
+  let offset = 0;
+
+  while (true) {
+    let transactionsResponse;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        transactionsResponse = await plaidClient.transactionsGet({
+          access_token: accessToken,
+          start_date: startDate,
+          end_date: endDate,
+          options: {
+            count,
+            offset,
+            include_original_description: true,
+            personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
+          },
+        });
+        break;
+      } catch (error: any) {
+        lastError = error;
+        const errorCode = error?.response?.data?.error_code;
+        if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
+          await sleep(attempt * 10000);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!transactionsResponse) throw lastError || new Error('Failed to fetch transactions');
+    
+    const txns = transactionsResponse.data.transactions ?? [];
+    const total = transactionsResponse.data.total_transactions ?? 0;
+    
+    allTransactions.push(...txns);
+    console.log(`[FALLBACK] Fetched page: ${txns.length} transactions (offset ${offset}, total: ${total}, accumulated: ${allTransactions.length})`);
+
+    if (txns.length === 0 || offset + txns.length >= total || txns.length < count) break;
+    offset += txns.length;
+  }
+
+  return allTransactions.length > 0;
+}
+
+/**
  * Fetch transactions in 3-month chunks as fallback when 12-month request fails
  */
 async function fetchTransactionsInChunks(
@@ -233,60 +292,100 @@ async function fetchTransactionsInChunks(
 
 /**
  * Fetch RAW Plaid data - no calculations, just the API responses
- * Fetches 12 months of transactions (matching Teller's approach)
+ * Requests 12 months of transactions, but actual availability depends on what the bank provides
+ * Many banks only provide 90 days regardless of what we request
  * Includes retry logic for PRODUCT_NOT_READY errors
  * Falls back to 4 chunks of 3 months if 12-month request fails
  */
 async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
   const now = new Date();
-  // Calculate 12 months ago more reliably (365 days to match Link token days_requested)
+  // Calculate 12 months ago (365 days to match Link token days_requested)
+  // Note: Actual data returned depends on bank - many only provide 90 days
   const twelveMonthsAgo = new Date(now);
   twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365); // Use days instead of months to avoid month boundary issues
   const startDate = twelveMonthsAgo.toISOString().split('T')[0];
   const endDate = now.toISOString().split('T')[0];
   
   console.log(`Calculated date range for 12 months: ${startDate} to ${endDate}`);
+  console.log(`Note: Actual data returned depends on what the bank provides (many banks only give 90 days)`);
 
   // Fetch accounts and balances (raw response) - usually available immediately
   const accountsResponse = await plaidClient.accountsGet({
     access_token: accessToken,
   });
+  
+  // DEBUG: Check Item status to see what's available and when historical data will be ready
+  let itemStatus: any = null;
+  try {
+    const itemResponse = await plaidClient.itemGet({
+      access_token: accessToken,
+    });
+    const itemData = itemResponse.data.item;
+    const itemWithStatus = itemResponse.data as any;
+    itemStatus = itemWithStatus.status;
+    
+    console.log('[DEBUG] Item info:', {
+      item_id: itemData.item_id,
+      institution_id: itemData.institution_id,
+      available_products: itemData.available_products,
+      billed_products: itemData.billed_products,
+    });
+    
+    if (itemStatus?.transactions) {
+      console.log('[DEBUG] Transactions status:', {
+        last_successful_update: itemStatus.transactions.last_successful_update,
+        last_failed_update: itemStatus.transactions.last_failed_update,
+      });
+      
+      // If historical data extraction hasn't completed, we may only get limited data
+      if (!itemStatus.transactions.last_successful_update) {
+        console.warn('[DEBUG] ⚠️  WARNING: No successful transaction update yet. Historical data may be limited.');
+      }
+    }
+  } catch (itemError) {
+    console.warn('[DEBUG] Could not fetch Item status:', itemError);
+  }
 
   let allTransactions: any[] = [];
   let transactionsFetched = false;
   
   // CRITICAL: Wait before first call to /transactions/get
-  // Plaid needs time to extract the first 30 days of transactions after linking.
-  // Calling too early (within a few seconds) will result in PRODUCT_NOT_READY error.
-  // For 12 months of historical data, we need to wait longer.
-  console.log('Waiting for Plaid to extract initial transaction data (12 months may take 10-15 seconds)...');
-  await sleep(10000); // Wait 10 seconds before first attempt for 12 months of data
+  // Plaid needs time to extract historical transactions after linking.
+  // Historical data extraction can take time - some banks provide it immediately,
+  // others may take minutes or hours. We can only get what the bank provides.
+  // Note: Some banks only provide 90 days of history regardless of what we request.
+  const initialWait = 15000; // Wait 15 seconds before first attempt
+  console.log(`Waiting ${initialWait/1000}s for Plaid to extract initial transaction data...`);
+  console.log('Note: Historical data availability depends on the bank. Some banks only provide 90 days.');
+  await sleep(initialWait);
 
   // Note: Historical data (12 months) should be available automatically when requested
   // with the correct date range, as long as days_requested: 365 is set in Link token.
   // We don't need transactionsRefresh here - it's for syncing new transactions, not historical data,
   // and it can interfere with category processing.
 
-  // First, try 12 months in one request
+  // Use transactions/sync instead of transactions/get - better for historical data
+  // Sync uses cursor-based pagination and handles historical data extraction better
   try {
-    console.log(`Fetching transactions: ${startDate} to ${endDate} (12 months of data)`);
+    console.log(`[DEBUG] ========== STARTING TRANSACTION SYNC ==========`);
+    console.log(`[DEBUG] Using /transactions/sync endpoint (recommended for historical data)`);
+    console.log(`[DEBUG] Requested: 12 months (365 days) via days_requested in Link token`);
+    console.log(`[DEBUG] ================================================`);
     
-    const count = 500;
-    let offset = 0;
+    let cursor: string | undefined = undefined;
+    let pageCount = 0;
 
     while (true) {
-      let transactionsResponse;
+      let syncResponse;
       let lastError;
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          transactionsResponse = await plaidClient.transactionsGet({
+          syncResponse = await plaidClient.transactionsSync({
             access_token: accessToken,
-            start_date: startDate,
-            end_date: endDate,
+            cursor: cursor,
+            count: 500,
             options: {
-              count,
-              offset,
               include_original_description: true,
               personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
             },
@@ -298,11 +397,10 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
           const errorCode = error?.response?.data?.error_code;
           
           // Only retry on PRODUCT_NOT_READY
-          // Historical data (12 months) may take longer to prepare, so wait longer
-          // Plaid needs time to extract transactions - can take 10-30+ seconds for 12 months
+          // Historical data (12 months) may take longer to prepare
           if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-            const waitTime = attempt * 10000; // Wait 10s, 20s, 30s for 12 months of historical data
-            console.log(`PRODUCT_NOT_READY: Plaid is still extracting transactions (12 months takes longer). Retrying in ${waitTime / 1000} seconds... (attempt ${attempt}/${maxRetries})`);
+            const waitTime = attempt * 10000; // Wait 10s, 20s, 30s for historical data
+            console.log(`PRODUCT_NOT_READY: Plaid is still extracting transactions. Retrying in ${waitTime / 1000} seconds... (attempt ${attempt}/${maxRetries})`);
             await sleep(waitTime);
           } else {
             throw error; // Don't retry on other errors
@@ -310,56 +408,73 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
         }
       }
 
-      if (!transactionsResponse) {
-        throw lastError || new Error('Failed to fetch transactions after retries');
+      if (!syncResponse) {
+        throw lastError || new Error('Failed to sync transactions after retries');
       }
 
-      const txns = transactionsResponse.data.transactions ?? [];
-      const total = transactionsResponse.data.total_transactions ?? 0;
+      const txns = syncResponse.data.added ?? [];
+      const hasMore = syncResponse.data.has_more;
+      cursor = syncResponse.data.next_cursor;
+      pageCount++;
 
-      // Log date range of fetched transactions on first page
-      if (txns.length > 0 && offset === 0) {
-        const rawTxn = txns[0];
-        const oldestTxn = txns[txns.length - 1];
-        const newestDate = rawTxn.date;
-        const oldestDate = oldestTxn.date;
-        console.log('RAW Plaid response (first transaction):', {
-          transaction_id: rawTxn.transaction_id,
-          original_description: rawTxn.original_description,
-          name: rawTxn.name,
-          merchant_name: rawTxn.merchant_name,
+      // DEBUG: Log what we got
+      console.log(`[DEBUG] Sync page ${pageCount}: added=${txns.length}, has_more=${hasMore}, removed=${syncResponse.data.removed?.length || 0}, modified=${syncResponse.data.modified?.length || 0}`);
+
+      // Log date range on first page
+      if (txns.length > 0 && pageCount === 1) {
+        const dates = txns.map((t: any) => t.date).sort();
+        const oldestDate = dates[0];
+        const newestDate = dates[dates.length - 1];
+        const daysDiff = Math.round(
+          (new Date(newestDate).getTime() - new Date(oldestDate).getTime()) / 
+          (1000 * 60 * 60 * 24)
+        );
+        console.log('[DEBUG] First sync page transaction details:', {
+          newest_date: newestDate,
+          oldest_date: oldestDate,
+          days_span: daysDiff,
+          total_transactions: txns.length,
         });
-        console.log(`Transaction date range in first page: ${oldestDate} to ${newestDate} (requested: ${startDate} to ${endDate})`);
-      }
-      if (txns.length === 0 && offset === 0) {
-        console.warn(`WARNING: Empty transaction array returned. This may indicate the date range exceeds bank's available history.`);
+        if (txns.length > 0) {
+          const rawTxn = txns[0];
+          console.log('RAW Plaid response (first transaction):', {
+            transaction_id: rawTxn.transaction_id,
+            original_description: rawTxn.original_description,
+            name: rawTxn.name,
+            merchant_name: rawTxn.merchant_name,
+          });
+        }
       }
 
       allTransactions.push(...txns);
       transactionsFetched = true;
-      console.log(`Fetched page: ${txns.length} transactions (offset ${offset}, total available: ${total})`);
+      console.log(`Fetched sync page ${pageCount}: ${txns.length} transactions (accumulated: ${allTransactions.length})`);
 
-      // Break if: no more transactions, reached total, or got fewer than requested (last page)
-      if (txns.length === 0 || offset + txns.length >= total || txns.length < count) break;
-      offset += txns.length;
+      // Break when we've fetched all available transactions
+      if (!hasMore) {
+        console.log(`[DEBUG] ✅ Sync complete. Total fetched: ${allTransactions.length} transactions across ${pageCount} pages`);
+        break;
+      }
+      
+      // Continue with next cursor
+      console.log(`[DEBUG] ➡️  Continuing sync with next cursor...`);
     }
   } catch (error: any) {
     const errorData = error?.response?.data || {};
-    const isTimeout = error?.response?.status === 504 || errorData?.error_code === 'GATEWAY_TIMEOUT';
     
-    console.error(`ERROR: Failed to fetch transactions:`, {
+    console.error(`ERROR: Failed to sync transactions:`, {
       status: error?.response?.status,
       error: errorData,
-      requestedDateRange: { start: startDate, end: endDate },
     });
     
-    // If it's a timeout or large request error, try fallback to 3-month chunks
-    if (isTimeout || errorData?.error_code === 'INVALID_REQUEST') {
-      console.log(`Timeout or error detected for 12-month request. Falling back to 3-month chunks...`);
-      transactionsFetched = await fetchTransactionsInChunks(accessToken, startDate, endDate, allTransactions, maxRetries);
-    } else {
-      // For other errors, try chunking as fallback anyway
-      console.log(`Error for 12-month request. Falling back to 3-month chunks...`);
+    // Fallback to transactions/get if sync fails
+    console.log(`Sync failed, falling back to transactions/get with date range...`);
+    try {
+      transactionsFetched = await fetchTransactionsWithGet(accessToken, startDate, endDate, allTransactions, maxRetries);
+    } catch (fallbackError: any) {
+      console.error(`Fallback to transactions/get also failed:`, fallbackError?.response?.data || fallbackError);
+      // Try chunking as last resort
+      console.log(`Trying 3-month chunks as last resort...`);
       transactionsFetched = await fetchTransactionsInChunks(accessToken, startDate, endDate, allTransactions, maxRetries);
     }
   }
@@ -377,15 +492,33 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
     );
     const actualOldest = sortedByDate[0].date;
     const actualNewest = sortedByDate[sortedByDate.length - 1].date;
-    const monthsDiff = Math.round(
+    const daysDiff = Math.round(
       (new Date(actualNewest).getTime() - new Date(actualOldest).getTime()) / 
-      (1000 * 60 * 60 * 24 * 30)
+      (1000 * 60 * 60 * 24)
     );
-    console.log(`Actual transaction date range: ${actualOldest} to ${actualNewest} (~${monthsDiff} months)`);
-    console.log(`Requested date range: ${startDate} to ${endDate} (12 months)`);
-    if (monthsDiff < 11) {
-      console.warn(`WARNING: Only fetched ~${monthsDiff} months of data, expected 12 months. Historical data may not be fully available yet.`);
+    const monthsDiff = Math.round(daysDiff / 30);
+    const requestedDays = Math.round(
+      (new Date(endDate).getTime() - new Date(startDate).getTime()) / 
+      (1000 * 60 * 60 * 24)
+    );
+    
+    console.log(`[DEBUG] ========== TRANSACTION FETCH SUMMARY ==========`);
+    console.log(`[DEBUG] Requested: ${startDate} to ${endDate} (${requestedDays} days / ~12 months)`);
+    console.log(`[DEBUG] Actual: ${actualOldest} to ${actualNewest} (${daysDiff} days / ~${monthsDiff} months)`);
+    console.log(`[DEBUG] Total transactions fetched: ${allTransactions.length}`);
+    console.log(`[DEBUG] ================================================`);
+    
+    if (daysDiff < requestedDays * 0.8) { // If we got less than 80% of requested
+      console.warn(`⚠️  WARNING: Only fetched ~${monthsDiff} months (${daysDiff} days) of data, requested ${requestedDays} days.`);
+      console.warn(`⚠️  This is likely a BANK LIMITATION - many banks only provide 90 days of transaction history.`);
+      console.warn(`⚠️  Plaid can only return what the bank provides, regardless of days_requested in Link token.`);
+      console.warn(`⚠️  Check Plaid dashboard Item status to see what the bank actually provides.`);
     }
+  } else {
+    console.error(`[DEBUG] ========== NO TRANSACTIONS FETCHED ==========`);
+    console.error(`[DEBUG] Requested: ${startDate} to ${endDate}`);
+    console.error(`[DEBUG] This is a critical issue - no transactions were returned.`);
+    console.error(`[DEBUG] ==============================================`);
   }
   
   // Final check: Log a transaction that should have full original_description
