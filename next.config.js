@@ -9,6 +9,20 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   outputFileTracingRoot: __dirname,
+  async headers() {
+    return [
+      {
+        // Apply to all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'accelerometer=*, encrypted-media=*, geolocation=*, microphone=*, camera=*',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
