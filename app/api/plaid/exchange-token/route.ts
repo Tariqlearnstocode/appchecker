@@ -174,6 +174,7 @@ async function fetchTransactionsInChunks(
             end_date: chunkEndStr,
             options: {
               count: 500,
+              include_original_description: true, // Request original_description from bank
               ...(chunkCursor ? { cursor: chunkCursor } : {}),
             },
           });
@@ -270,6 +271,7 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
             end_date: endDate,
             options: {
               count: 500,
+              include_original_description: true, // Request original_description from bank
               ...(cursor ? { cursor } : {}),
             },
           });

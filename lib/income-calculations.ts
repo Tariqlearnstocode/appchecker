@@ -248,10 +248,11 @@ function normalizeTransactions(transactions: any[], provider: 'plaid' | 'teller'
       accountId: t.account_id,
       amount: Math.abs(t.amount),
       date: t.date,
-      // CRITICAL: Use name (description) first - it contains the FULL transaction text
+      // CRITICAL: Use original_description first - it contains the FULL raw transaction text from bank
+      // e.g., "Deposit from Great Lakes Prop PAYROLL" vs just "Great Lakes Prop"
       // merchant_name may be null for direct deposits, payroll, transfers, etc.
-      // The name field has the complete description needed for income classification
-      name: t.name || t.merchant_name || 'Unknown',
+      // name is deprecated - use original_description if available, fall back to name, then merchant_name
+      name: t.original_description || t.name || t.merchant_name || 'Unknown',
       category: t.category?.[0] || null,
       pending: t.pending || false,
       isIncome,
