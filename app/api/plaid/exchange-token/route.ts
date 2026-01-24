@@ -61,24 +61,25 @@ export async function POST(request: NextRequest) {
     // Fetch RAW data from Plaid (no calculations here)
     const rawPlaidData = await fetchRawPlaidData(access_token);
 
-    // IMPORTANT: Disconnect the Item immediately to avoid monthly charges
+    // NOTE: Keeping Item connected for debugging - allows viewing logs in Plaid dashboard
+    // TODO: Re-enable disconnect in production to avoid monthly charges
     // Transactions is billed monthly per connected Item
-    try {
-      await plaidClient.itemRemove({ access_token });
-      console.log('Plaid Item disconnected to avoid recurring charges');
-    } catch (removeError) {
-      // Log but don't fail the request - data was already fetched
-      console.error('Warning: Failed to disconnect Plaid Item:', removeError);
-    }
+    // try {
+    //   await plaidClient.itemRemove({ access_token });
+    //   console.log('Plaid Item disconnected to avoid recurring charges');
+    // } catch (removeError) {
+    //   // Log but don't fail the request - data was already fetched
+    //   console.error('Warning: Failed to disconnect Plaid Item:', removeError);
+    // }
 
     // Store raw data only - calculations happen at display time
-    // Clear the access token since we've disconnected
+    // Keep access token for debugging (can view logs in Plaid dashboard)
     // Use admin client to bypass RLS - this is a server-side operation
     const { error: reportError } = await supabaseAdmin
       .from('income_verifications')
       .update({
         raw_plaid_data: rawPlaidData,
-        plaid_access_token: null, // Clear since Item is disconnected
+        plaid_access_token: access_token, // Keep for debugging - can view logs in Plaid dashboard
         status: 'completed',
         completed_at: new Date().toISOString(),
       } as any)
@@ -186,8 +187,9 @@ async function fetchTransactionsInChunks(
             lastChunkError = error;
             const errorCode = error?.response?.data?.error_code;
             if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-              console.log(`Chunk ${i + 1} not ready, retrying in ${attempt * 2} seconds... (attempt ${attempt}/${maxRetries})`);
-              await sleep(attempt * 2000);
+              const waitTime = attempt * 10000; // Wait 10s, 20s, 30s for historical data
+              console.log(`Chunk ${i + 1} not ready, retrying in ${waitTime / 1000} seconds... (attempt ${attempt}/${maxRetries})`);
+              await sleep(waitTime);
             } else {
               throw error;
             }
@@ -237,10 +239,13 @@ async function fetchTransactionsInChunks(
  */
 async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
   const now = new Date();
+  // Calculate 12 months ago more reliably (365 days to match Link token days_requested)
   const twelveMonthsAgo = new Date(now);
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365); // Use days instead of months to avoid month boundary issues
   const startDate = twelveMonthsAgo.toISOString().split('T')[0];
   const endDate = now.toISOString().split('T')[0];
+  
+  console.log(`Calculated date range for 12 months: ${startDate} to ${endDate}`);
 
   // Fetch accounts and balances (raw response) - usually available immediately
   const accountsResponse = await plaidClient.accountsGet({
@@ -249,10 +254,22 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
 
   let allTransactions: any[] = [];
   let transactionsFetched = false;
+  
+  // CRITICAL: Wait before first call to /transactions/get
+  // Plaid needs time to extract the first 30 days of transactions after linking.
+  // Calling too early (within a few seconds) will result in PRODUCT_NOT_READY error.
+  // For 12 months of historical data, we need to wait longer.
+  console.log('Waiting for Plaid to extract initial transaction data (12 months may take 10-15 seconds)...');
+  await sleep(10000); // Wait 10 seconds before first attempt for 12 months of data
+
+  // Note: Historical data (12 months) should be available automatically when requested
+  // with the correct date range, as long as days_requested: 365 is set in Link token.
+  // We don't need transactionsRefresh here - it's for syncing new transactions, not historical data,
+  // and it can interfere with category processing.
 
   // First, try 12 months in one request
   try {
-    console.log(`Fetching transactions: ${startDate} to ${endDate}`);
+    console.log(`Fetching transactions: ${startDate} to ${endDate} (12 months of data)`);
     
     const count = 500;
     let offset = 0;
@@ -281,9 +298,12 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
           const errorCode = error?.response?.data?.error_code;
           
           // Only retry on PRODUCT_NOT_READY
+          // Historical data (12 months) may take longer to prepare, so wait longer
+          // Plaid needs time to extract transactions - can take 10-30+ seconds for 12 months
           if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-            console.log(`Transactions not ready, retrying in ${attempt * 2} seconds... (attempt ${attempt}/${maxRetries})`);
-            await sleep(attempt * 2000); // Wait 2s, 4s, 6s
+            const waitTime = attempt * 10000; // Wait 10s, 20s, 30s for 12 months of historical data
+            console.log(`PRODUCT_NOT_READY: Plaid is still extracting transactions (12 months takes longer). Retrying in ${waitTime / 1000} seconds... (attempt ${attempt}/${maxRetries})`);
+            await sleep(waitTime);
           } else {
             throw error; // Don't retry on other errors
           }
@@ -297,14 +317,19 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
       const txns = transactionsResponse.data.transactions ?? [];
       const total = transactionsResponse.data.total_transactions ?? 0;
 
+      // Log date range of fetched transactions on first page
       if (txns.length > 0 && offset === 0) {
         const rawTxn = txns[0];
+        const oldestTxn = txns[txns.length - 1];
+        const newestDate = rawTxn.date;
+        const oldestDate = oldestTxn.date;
         console.log('RAW Plaid response (first transaction):', {
           transaction_id: rawTxn.transaction_id,
           original_description: rawTxn.original_description,
           name: rawTxn.name,
           merchant_name: rawTxn.merchant_name,
         });
+        console.log(`Transaction date range in first page: ${oldestDate} to ${newestDate} (requested: ${startDate} to ${endDate})`);
       }
       if (txns.length === 0 && offset === 0) {
         console.warn(`WARNING: Empty transaction array returned. This may indicate the date range exceeds bank's available history.`);
@@ -344,6 +369,24 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
   }
   
   console.log(`Total transactions fetched: ${allTransactions.length}`);
+  
+  // Log actual date range of all fetched transactions
+  if (allTransactions.length > 0) {
+    const sortedByDate = [...allTransactions].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    const actualOldest = sortedByDate[0].date;
+    const actualNewest = sortedByDate[sortedByDate.length - 1].date;
+    const monthsDiff = Math.round(
+      (new Date(actualNewest).getTime() - new Date(actualOldest).getTime()) / 
+      (1000 * 60 * 60 * 24 * 30)
+    );
+    console.log(`Actual transaction date range: ${actualOldest} to ${actualNewest} (~${monthsDiff} months)`);
+    console.log(`Requested date range: ${startDate} to ${endDate} (12 months)`);
+    if (monthsDiff < 11) {
+      console.warn(`WARNING: Only fetched ~${monthsDiff} months of data, expected 12 months. Historical data may not be fully available yet.`);
+    }
+  }
   
   // Final check: Log a transaction that should have full original_description
   // Look for income transactions (negative amount in Plaid) that might have payroll keywords
