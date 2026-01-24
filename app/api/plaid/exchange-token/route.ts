@@ -160,69 +160,55 @@ async function fetchTransactionsInChunks(
 
     try {
       console.log(`Fetching 3-month chunk ${i + 1}/4: ${chunkStartStr} to ${chunkEndStr}`);
-      
-      // Fetch chunk with retry logic for PRODUCT_NOT_READY
-      let chunkTransactions: any[] = [];
-      let chunkCursor: string | null = null;
-      let chunkFetched = false;
-      
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const chunkResponse = await plaidClient.transactionsGet({
-            access_token: accessToken,
-            start_date: chunkStartStr,
-            end_date: chunkEndStr,
-            options: {
-              count: 500,
-              include_original_description: true,
-              personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
-              ...(chunkCursor ? { cursor: chunkCursor } : {}),
-            },
-          });
-          
-          // Debug: Log raw response for first chunk
-          if (chunkResponse.data.transactions.length > 0 && !chunkCursor && i === 0) {
-            const rawTxn = chunkResponse.data.transactions[0];
-            console.log(`RAW Plaid response (chunk ${i + 1}, first transaction):`, {
-              transaction_id: rawTxn.transaction_id,
-              original_description: rawTxn.original_description,
-              name: rawTxn.name,
-              merchant_name: rawTxn.merchant_name,
+      const chunkCount = 500;
+      let chunkOffset = 0;
+      const chunkTransactions: any[] = [];
+
+      chunkLoop: while (true) {
+        let chunkResponse;
+        let lastChunkError;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            chunkResponse = await plaidClient.transactionsGet({
+              access_token: accessToken,
+              start_date: chunkStartStr,
+              end_date: chunkEndStr,
+              options: {
+                count: chunkCount,
+                offset: chunkOffset,
+                include_original_description: true,
+                personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
+              },
             });
-          }
-          
-          chunkTransactions.push(...chunkResponse.data.transactions);
-          chunkFetched = true;
-          
-          // Handle pagination if needed
-          // Plaid response may have has_more and next_cursor for pagination
-          const responseData = chunkResponse.data as any;
-          if (responseData.has_more && responseData.next_cursor) {
-            chunkCursor = responseData.next_cursor;
-            // Continue paginating this chunk
-            continue;
-          } else {
-            break; // No more pages for this chunk
-          }
-        } catch (error: any) {
-          const errorCode = error?.response?.data?.error_code;
-          
-          // Only retry on PRODUCT_NOT_READY
-          if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-            console.log(`Chunk ${i + 1} not ready, retrying in ${attempt * 2} seconds... (attempt ${attempt}/${maxRetries})`);
-            await sleep(attempt * 2000);
-          } else {
-            throw error;
+            break;
+          } catch (error: any) {
+            lastChunkError = error;
+            const errorCode = error?.response?.data?.error_code;
+            if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
+              console.log(`Chunk ${i + 1} not ready, retrying in ${attempt * 2} seconds... (attempt ${attempt}/${maxRetries})`);
+              await sleep(attempt * 2000);
+            } else {
+              throw error;
+            }
           }
         }
+
+        if (!chunkResponse) throw lastChunkError || new Error('Chunk fetch failed');
+        const txns = chunkResponse.data.transactions ?? [];
+        const total = chunkResponse.data.total_transactions ?? 0;
+
+        chunkTransactions.push(...txns);
+        // Break if: no more transactions, reached total, or got fewer than requested (last page)
+        if (txns.length === 0 || chunkOffset + txns.length >= total || txns.length < chunkCount) break chunkLoop;
+        chunkOffset += txns.length;
       }
-      
-      if (chunkFetched && chunkTransactions.length > 0) {
-        const txnCount = chunkTransactions.length;
-        totalFetched += txnCount;
+
+      if (chunkTransactions.length > 0) {
+        totalFetched += chunkTransactions.length;
         allTransactions.push(...chunkTransactions);
         anyChunkSucceeded = true;
-        console.log(`Successfully fetched chunk ${i + 1}/4: ${txnCount} transactions (${chunkStartStr} to ${chunkEndStr})`);
+        console.log(`Successfully fetched chunk ${i + 1}/4: ${chunkTransactions.length} transactions (${chunkStartStr} to ${chunkEndStr})`);
       } else {
         console.error(`Failed to fetch chunk ${i + 1}/4: ${chunkStartStr} to ${chunkEndStr}`);
       }
@@ -268,10 +254,10 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
   try {
     console.log(`Fetching transactions: ${startDate} to ${endDate}`);
     
-    let cursor: string | null = null;
-    let hasMore = true;
-    
-    while (hasMore) {
+    const count = 500;
+    let offset = 0;
+
+    while (true) {
       let transactionsResponse;
       let lastError;
       
@@ -282,30 +268,14 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
             start_date: startDate,
             end_date: endDate,
             options: {
-              count: 500,
+              count,
+              offset,
               include_original_description: true,
               personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
-              ...(cursor ? { cursor } : {}),
             },
           });
           
-          // Immediately log raw response structure for first transaction to debug
-          if (transactionsResponse.data.transactions?.length > 0 && !cursor && attempt === 1) {
-            const rawTxn = transactionsResponse.data.transactions[0];
-            console.log('RAW Plaid response (first transaction):', {
-              transaction_id: rawTxn.transaction_id,
-              original_description: rawTxn.original_description,
-              original_description_type: typeof rawTxn.original_description,
-              name: rawTxn.name,
-              merchant_name: rawTxn.merchant_name,
-              all_description_fields: {
-                original_description: rawTxn.original_description,
-                name: rawTxn.name,
-                merchant_name: rawTxn.merchant_name,
-              },
-            });
-          }
-          break; // Success - exit retry loop
+          break;
         } catch (error: any) {
           lastError = error;
           const errorCode = error?.response?.data?.error_code;
@@ -324,47 +294,29 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
         throw lastError || new Error('Failed to fetch transactions after retries');
       }
 
-      const txnCount = transactionsResponse.data.transactions?.length || 0;
-      console.log(`Successfully fetched transactions: ${txnCount} transactions returned (date range: ${startDate} to ${endDate})`);
-      
-      if (txnCount === 0 && !cursor) {
+      const txns = transactionsResponse.data.transactions ?? [];
+      const total = transactionsResponse.data.total_transactions ?? 0;
+
+      if (txns.length > 0 && offset === 0) {
+        const rawTxn = txns[0];
+        console.log('RAW Plaid response (first transaction):', {
+          transaction_id: rawTxn.transaction_id,
+          original_description: rawTxn.original_description,
+          name: rawTxn.name,
+          merchant_name: rawTxn.merchant_name,
+        });
+      }
+      if (txns.length === 0 && offset === 0) {
         console.warn(`WARNING: Empty transaction array returned. This may indicate the date range exceeds bank's available history.`);
       }
-      
-      // Debug: Log a sample transaction to verify original_description is being returned
-      if (txnCount > 0 && !cursor) {
-        const sampleTxn = transactionsResponse.data.transactions[0];
-        console.log('Sample transaction (first fetch):', {
-          has_original_description: !!sampleTxn.original_description,
-          original_description: sampleTxn.original_description,
-          original_description_length: sampleTxn.original_description?.length,
-          name: sampleTxn.name,
-          name_length: sampleTxn.name?.length,
-          merchant_name: sampleTxn.merchant_name,
-          counterparties_count: sampleTxn.counterparties?.length || 0,
-          // Log full transaction to see all fields
-          full_transaction_keys: Object.keys(sampleTxn),
-        });
-        // If original_description exists but seems truncated, log the full object
-        if (sampleTxn.original_description && sampleTxn.original_description === sampleTxn.name) {
-          console.warn('WARNING: original_description matches name - may be truncated by Plaid or bank');
-          console.log('Full transaction object:', JSON.stringify(sampleTxn, null, 2));
-        }
-      }
-      
-      // Store transactions directly - no processing
-      allTransactions.push(...transactionsResponse.data.transactions);
+
+      allTransactions.push(...txns);
       transactionsFetched = true;
-      
-      // Check if there are more pages
-      // Plaid response may have has_more and next_cursor for pagination
-      const responseData = transactionsResponse.data as any;
-      if (responseData.has_more && responseData.next_cursor) {
-        cursor = responseData.next_cursor;
-        hasMore = true;
-      } else {
-        hasMore = false;
-      }
+      console.log(`Fetched page: ${txns.length} transactions (offset ${offset}, total available: ${total})`);
+
+      // Break if: no more transactions, reached total, or got fewer than requested (last page)
+      if (txns.length === 0 || offset + txns.length >= total || txns.length < count) break;
+      offset += txns.length;
     }
   } catch (error: any) {
     const errorData = error?.response?.data || {};
