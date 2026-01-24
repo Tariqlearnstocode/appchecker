@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const daysRequested = 365; // Request 12 months (365 days) - actual availability depends on bank
+    
+    console.log(`[LINK_TOKEN] Creating Link token with days_requested: ${daysRequested} (12 months)`);
+    
     const response = await plaidClient.linkTokenCreate({
       user: {
         client_user_id: verification_token,
@@ -33,12 +37,15 @@ export async function POST(request: NextRequest) {
       country_codes: [CountryCode.Us],
       language: 'en',
       transactions: {
-        days_requested: 365, // Request 12 months (365 days) - actual availability depends on bank
+        days_requested: daysRequested,
       },
       // Note: Data Transparency Messaging (DTM) use cases must be configured in Plaid Dashboard
       // Go to: https://dashboard.plaid.com/link/data-transparency-v5
       // Required for production: Select at least one use case (e.g., "Verify your income")
     });
+
+    console.log(`[LINK_TOKEN] Link token created successfully. Request ID: ${response.data.request_id}`);
+    console.log(`[LINK_TOKEN] Verification: days_requested=${daysRequested} was sent to Plaid`);
 
     return NextResponse.json({ link_token: response.data.link_token });
   } catch (error: any) {

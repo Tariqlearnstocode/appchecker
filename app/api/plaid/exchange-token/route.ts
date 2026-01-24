@@ -342,6 +342,10 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
         console.warn('[DEBUG] ⚠️  WARNING: No successful transaction update yet. Historical data may be limited.');
       }
     }
+    
+    // Check if we can see what days_requested was actually used (may not be in response, but log what we expect)
+    console.log('[DEBUG] Expected days_requested from Link token: 365 (12 months)');
+    console.log('[DEBUG] Note: If only getting ~90 days, either bank limitation or historical data still processing');
   } catch (itemError) {
     console.warn('[DEBUG] Could not fetch Item status:', itemError);
   }
@@ -366,16 +370,22 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
 
   // Use transactions/sync instead of transactions/get - better for historical data
   // Sync uses cursor-based pagination and handles historical data extraction better
+  // IMPORTANT: Historical data (12 months) may not be ready immediately - we need to poll
   try {
     console.log(`[DEBUG] ========== STARTING TRANSACTION SYNC ==========`);
     console.log(`[DEBUG] Using /transactions/sync endpoint (recommended for historical data)`);
     console.log(`[DEBUG] Requested: 12 months (365 days) via days_requested in Link token`);
+    console.log(`[DEBUG] Note: Historical data extraction can take time - we'll poll until complete`);
     console.log(`[DEBUG] ================================================`);
     
     let cursor: string | undefined = undefined;
     let pageCount = 0;
+    let totalSyncAttempts = 0;
+    const maxSyncAttempts = 10; // Poll up to 10 times to get all historical data
+    let lastTransactionCount = 0;
+    let stableCount = 0; // Track if count is stable (no new data)
 
-    while (true) {
+    while (totalSyncAttempts < maxSyncAttempts) {
       let syncResponse;
       let lastError;
       
@@ -416,9 +426,10 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
       const hasMore = syncResponse.data.has_more;
       cursor = syncResponse.data.next_cursor;
       pageCount++;
+      totalSyncAttempts++;
 
       // DEBUG: Log what we got
-      console.log(`[DEBUG] Sync page ${pageCount}: added=${txns.length}, has_more=${hasMore}, removed=${syncResponse.data.removed?.length || 0}, modified=${syncResponse.data.modified?.length || 0}`);
+      console.log(`[DEBUG] Sync attempt ${totalSyncAttempts}, page ${pageCount}: added=${txns.length}, has_more=${hasMore}, removed=${syncResponse.data.removed?.length || 0}, modified=${syncResponse.data.modified?.length || 0}`);
 
       // Log date range on first page
       if (txns.length > 0 && pageCount === 1) {
@@ -450,14 +461,36 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
       transactionsFetched = true;
       console.log(`Fetched sync page ${pageCount}: ${txns.length} transactions (accumulated: ${allTransactions.length})`);
 
+      // Check if we got new data
+      if (allTransactions.length === lastTransactionCount) {
+        stableCount++;
+        console.log(`[DEBUG] No new transactions (stable count: ${stableCount})`);
+      } else {
+        stableCount = 0; // Reset if we got new data
+      }
+      lastTransactionCount = allTransactions.length;
+
       // Break when we've fetched all available transactions
       if (!hasMore) {
-        console.log(`[DEBUG] ✅ Sync complete. Total fetched: ${allTransactions.length} transactions across ${pageCount} pages`);
-        break;
+        // If no more and we haven't gotten new data in a while, we're done
+        if (stableCount >= 2 || (txns.length === 0 && allTransactions.length > 0)) {
+          console.log(`[DEBUG] ✅ Sync complete. Total fetched: ${allTransactions.length} transactions across ${pageCount} pages`);
+          break;
+        }
+        // If hasMore is false but we just got data, wait a bit and try again with same cursor
+        // Historical data (12 months) might still be processing
+        console.log(`[DEBUG] ⏳ hasMore=false but may have more historical data processing. Waiting 10s and polling again with same cursor...`);
+        await sleep(10000); // Wait 10 seconds for historical data to be ready
+        // Keep the cursor - don't reset it, just poll again
+        continue;
       }
       
       // Continue with next cursor
       console.log(`[DEBUG] ➡️  Continuing sync with next cursor...`);
+    }
+
+    if (totalSyncAttempts >= maxSyncAttempts) {
+      console.warn(`[DEBUG] ⚠️  Reached max sync attempts (${maxSyncAttempts}). May have more historical data still processing.`);
     }
   } catch (error: any) {
     const errorData = error?.response?.data || {};
