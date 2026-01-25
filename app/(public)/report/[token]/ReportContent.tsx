@@ -453,8 +453,14 @@ export default function ReportContent({ verification, reportData, isCalculated }
     ? payrollDeposits3Mo.find(t => t.name.toLowerCase().slice(0, 30) === topSourceEntry[0])?.name || 'Payroll'
     : (income.verified?.sources?.[0]?.likelySource || 'Not Detected');
   
-  const primarySourceTotal90Days = payrollTotalAmount;
-  const primarySourceOccurrences = payrollDepositCount;
+  // Calculate totals for PRIMARY source only (not all payroll deposits)
+  const primarySourceKey = topSourceEntry?.[0];
+  const primarySourceDeposits = primarySourceKey
+    ? payrollDeposits3Mo.filter(t => t.name.toLowerCase().slice(0, 30) === primarySourceKey)
+    : [];
+  
+  const primarySourceTotal90Days = primarySourceDeposits.reduce((sum, t) => sum + t.amount, 0);
+  const primarySourceOccurrences = primarySourceDeposits.length;
 
   // Calculate months of data and earliest transaction date
   const transactionDates = transactions
@@ -553,19 +559,28 @@ export default function ReportContent({ verification, reportData, isCalculated }
             </div>
             
             <p className="text-sm text-gray-600 mb-6">
-              Historical income values are estimated using the individual's income from the past twelve (12) complete calendar months.<br/>
+              {monthsOfData >= 12 && (
+                <>
+                  Historical income values are estimated using the individual's income from the past twelve (12) complete calendar months.<br/>
+                </>
+              )}
               Projected income values are estimated using the individual's income from the past three (3) complete calendar months.
             </p>
 
-            {/* Projected & Historical Cards - Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
+            {monthsOfData < 12 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-6">
+                Only {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data {monthsOfData === 1 ? 'was' : 'were'} available from the bank. A 12‑month historical estimate is not shown.
+              </p>
+            )}
+
+            {/* Projected & Historical Cards - Side by Side (Historical hidden when &lt; 12 months) */}
+            <div className={`grid grid-cols-1 gap-4 ${monthsOfData >= 12 ? 'md:grid-cols-2 print:grid-cols-2' : ''}`}>
               {/* Projected Card */}
               <div className="bg-white border-4 border-emerald-200 rounded p-6">
                 <div className="mb-4">
                   <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
                   <div className="text-gray-600 mt-1">
-                    <span className="text-sm font-medium">Projected</span><br/>
-                    <span className="text-sm text-gray-500">Estimated Annual</span>
+                    <span className="text-sm font-medium">Projected Data</span><br/>
                   </div>
                 </div>
 
@@ -581,53 +596,42 @@ export default function ReportContent({ verification, reportData, isCalculated }
                 </div>
               </div>
 
-              {/* Historical Card */}
-              <div className="bg-white border-2 border-emerald-200 rounded p-6">
-                <div className="mb-4">
-                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(historicalAnnual)}</span>
-                  <div className="text-gray-600 mt-1">
-                    <span className="text-sm font-medium">Historical</span><br/>
-                    <span className="text-sm text-gray-500">Estimated Annual</span>
+              {/* Historical Card - only when 12+ months of data */}
+              {monthsOfData >= 12 && (
+                <div className="bg-white border-2 border-emerald-200 rounded p-6">
+                  <div className="mb-4">
+                    <span className="text-5xl font-light text-emerald-600">{formatCurrency(historicalAnnual)}</span>
+                    <div className="text-gray-600 mt-1">
+                      <span className="text-sm font-medium">Historical Data</span><br/>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Annual</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(historicalAnnual)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Monthly</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(historicalMonthly)}</span>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Estimated Annual</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(historicalAnnual)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Estimated Monthly</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(historicalMonthly)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Illustrative Monthly Capacity & Primary Income Source - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4 mb-6">
-          {/* Illustrative Monthly Capacity - Split into 2 columns */}
+          {/* Illustrative Monthly Capacity */}
           <div className="bg-white border border-gray-200 rounded p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Illustrative Monthly Capacity</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Left: 3x requirement */}
-              <div className="text-center pr-4 border-r border-gray-200">
-                <div className="text-xs font-medium text-gray-600 mb-1">3x Requirement</div>
-                <div className="text-emerald-600 text-3xl font-light mb-2">
-                  {formatCurrency(projectedMonthly / 3)}
-                </div>
-                <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 3)</p>
+            <h3 className="font-semibold text-gray-900 mb-3">Illustrative Monthly Capacity</h3>
+            <div>
+              <div className="text-emerald-600 text-5xl font-light mb-2">
+                {formatCurrency(projectedMonthly / 3)}
               </div>
-              {/* Right: 10x requirement */}
-              <div className="text-center pl-4">
-                <div className="text-xs font-medium text-gray-600 mb-1">10x Requirement</div>
-                <div className="text-emerald-600 text-3xl font-light mb-2">
-                  {formatCurrency(projectedMonthly / 10)}
-                </div>
-                <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 10)</p>
-              </div>
+              <p className="text-xs text-gray-500">({formatCurrency(projectedMonthly)} ÷ 3)</p>
             </div>
           </div>
 
@@ -636,7 +640,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
             <h3 className="font-semibold text-gray-900 mb-3">Primary Income Source</h3>
             {primarySourceOccurrences > 0 ? (
               <>
-                <div className="text-emerald-600 text-xl font-medium mb-4">{primaryIncomeSource}</div>
+                <div className="text-emerald-600 text-xl font-medium mb-4 line-clamp-2">{primaryIncomeSource}</div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total (Last 90 Days)</span>

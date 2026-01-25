@@ -337,15 +337,21 @@ async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
         last_failed_update: itemStatus.transactions.last_failed_update,
       });
       
-      // If historical data extraction hasn't completed, we may only get limited data
-      if (!itemStatus.transactions.last_successful_update) {
+      // CRITICAL: Check if historical data extraction failed
+      if (itemStatus.transactions.last_failed_update && !itemStatus.transactions.last_successful_update) {
+        console.error('[DEBUG] ❌ CRITICAL: Historical data extraction FAILED!');
+        console.error('[DEBUG] ❌ last_failed_update:', itemStatus.transactions.last_failed_update);
+        console.error('[DEBUG] ❌ This explains why only ~90 days are available instead of 12 months.');
+        console.error('[DEBUG] ❌ Plaid failed to extract the full historical data from the bank.');
+        console.error('[DEBUG] ❌ Possible causes: bank connectivity issues, bank API limitations, or Plaid service issue.');
+      } else if (!itemStatus.transactions.last_successful_update) {
         console.warn('[DEBUG] ⚠️  WARNING: No successful transaction update yet. Historical data may be limited.');
       }
     }
     
     // Check if we can see what days_requested was actually used (may not be in response, but log what we expect)
     console.log('[DEBUG] Expected days_requested from Link token: 365 (12 months)');
-    console.log('[DEBUG] Note: If only getting ~90 days, either bank limitation or historical data still processing');
+    console.log('[DEBUG] Note: If only getting ~90 days, check last_failed_update above - extraction may have failed');
   } catch (itemError) {
     console.warn('[DEBUG] Could not fetch Item status:', itemError);
   }
