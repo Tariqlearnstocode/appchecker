@@ -12,7 +12,7 @@ export default function SupportedBanksPage() {
             Supported Banks & Financial Institutions
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            We support connections to over 7,000 U.S. banks and credit unions through our secure banking partner, Teller.
+            We support connections to over 7,000 U.S. banks and credit unions through our secure banking partner, Plaid.
           </p>
         </div>
 

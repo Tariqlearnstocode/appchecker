@@ -7,7 +7,7 @@ const ogImage = `${siteUrl}/opengraph-image.png`;
 
 export const metadata: Metadata = {
   title: 'Supported Banks',
-  description: 'IncomeChecker.com supports connections to over 7,000 U.S. banks and credit unions through our secure banking partner, Teller. Find your bank and verify income securely.',
+  description: 'IncomeChecker.com supports connections to over 7,000 U.S. banks and credit unions through our secure banking partner, Plaid. Find your bank and verify income securely.',
 };
 
 export default function BanksLayout({ children }: PropsWithChildren) {

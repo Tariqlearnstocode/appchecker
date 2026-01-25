@@ -11,7 +11,7 @@ import { getUser } from '@/utils/supabase/queries';
 import 'styles/main.css';
 
 const title = 'IncomeChecker.com';
-const description = 'Verify applicant income, bank balances, and transaction history securely via Teller.';
+const description = 'Verify applicant income, bank balances, and transaction history securely via Plaid.';
 
 const siteUrl = getURL();
 const ogImage = `${siteUrl}/opengraph-image.png`;

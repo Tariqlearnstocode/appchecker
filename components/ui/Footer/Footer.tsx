@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="flex items-center gap-2 text-zinc-400">
           <Shield className="w-4 h-4" />
           <span className="text-sm">
-            &copy; {new Date().getFullYear()} IncomeChecker.com. Powered by Teller.
+            &copy; {new Date().getFullYear()} IncomeChecker.com. Powered by Plaid.
           </span>
         </div>
         <div className="flex items-center gap-6 text-sm text-zinc-500">

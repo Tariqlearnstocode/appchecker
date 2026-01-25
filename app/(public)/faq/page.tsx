@@ -28,7 +28,7 @@ export default function FAQPage() {
         },
         {
           q: "How does the verification process work?",
-          a: "The process is simple: (1) Create a verification request through your dashboard, (2) Share the verification link with the individual being verified, (3) They securely connect their bank account via Teller, (4) We analyze their transaction history to calculate income, and (5) You receive a comprehensive income report. The entire process typically takes just a few minutes."
+          a: "The process is simple: (1) Create a verification request through your dashboard, (2) Share the verification link with the individual being verified, (3) They securely connect their bank account via Plaid, (4) We analyze their transaction history to calculate income, and (5) You receive a comprehensive income report. The entire process typically takes just a few minutes."
         },
         {
           q: "Is my bank supported?",
@@ -49,7 +49,7 @@ export default function FAQPage() {
       questions: [
         {
           q: "Is my bank account information secure?",
-          a: "Yes, security is our top priority. We use bank-level encryption (AES-256 at rest, TLS 1.3 in transit) and work with Teller, a secure financial data provider. Your bank login credentials are never stored, and bank connections are immediately disconnected after data retrieval. All access tokens are deleted after use."
+          a: "Yes, security is our top priority. We use bank-level encryption (AES-256 at rest, TLS 1.3 in transit) and work with Plaid, a secure financial data provider. Your bank login credentials are never stored, and bank connections are immediately disconnected after data retrieval. All access tokens are deleted after use."
         },
         {
           q: "What data do you collect?",
