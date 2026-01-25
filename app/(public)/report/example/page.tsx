@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import ReportContent from '../[token]/ReportContent';
-import { IncomeReport } from '@/lib/income-calculations';
+import { IncomeReport, type IncomeType } from '@/lib/income-calculations';
 import { analytics } from '@/utils/analytics';
 
 // Metadata needs to be handled differently for client components
@@ -57,6 +57,8 @@ const generateSampleTransactions = () => {
       pending: false,
       isIncome: true,
       runningBalance: null,
+      incomeType: 'payroll' as const,
+      plaidCategory: { primary: 'INCOME', detailed: 'INCOME_SALARY' },
     });
     
     depositCount++;
@@ -274,6 +276,7 @@ const generateSampleTransactions = () => {
         pending: false,
         isIncome: isIncome,
         runningBalance: null,
+        ...(isIncome && { incomeType: 'p2p' as const }),
       });
     }
   }
@@ -387,14 +390,15 @@ const sampleReportData: IncomeReport = {
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     
-    // Get all income deposits (ensure they're marked as payroll for the report)
+    // Get all income deposits (payroll have incomeType from generateSampleTransactions)
     const allIncomeDeposits = sampleTransactions
       .filter(t => t.isIncome)
       .map(t => ({
         date: t.date,
         amount: t.amount,
-        name: t.name, // Names already contain "Payroll" so isPayroll() will match
+        name: t.name,
         category: t.category || 'Transfer',
+        incomeType: (t as { incomeType?: IncomeType }).incomeType,
       }));
     
     // Get 3-month deposits

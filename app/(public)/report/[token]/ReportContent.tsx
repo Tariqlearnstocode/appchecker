@@ -474,6 +474,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
   const monthsOfData = earliestTransactionDate && latestTransactionDate
     ? Math.max(1, Math.ceil((latestTransactionDate.getTime() - earliestTransactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30)))
     : 0;
+  const monthsDisplay = Math.min(monthsOfData, 12);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] print:bg-white">
@@ -543,7 +544,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
         <div className="bg-white border border-gray-200 rounded mb-6">
           <div className="px-5 py-3 border-b border-gray-200">
             <span className="font-semibold text-gray-900">Income Summary</span>
-            <span className="text-gray-500 text-sm ml-2">Provided by Plaid • {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data available</span>
+            <span className="text-gray-500 text-sm ml-2">Provided by Plaid • {monthsDisplay} {monthsDisplay === 1 ? 'month' : 'months'} of transaction data available</span>
               </div>
 
           <div className="p-5">
