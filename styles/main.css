@@ -57,3 +57,32 @@ p a {
 .height-screen-helper {
   min-height: calc(100vh - 80px);
 }
+
+/* Print styles to prevent page breaks inside sections and tables */
+@media print {
+  /* Prevent page breaks inside table sections */
+  .print-keep-together {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Prevent page breaks inside table rows */
+  .print-keep-row-together {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Keep section headers with their content */
+  .print-keep-header-with-content {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Prevent orphans and widows in tables */
+  .print-table-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    orphans: 3;
+    widows: 3;
+  }
+}

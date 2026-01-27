@@ -198,12 +198,26 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   const [page, setPage] = useState(1);
   const PER_PAGE = 20;
 
+  // Calculate both datasets upfront for print sections
+  const allIncomeTransactions = useMemo(() => 
+    transactions.filter(t => t.isIncome)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [transactions]
+  );
+
+  const recurringIncomeTransactions = useMemo(() =>
+    transactions.filter(t => t.isIncome && 
+      (t.incomeType === 'payroll' || t.incomeType === 'government'))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [transactions]
+  );
+
   const filteredAndSorted = useMemo(() => {
     const filtered = filter === 'payroll'
-      ? transactions.filter(t => t.isIncome && (t.incomeType === 'payroll' || t.incomeType === 'government'))
-      : transactions.filter(t => t.isIncome);
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, filter]);
+      ? recurringIncomeTransactions
+      : allIncomeTransactions;
+    return filtered;
+  }, [allIncomeTransactions, recurringIncomeTransactions, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -215,128 +229,198 @@ function TransactionHistory({ transactions }: { transactions: Array<{
   const start = (currentPage - 1) * PER_PAGE;
   const end = Math.min(start + PER_PAGE, filteredAndSorted.length);
 
+  // Helper function to render transaction rows
+  const renderTransactionRows = (txns: typeof transactions) => {
+    if (txns.length === 0) {
+      return (
+        <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
+          No incoming deposits found.
+        </div>
+      );
+    }
+
+    return txns.map((txn, i) => (
+      <React.Fragment key={i}>
+        {/* Mobile Card View */}
+        <div 
+          className={`sm:hidden px-3 py-3 border-b border-gray-100 text-sm print-table-row ${txn.pending ? 'opacity-60' : ''}`}
+        >
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-emerald-600 text-xs font-medium">
+              {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+            </div>
+            <div className="text-right">
+              {txn.isIncome ? (
+                <div className="text-emerald-600 font-medium">{formatCurrency(txn.amount)}</div>
+              ) : (
+                <div className="text-gray-900 font-medium">{formatCurrency(txn.amount)}</div>
+              )}
+            </div>
+          </div>
+          <div className="text-gray-900 truncate cursor-help" title={txn.name}>
+            {txn.name}
+            {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
+          </div>
+        </div>
+        {/* Desktop Grid View */}
+        <div 
+          className={`hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm print-table-row ${txn.pending ? 'opacity-60' : ''}`}
+        >
+          <div className="col-span-2 text-emerald-600 text-xs">
+            {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+          </div>
+          <div className="col-span-4 text-gray-900 truncate cursor-help text-xs sm:text-sm" title={txn.name}>
+            {txn.name}
+            {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
+          </div>
+          <div className="col-span-2 text-right text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
+            {txn.isIncome && formatCurrency(txn.amount)}
+          </div>
+        </div>
+      </React.Fragment>
+    ));
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded mb-6 print:hidden">
-      <div className="px-5 py-3 border-b border-gray-200">
-        <div className="font-semibold text-gray-900">Other Incoming Deposits</div>
-        <p className="text-gray-500 text-sm mt-1">
-          Incoming deposits authorized by the applicant that were not identified as recurring income. These may include peer-to-peer transfers or irregular payments.
-        </p>
-      </div>
-      
-      {/* Filter + Pagination */}
-      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Show:</span>
-          <button
-            onClick={() => { setFilter('credits'); setPage(1); }}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-              filter === 'credits'
-                ? 'bg-black text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-            }`}
-          >
-            Incoming Deposits
-          </button>
-          <button
-            onClick={() => { setFilter('payroll'); setPage(1); }}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-              filter === 'payroll'
-                ? 'bg-black text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-            }`}
-          >
-            Recurring Income
-          </button>
+    <>
+      {/* Interactive Section - Hidden in Print */}
+      <div className="bg-white border border-gray-200 rounded mb-6 print:hidden">
+        <div className="px-5 py-3 border-b border-gray-200">
+          <div className="font-semibold text-gray-900">Other Incoming Deposits</div>
+          <p className="text-gray-500 text-sm mt-1">
+            Incoming deposits authorized by the applicant that were not identified as recurring income. These may include peer-to-peer transfers or irregular payments.
+          </p>
         </div>
+        
+        {/* Filter + Pagination */}
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Show:</span>
+            <button
+              onClick={() => { setFilter('credits'); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                filter === 'credits'
+                  ? 'bg-black text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+              }`}
+            >
+              Incoming Deposits
+            </button>
+            <button
+              onClick={() => { setFilter('payroll'); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                filter === 'payroll'
+                  ? 'bg-black text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+              }`}
+            >
+              Recurring Income
+            </button>
+          </div>
+          {filteredAndSorted.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>Showing {start + 1}–{end} of {filteredAndSorted.length}</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-1.5">Page {currentPage} of {totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Table Header */}
         {filteredAndSorted.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>Showing {start + 1}–{end} of {filteredAndSorted.length}</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
-                className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="px-1.5">Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Next page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+            <div className="col-span-2">Date</div>
+            <div className="col-span-4">Description</div>
+            <div className="col-span-2 text-right">Credit</div>
           </div>
         )}
-      </div>
-      
-      {/* Table Header */}
-      {filteredAndSorted.length > 0 && (
-        <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-          <div className="col-span-2">Date</div>
-          <div className="col-span-4">Description</div>
-          <div className="col-span-2 text-right">Credit</div>
+        
+        {/* Table Rows or Empty State */}
+        <div className="max-h-[1000px] overflow-y-auto">
+          {paginated.length === 0 ? (
+            <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
+              {filter === 'payroll' 
+                ? 'No deposits identified as recurring income patterns.'
+                : 'No incoming deposits found.'}
+            </div>
+          ) : (
+            renderTransactionRows(paginated)
+          )}
         </div>
-      )}
-      
-      {/* Table Rows or Empty State */}
-      <div className="max-h-[1000px] overflow-y-auto">
-        {paginated.length === 0 ? (
-          <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
-            {filter === 'payroll' 
-              ? 'No deposits identified as recurring income patterns.'
-              : 'No incoming deposits found.'}
-          </div>
-        ) : (
-          paginated.map((txn, i) => (
-          <React.Fragment key={i}>
-            {/* Mobile Card View */}
-            <div 
-              className={`sm:hidden px-3 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
-            >
-              <div className="flex justify-between items-start mb-1">
-                <div className="text-emerald-600 text-xs font-medium">
-                  {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-                </div>
-                <div className="text-right">
-                  {txn.isIncome ? (
-                    <div className="text-emerald-600 font-medium">{formatCurrency(txn.amount)}</div>
-                  ) : (
-                    <div className="text-gray-900 font-medium">{formatCurrency(txn.amount)}</div>
-                  )}
-                </div>
-              </div>
-              <div className="text-gray-900 truncate cursor-help" title={txn.name}>
-                {txn.name}
-                {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
-              </div>
-            </div>
-            {/* Desktop Grid View */}
-            <div 
-              className={`hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm ${txn.pending ? 'opacity-60' : ''}`}
-            >
-              <div className="col-span-2 text-emerald-600 text-xs">
-                {new Date(txn.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
-              </div>
-              <div className="col-span-4 text-gray-900 truncate cursor-help text-xs sm:text-sm" title={txn.name}>
-                {txn.name}
-                {txn.pending && <span className="ml-2 text-xs text-amber-600">(pending)</span>}
-              </div>
-              <div className="col-span-2 text-right text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
-                {txn.isIncome && formatCurrency(txn.amount)}
-              </div>
-            </div>
-          </React.Fragment>
-          ))
-        )}
       </div>
-      
-    </div>
+
+      {/* Print-Only Sections */}
+      {/* Section 1: Incoming Deposits (All Income) */}
+      <div className="hidden print:block bg-white border border-gray-200 rounded mb-6 print-keep-together">
+        <div className="px-5 py-3 border-b border-gray-200 print-keep-header-with-content">
+          <div className="font-semibold text-gray-900">Incoming Deposits</div>
+          <p className="text-gray-500 text-sm mt-1">
+            All incoming deposits authorized by the applicant.
+          </p>
+        </div>
+        
+        {/* Table Header */}
+        {allIncomeTransactions.length > 0 && (
+          <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 print-keep-header-with-content">
+            <div className="col-span-2">Date</div>
+            <div className="col-span-4">Description</div>
+            <div className="col-span-2 text-right">Credit</div>
+          </div>
+        )}
+        
+        {/* Table Rows */}
+        <div>
+          {renderTransactionRows(allIncomeTransactions)}
+        </div>
+      </div>
+
+      {/* Section 2: Recurring Income (Payroll/Government Only) */}
+      <div className="hidden print:block bg-white border border-gray-200 rounded mb-6 print-keep-together">
+        <div className="px-5 py-3 border-b border-gray-200 print-keep-header-with-content">
+          <div className="font-semibold text-gray-900">Recurring Income</div>
+          <p className="text-gray-500 text-sm mt-1">
+            Deposits identified as recurring income patterns (payroll or government payments).
+          </p>
+        </div>
+        
+        {/* Table Header */}
+        {recurringIncomeTransactions.length > 0 && (
+          <div className="hidden sm:grid grid-cols-8 gap-2 sm:gap-4 px-3 sm:px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 print-keep-header-with-content">
+            <div className="col-span-2">Date</div>
+            <div className="col-span-4">Description</div>
+            <div className="col-span-2 text-right">Credit</div>
+          </div>
+        )}
+        
+        {/* Table Rows */}
+        <div>
+          {recurringIncomeTransactions.length === 0 ? (
+            <div className="px-3 sm:px-5 py-8 text-center text-gray-500">
+              No deposits identified as recurring income patterns.
+            </div>
+          ) : (
+            renderTransactionRows(recurringIncomeTransactions)
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -541,8 +625,8 @@ export default function ReportContent({ verification, reportData, isCalculated }
         </div>
 
         {/* Income Summary Section */}
-        <div className="bg-white border border-gray-200 rounded mb-6">
-          <div className="px-5 py-3 border-b border-gray-200">
+        <div className="bg-white border border-gray-200 rounded mb-6 print-keep-together">
+          <div className="px-5 py-3 border-b border-gray-200 print-keep-header-with-content">
             <span className="font-semibold text-gray-900">Income Summary</span>
             <span className="text-gray-500 text-sm ml-2">Provided by Plaid • {monthsDisplay} {monthsDisplay === 1 ? 'month' : 'months'} of transaction data available</span>
               </div>
@@ -577,7 +661,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
             {/* Projected & Historical Cards - Side by Side (Historical hidden when &lt; 12 months) */}
             <div className={`grid grid-cols-1 gap-4 ${monthsOfData >= 12 ? 'md:grid-cols-2 print:grid-cols-2' : ''}`}>
               {/* Projected Card */}
-              <div className="bg-white border-4 border-emerald-200 rounded p-6">
+              <div className="bg-white border-4 border-emerald-200 rounded p-6 print-keep-together">
                 <div className="mb-4">
                   <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
                   <div className="text-gray-600 mt-1">
@@ -599,7 +683,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
 
               {/* Historical Card - only when 12+ months of data */}
               {monthsOfData >= 12 && (
-                <div className="bg-white border-2 border-emerald-200 rounded p-6">
+                <div className="bg-white border-2 border-emerald-200 rounded p-6 print-keep-together">
                   <div className="mb-4">
                     <span className="text-5xl font-light text-emerald-600">{formatCurrency(historicalAnnual)}</span>
                     <div className="text-gray-600 mt-1">
@@ -626,7 +710,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
         {/* Illustrative Monthly Capacity & Primary Income Source - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4 mb-6">
           {/* Illustrative Monthly Capacity */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white border border-gray-200 rounded p-5 print-keep-together">
             <h3 className="font-semibold text-gray-900 mb-3">Illustrative Monthly Capacity</h3>
             <div>
               <div className="text-emerald-600 text-5xl font-light mb-2">
@@ -637,7 +721,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
           </div>
 
           {/* Primary Income Source */}
-          <div className="bg-white border border-gray-200 rounded p-5">
+          <div className="bg-white border border-gray-200 rounded p-5 print-keep-together">
             <h3 className="font-semibold text-gray-900 mb-3">Primary Income Source</h3>
             {primarySourceOccurrences > 0 ? (
               <>
@@ -660,14 +744,14 @@ export default function ReportContent({ verification, reportData, isCalculated }
         </div>
 
         {/* Recent Payroll Deposits */}
-        <div className="bg-white border border-gray-200 rounded mb-6">
-          <div className="px-5 py-3 border-b border-gray-200">
+        <div className="bg-white border border-gray-200 rounded mb-6 print-keep-together">
+          <div className="px-5 py-3 border-b border-gray-200 print-keep-header-with-content">
             <span className="font-semibold text-gray-900">Recent Deposits Identified as Recurring Income Patterns</span>
             <span className="text-gray-500 text-sm ml-2">(Last 90 Days)</span>  
           </div>
           
           {/* Table Header */}
-          <div className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600">
+          <div className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-200 text-xs font-semibold text-gray-600 print-keep-header-with-content">
             <div className="col-span-2">Pay Date</div>
             <div className="col-span-4">Source</div>
             <div className="col-span-2 text-right">Amount</div>
@@ -710,7 +794,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
               <React.Fragment key={i}>
                 {/* Mobile Card View */}
                 <div 
-                  className="sm:hidden px-3 py-3 border-b border-gray-100 text-sm"
+                  className="sm:hidden px-3 py-3 border-b border-gray-100 text-sm print-table-row"
                 >
                   <div className="flex justify-between items-start mb-1">
                     <div className="text-emerald-600 text-xs font-medium">
@@ -727,7 +811,7 @@ export default function ReportContent({ verification, reportData, isCalculated }
                 </div>
                 {/* Desktop Grid View */}
                 <div 
-                  className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm"
+                  className="hidden sm:grid grid-cols-10 gap-2 sm:gap-4 px-3 sm:px-5 py-3 border-b border-gray-100 text-sm print-table-row"
                 >
                   <div className="col-span-2 text-emerald-600 text-xs">
                     {new Date(deposit.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
