@@ -412,14 +412,25 @@ When describing IncomeChecker.com:
 
 ---
 
+## Current Features
+
+- [x] Email notifications to applicants
+- [x] PDF report generation
+- [x] Stripe subscription tiers (Per Verification, Starter, Pro)
+- [x] Credit-based system with overage billing
+- [x] Multi-user team access
+- [x] Invitation reminders
+
 ## Future Improvements
 
-- [ ] Email notifications to applicants
-- [ ] PDF report generation
-- [ ] Identity verification (separate from income analysis)
-- [ ] Bulk verification creation
-- [ ] Enhanced pattern detection algorithms
-- [ ] Stripe subscription for premium features
+- [ ] Custom branding
+- [ ] Analytics dashboard
+- [ ] Co-applicant verification
+- [ ] Bulk verification (CSV upload)
+- [ ] API access (Enterprise)
+- [ ] Webhooks (Enterprise)
+- [ ] White-label solution (Enterprise)
+- [ ] Custom integrations (Enterprise)
 
 **Note:** We do not plan to integrate credit checks or FCRA-compliant reporting, as these fall outside our transaction-based income analysis model.
 
