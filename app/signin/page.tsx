@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeCompanyName } from '@/utils/sanitize';
+import { getURL } from '@/utils/helpers';
 import Link from 'next/link';
 import { FileCheck } from 'lucide-react';
 
@@ -211,7 +212,7 @@ export default function SignInPage() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/`,
+          redirectTo: `${getURL()}/auth/callback?next=/`,
         },
       });
 
