@@ -90,7 +90,8 @@ export function GoogleOneTap() {
       }
 
       const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const useFedCM = !isLocalhost;
+      // FedCM is Chrome 117+ only; Safari doesn't support it. Use legacy flow when unsupported so One Tap works on Safari.
+      const useFedCM = !isLocalhost && typeof window !== 'undefined' && 'IdentityCredential' in window;
 
       console.log('[Google One Tap] Config:', {
         clientId: clientId.substring(0, 20) + '...',
