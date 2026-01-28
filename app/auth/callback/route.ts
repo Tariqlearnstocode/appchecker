@@ -1,11 +1,20 @@
 import { createClient } from '@/utils/supabase/server';
+import { getURL } from '@/utils/helpers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
+function redirectBase(request: NextRequest): string {
+  const host = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (host && proto) return `${proto}://${host}`.replace(/\/+$/, '');
+  return getURL();
+}
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next') || '/';
+  const baseUrl = redirectBase(request);
 
   if (code) {
     const supabase = await createClient();
@@ -23,7 +32,7 @@ export async function GET(request: NextRequest) {
       // If no Stripe customer exists, create one (for new OAuth sign-ups)
       if (!profile?.stripe_customer_id && data.user.email) {
         try {
-          await fetch(`${requestUrl.origin}/api/stripe/create-customer`, {
+          await fetch(`${baseUrl}/api/stripe/create-customer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -39,6 +48,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Redirect to the home page or the specified next URL
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  // Redirect to the home page or the specified next URL (forwarded headers or getURL; avoids localhost behind proxy)
+  return NextResponse.redirect(new URL(next, baseUrl));
 }
