@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         .from('users')
         .select('stripe_customer_id')
         .eq('id', data.user.id)
-        .single();
+        .single() as { data: { stripe_customer_id?: string | null } | null };
 
       // If no Stripe customer exists, create one (for new OAuth sign-ups)
       if (!profile?.stripe_customer_id && data.user.email) {
