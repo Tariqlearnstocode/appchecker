@@ -506,59 +506,58 @@ export default function ReportContent({ verification, reportData, isCalculated }
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-  const payrollTransactions12Mo = transactions.filter(t => t.isIncome && isPayrollTxn(t));
-  const historicalAnnual = payrollTransactions12Mo.reduce((sum, t) => sum + t.amount, 0);
-  const historicalMonthly = historicalAnnual / 12;
+  // Months of data and date range (needed for projection window)
+  const transactionDates = transactions
+    .map(t => new Date(t.date))
+    .filter(d => !isNaN(d.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+  const earliestTransactionDate = transactionDates.length > 0 ? transactionDates[0] : null;
+  const latestTransactionDate = transactionDates.length > 0 ? transactionDates[transactionDates.length - 1] : null;
+  const monthsOfData = earliestTransactionDate && latestTransactionDate
+    ? Math.max(1, Math.ceil((latestTransactionDate.getTime() - earliestTransactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30)))
+    : 0;
+  const monthsDisplay = Math.min(monthsOfData, 12);
 
-  const payrollDeposits3Mo = transactions.filter(t =>
-    t.isIncome && isPayrollTxn(t) && new Date(t.date) >= threeMonthsAgo
+  // Projection window: 1 or 2 months → all data; 3+ months → last 3 months only
+  const projectionMonths = Math.min(monthsOfData, 3);
+  const inProjectionWindow = (t: { date: string }) => {
+    const d = new Date(t.date);
+    if (monthsOfData >= 3) return d >= threeMonthsAgo;
+    return earliestTransactionDate != null && latestTransactionDate != null && d >= earliestTransactionDate && d <= latestTransactionDate;
+  };
+
+  const payrollInWindow = transactions.filter(t =>
+    t.isIncome && isPayrollTxn(t) && inProjectionWindow(t)
   );
-  const projectedTotal3Mo = payrollDeposits3Mo.reduce((sum, t) => sum + t.amount, 0);
-  const projectedMonthly = projectedTotal3Mo / 3;
+  const projectedTotalInWindow = payrollInWindow.reduce((sum, t) => sum + t.amount, 0);
+  const projectedMonthly = projectionMonths > 0 ? projectedTotalInWindow / projectionMonths : 0;
   const projectedAnnual = projectedMonthly * 12;
-  
-  // Payroll deposit counts for display
-  const payrollDepositCount = payrollDeposits3Mo.length;
-  const payrollTotalAmount = projectedTotal3Mo;
-  
-  // Get primary source name (most common payroll source)
+
+  const payrollDepositCount = payrollInWindow.length;
+  const payrollTotalAmount = projectedTotalInWindow;
+
   const sourceNameCounts: Record<string, { count: number; total: number }> = {};
-  payrollDeposits3Mo.forEach(t => {
+  payrollInWindow.forEach(t => {
     const key = t.name.toLowerCase().slice(0, 30);
     if (!sourceNameCounts[key]) sourceNameCounts[key] = { count: 0, total: 0 };
     sourceNameCounts[key].count++;
     sourceNameCounts[key].total += t.amount;
   });
-  
+
   const topSourceEntry = Object.entries(sourceNameCounts)
     .sort((a, b) => b[1].total - a[1].total)[0];
-  
-  const primaryIncomeSource = topSourceEntry 
-    ? payrollDeposits3Mo.find(t => t.name.toLowerCase().slice(0, 30) === topSourceEntry[0])?.name || 'Payroll'
+
+  const primaryIncomeSource = topSourceEntry
+    ? payrollInWindow.find(t => t.name.toLowerCase().slice(0, 30) === topSourceEntry[0])?.name || 'Payroll'
     : (income.verified?.sources?.[0]?.likelySource || 'Not Detected');
-  
-  // Calculate totals for PRIMARY source only (not all payroll deposits)
+
   const primarySourceKey = topSourceEntry?.[0];
   const primarySourceDeposits = primarySourceKey
-    ? payrollDeposits3Mo.filter(t => t.name.toLowerCase().slice(0, 30) === primarySourceKey)
+    ? payrollInWindow.filter(t => t.name.toLowerCase().slice(0, 30) === primarySourceKey)
     : [];
-  
+
   const primarySourceTotal90Days = primarySourceDeposits.reduce((sum, t) => sum + t.amount, 0);
   const primarySourceOccurrences = primarySourceDeposits.length;
-
-  // Calculate months of data and earliest transaction date
-  const transactionDates = transactions
-    .map(t => new Date(t.date))
-    .filter(d => !isNaN(d.getTime()))
-    .sort((a, b) => a.getTime() - b.getTime());
-  
-  const earliestTransactionDate = transactionDates.length > 0 ? transactionDates[0] : null;
-  const latestTransactionDate = transactionDates.length > 0 ? transactionDates[transactionDates.length - 1] : null;
-  
-  const monthsOfData = earliestTransactionDate && latestTransactionDate
-    ? Math.max(1, Math.ceil((latestTransactionDate.getTime() - earliestTransactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30)))
-    : 0;
-  const monthsDisplay = Math.min(monthsOfData, 12);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] print:bg-white">
@@ -643,66 +642,29 @@ export default function ReportContent({ verification, reportData, isCalculated }
               </span>
             </div>
             
-            <p className="text-sm text-gray-600 mb-6">
-              {monthsOfData >= 12 && (
-                <>
-                  Historical income values are estimated using the individual's income from the past twelve (12) complete calendar months.<br/>
-                </>
-              )}
-              Projected income values are estimated using the individual's income from the past three (3) complete calendar months.
-            </p>
-
-            {monthsOfData < 12 && (
-              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-6">
-                Only {monthsOfData} {monthsOfData === 1 ? 'month' : 'months'} of transaction data {monthsOfData === 1 ? 'was' : 'were'} available from the bank. A 12‑month historical estimate is not shown.
-              </p>
-            )}
-
-            {/* Projected & Historical Cards - Side by Side (Historical hidden when &lt; 12 months) */}
-            <div className={`grid grid-cols-1 gap-4 ${monthsOfData >= 12 ? 'md:grid-cols-2 print:grid-cols-2' : ''}`}>
-              {/* Projected Card */}
+            {/* Projected Monthly | Projected Annual - always side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4">
+              {/* Projected Monthly */}
               <div className="bg-white border-4 border-emerald-200 rounded p-6 print-keep-together">
                 <div className="mb-4">
-                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
+                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedMonthly)}</span>
                   <div className="text-gray-600 mt-1">
-                    <span className="text-sm font-medium">Projected Data</span><br/>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Annual</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(projectedAnnual)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Monthly</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(projectedMonthly)}</span>
+                    <span className="text-sm font-medium">Projected Monthly</span>
+                    <span className="text-gray-500 text-xs block mt-0.5">{projectionMonths === 1 ? 'Based on last month' : `Based on last ${projectionMonths} months`}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Historical Card - only when 12+ months of data */}
-              {monthsOfData >= 12 && (
-                <div className="bg-white border-2 border-emerald-200 rounded p-6 print-keep-together">
-                  <div className="mb-4">
-                    <span className="text-5xl font-light text-emerald-600">{formatCurrency(historicalAnnual)}</span>
-                    <div className="text-gray-600 mt-1">
-                      <span className="text-sm font-medium">Historical Data</span><br/>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Estimated Annual</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(historicalAnnual)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Estimated Monthly</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(historicalMonthly)}</span>
-                    </div>
+              {/* Projected Annual */}
+              <div className="bg-white border-2 border-emerald-200 rounded p-6 print-keep-together">
+                <div className="mb-4">
+                  <span className="text-5xl font-light text-emerald-600">{formatCurrency(projectedAnnual)}</span>
+                  <div className="text-gray-600 mt-1">
+                    <span className="text-sm font-medium">Projected Annual</span>
+                    <span className="text-gray-500 text-xs block mt-0.5">{projectionMonths === 1 ? 'Based on last month' : `Based on last ${projectionMonths} months`}</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
