@@ -129,29 +129,28 @@ function sleep(ms: number) {
 }
 
 /**
- * PRIMARY: Fetch transactions using transactions/get with date range
- * This is the correct endpoint for fetching initial historical data.
- * /transactions/sync is for incremental updates after initial fetch.
+ * Fetch a single 3-month chunk of transactions
+ * Returns transactions array for the chunk
  */
-async function fetchTransactionsWithGet(
+async function fetchChunk(
   accessToken: string,
   startDate: string,
   endDate: string,
-  allTransactions: any[],
-  maxRetries = 3
-): Promise<boolean> {
-  console.log(`[GET] Using transactions/get with date range: ${startDate} to ${endDate}`);
-  
+  chunkNumber: number,
+  maxRetries = 5
+): Promise<any[]> {
+  const chunkTransactions: any[] = [];
   const count = 500;
   let offset = 0;
 
+  console.log(`[Chunk ${chunkNumber}/4] Fetching: ${startDate} to ${endDate}`);
+
   while (true) {
-    let transactionsResponse;
-    let lastError;
-    
+    let response;
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        transactionsResponse = await plaidClient.transactionsGet({
+        response = await plaidClient.transactionsGet({
           access_token: accessToken,
           start_date: startDate,
           end_date: endDate,
@@ -164,404 +163,120 @@ async function fetchTransactionsWithGet(
         });
         break;
       } catch (error: any) {
-        lastError = error;
         const errorCode = error?.response?.data?.error_code;
         if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-          await sleep(attempt * 10000);
+          // Wait longer for older chunks (historical data takes time)
+          const waitTime = attempt * 10000 + (chunkNumber - 1) * 5000;
+          console.log(`[Chunk ${chunkNumber}/4] Not ready, waiting ${waitTime / 1000}s... (attempt ${attempt}/${maxRetries})`);
+          await sleep(waitTime);
+        } else if (attempt === maxRetries) {
+          console.warn(`[Chunk ${chunkNumber}/4] Failed after ${maxRetries} attempts`);
+          return chunkTransactions; // Return what we have
         } else {
           throw error;
         }
       }
     }
 
-    if (!transactionsResponse) throw lastError || new Error('Failed to fetch transactions');
-    
-    const txns = transactionsResponse.data.transactions ?? [];
-    const total = transactionsResponse.data.total_transactions ?? 0;
-    
-    allTransactions.push(...txns);
-    console.log(`[GET] Fetched page: ${txns.length} transactions (offset ${offset}, total: ${total}, accumulated: ${allTransactions.length})`);
+    if (!response) break;
+
+    const txns = response.data.transactions ?? [];
+    const total = response.data.total_transactions ?? 0;
+
+    chunkTransactions.push(...txns);
 
     if (txns.length === 0 || offset + txns.length >= total || txns.length < count) break;
     offset += txns.length;
   }
 
-  return allTransactions.length > 0;
+  console.log(`[Chunk ${chunkNumber}/4] Fetched ${chunkTransactions.length} transactions`);
+  return chunkTransactions;
 }
 
 /**
- * Fetch transactions in 3-month chunks as fallback when 12-month request fails
+ * Fetch RAW Plaid data using 3-month chunks (newest first)
+ *
+ * Strategy: Fetch 4 chunks of 3 months each (12 months total)
+ * - Chunk 1: Most recent 3 months (available after INITIAL_UPDATE)
+ * - Chunks 2-4: Older data (becomes available as HISTORICAL_UPDATE progresses)
  */
-async function fetchTransactionsInChunks(
-  accessToken: string,
-  startDate: string,
-  endDate: string,
-  allTransactions: any[],
-  maxRetries = 3
-): Promise<boolean> {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const chunkMonths = 3;
-  let totalFetched = 0;
-  let anyChunkSucceeded = false;
+async function fetchRawPlaidData(accessToken: string) {
+  const now = new Date();
+  const endDate = now.toISOString().split('T')[0];
 
-  // Split into 4 chunks of 3 months each (12 months total)
+  // Calculate 12 months ago
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const startDate = twelveMonthsAgo.toISOString().split('T')[0];
+
+  console.log(`Fetching 12 months of transactions in 3-month chunks: ${startDate} to ${endDate}`);
+
+  // Fetch accounts (available immediately)
+  const accountsResponse = await plaidClient.accountsGet({
+    access_token: accessToken,
+  });
+  console.log(`Fetched ${accountsResponse.data.accounts.length} accounts`);
+
+  // Wait briefly for initial data to be ready
+  await sleep(5000);
+
+  // Fetch 4 chunks of 3 months each, newest first
+  const allTransactions: any[] = [];
+
   for (let i = 0; i < 4; i++) {
-    const chunkStart = new Date(start);
-    chunkStart.setMonth(chunkStart.getMonth() + (i * chunkMonths));
-    
-    const chunkEnd = new Date(chunkStart);
-    chunkEnd.setMonth(chunkEnd.getMonth() + chunkMonths);
-    // Make sure we don't go past the original end date
-    if (chunkEnd > end) {
-      chunkEnd.setTime(end.getTime());
+    // Calculate chunk dates (newest first: 0-3mo, 3-6mo, 6-9mo, 9-12mo)
+    const chunkEnd = new Date(now);
+    chunkEnd.setMonth(chunkEnd.getMonth() - (i * 3));
+
+    const chunkStart = new Date(chunkEnd);
+    chunkStart.setMonth(chunkStart.getMonth() - 3);
+
+    // Don't go before our start date
+    if (chunkStart < twelveMonthsAgo) {
+      chunkStart.setTime(twelveMonthsAgo.getTime());
     }
 
     const chunkStartStr = chunkStart.toISOString().split('T')[0];
     const chunkEndStr = chunkEnd.toISOString().split('T')[0];
 
-    try {
-      console.log(`Fetching 3-month chunk ${i + 1}/4: ${chunkStartStr} to ${chunkEndStr}`);
-      const chunkCount = 500;
-      let chunkOffset = 0;
-      const chunkTransactions: any[] = [];
-
-      chunkLoop: while (true) {
-        let chunkResponse;
-        let lastChunkError;
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            chunkResponse = await plaidClient.transactionsGet({
-              access_token: accessToken,
-              start_date: chunkStartStr,
-              end_date: chunkEndStr,
-              options: {
-                count: chunkCount,
-                offset: chunkOffset,
-                include_original_description: true,
-                personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
-              },
-            });
-            break;
-          } catch (error: any) {
-            lastChunkError = error;
-            const errorCode = error?.response?.data?.error_code;
-            if (errorCode === 'PRODUCT_NOT_READY' && attempt < maxRetries) {
-              const waitTime = attempt * 10000; // Wait 10s, 20s, 30s for historical data
-              console.log(`Chunk ${i + 1} not ready, retrying in ${waitTime / 1000} seconds... (attempt ${attempt}/${maxRetries})`);
-              await sleep(waitTime);
-            } else {
-              throw error;
-            }
-          }
-        }
-
-        if (!chunkResponse) throw lastChunkError || new Error('Chunk fetch failed');
-        const txns = chunkResponse.data.transactions ?? [];
-        const total = chunkResponse.data.total_transactions ?? 0;
-
-        chunkTransactions.push(...txns);
-        // Break if: no more transactions, reached total, or got fewer than requested (last page)
-        if (txns.length === 0 || chunkOffset + txns.length >= total || txns.length < chunkCount) break chunkLoop;
-        chunkOffset += txns.length;
-      }
-
-      if (chunkTransactions.length > 0) {
-        totalFetched += chunkTransactions.length;
-        allTransactions.push(...chunkTransactions);
-        anyChunkSucceeded = true;
-        console.log(`Successfully fetched chunk ${i + 1}/4: ${chunkTransactions.length} transactions (${chunkStartStr} to ${chunkEndStr})`);
-      } else {
-        console.error(`Failed to fetch chunk ${i + 1}/4: ${chunkStartStr} to ${chunkEndStr}`);
-      }
-    } catch (err) {
-      console.error(`Connection error fetching chunk ${i + 1}/4:`, {
-        error: err,
-        message: err instanceof Error ? err.message : String(err),
-        dateRange: { start: chunkStartStr, end: chunkEndStr },
-      });
-      // Continue with next chunk even if one fails
+    // Add delay before older chunks to let historical data extraction progress
+    if (i > 0) {
+      console.log(`Waiting 10s before fetching older chunk...`);
+      await sleep(10000);
     }
+
+    const chunkTransactions = await fetchChunk(
+      accessToken,
+      chunkStartStr,
+      chunkEndStr,
+      i + 1
+    );
+
+    allTransactions.push(...chunkTransactions);
   }
 
-  if (anyChunkSucceeded) {
-    console.log(`Successfully fetched ${totalFetched} transactions using 3-month chunk fallback`);
-  }
+  // Sort all transactions by date (oldest first)
+  allTransactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  return anyChunkSucceeded;
-}
-
-/**
- * Fetch RAW Plaid data - no calculations, just the API responses
- * Requests 12 months of transactions, but actual availability depends on what the bank provides
- * Many banks only provide 90 days regardless of what we request
- * 
- * Strategy:
- * 1. Poll Item status to wait for historical extraction to complete (up to 2 minutes)
- * 2. PRIMARY: Use /transactions/get with date range for initial historical data
- * 3. FALLBACK: If get fails, try 3-month chunks
- * 4. OPTIONAL: Use /transactions/sync to catch any remaining transactions
- * 
- * Note: /transactions/get is for initial historical data, /transactions/sync is for incremental updates
- */
-async function fetchRawPlaidData(accessToken: string, maxRetries = 3) {
-  const now = new Date();
-  // Calculate 12 months ago (365 days to match Link token days_requested)
-  // Note: Actual data returned depends on bank - many only provide 90 days
-  const twelveMonthsAgo = new Date(now);
-  twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365); // Use days instead of months to avoid month boundary issues
-  const startDate = twelveMonthsAgo.toISOString().split('T')[0];
-  const endDate = now.toISOString().split('T')[0];
-  
-  console.log(`Calculated date range for 12 months: ${startDate} to ${endDate}`);
-  console.log(`Note: Actual data returned depends on what the bank provides (many banks only give 90 days)`);
-
-  // Fetch accounts and balances (raw response) - usually available immediately
-  const accountsResponse = await plaidClient.accountsGet({
-    access_token: accessToken,
-  });
-  
-  // DEBUG: Check Item status to see what's available and when historical data will be ready
-  let itemStatus: any = null;
-  try {
-    const itemResponse = await plaidClient.itemGet({
-      access_token: accessToken,
-    });
-    const itemData = itemResponse.data.item;
-    const itemWithStatus = itemResponse.data as any;
-    itemStatus = itemWithStatus.status;
-    
-    console.log('[DEBUG] Item info:', {
-      item_id: itemData.item_id,
-      institution_id: itemData.institution_id,
-      available_products: itemData.available_products,
-      billed_products: itemData.billed_products,
-    });
-    
-    if (itemStatus?.transactions) {
-      console.log('[DEBUG] Transactions status:', {
-        last_successful_update: itemStatus.transactions.last_successful_update,
-        last_failed_update: itemStatus.transactions.last_failed_update,
-      });
-      
-      // CRITICAL: Check if historical data extraction failed
-      if (itemStatus.transactions.last_failed_update && !itemStatus.transactions.last_successful_update) {
-        console.error('[DEBUG] ❌ CRITICAL: Historical data extraction FAILED!');
-        console.error('[DEBUG] ❌ last_failed_update:', itemStatus.transactions.last_failed_update);
-        console.error('[DEBUG] ❌ This explains why only ~90 days are available instead of 12 months.');
-        console.error('[DEBUG] ❌ Plaid failed to extract the full historical data from the bank.');
-        console.error('[DEBUG] ❌ Possible causes: bank connectivity issues, bank API limitations, or Plaid service issue.');
-      } else if (!itemStatus.transactions.last_successful_update) {
-        console.warn('[DEBUG] ⚠️  WARNING: No successful transaction update yet. Historical data may be limited.');
-      }
-    }
-    
-    // Check if we can see what days_requested was actually used (may not be in response, but log what we expect)
-    console.log('[DEBUG] Expected days_requested from Link token: 365 (12 months)');
-    console.log('[DEBUG] Note: If only getting ~90 days, check last_failed_update above - extraction may have failed');
-  } catch (itemError) {
-    console.warn('[DEBUG] Could not fetch Item status:', itemError);
-  }
-
-  let allTransactions: any[] = [];
-  let transactionsFetched = false;
-  
-  // CRITICAL: Poll Item status to wait for historical data extraction to complete
-  // Plaid needs time to extract historical transactions after linking.
-  // Historical data extraction can take time - some banks provide it immediately,
-  // others may take minutes. We poll for up to 2 minutes (12 polls × 10 seconds).
-  // Note: Some banks only provide 90 days of history regardless of what we request.
-  console.log(`[DEBUG] ========== WAITING FOR HISTORICAL DATA EXTRACTION ==========`);
-  console.log(`[DEBUG] Polling Item status to check if historical extraction is complete...`);
-  console.log(`[DEBUG] Requested: 12 months (365 days) via days_requested in Link token`);
-  console.log(`[DEBUG] ============================================================`);
-  
-  let historicalReady = false;
-  let pollAttempts = 0;
-  const maxPollAttempts = 12; // Poll for up to 2 minutes (12 × 10s)
-  const pollInterval = 10000; // 10 seconds between polls
-  
-  while (!historicalReady && pollAttempts < maxPollAttempts) {
-    try {
-      const itemResponse = await plaidClient.itemGet({ access_token: accessToken });
-      const itemWithStatus = itemResponse.data as any;
-      const txStatus = itemWithStatus.status?.transactions;
-      
-      if (txStatus?.last_successful_update) {
-        historicalReady = true;
-        console.log(`[DEBUG] ✅ Historical data extraction complete. last_successful_update: ${txStatus.last_successful_update}`);
-      } else if (txStatus?.last_failed_update && !txStatus?.last_successful_update) {
-        console.error(`[DEBUG] ❌ Historical extraction failed. Will try anyway but may get limited data.`);
-        console.error(`[DEBUG] ❌ last_failed_update: ${txStatus.last_failed_update}`);
-        break; // Don't wait forever if it failed
-      } else {
-        pollAttempts++;
-        if (pollAttempts < maxPollAttempts) {
-          console.log(`[DEBUG] ⏳ Historical extraction in progress (attempt ${pollAttempts}/${maxPollAttempts}). Waiting ${pollInterval/1000}s...`);
-          await sleep(pollInterval);
-        }
-      }
-    } catch (err) {
-      console.warn(`[DEBUG] Could not check Item status, proceeding anyway:`, err);
-      break;
-    }
-  }
-  
-  if (!historicalReady && pollAttempts >= maxPollAttempts) {
-    console.warn(`[DEBUG] ⚠️  Reached max poll attempts (${maxPollAttempts}). Proceeding with fetch - historical data may still be processing.`);
-  }
-
-  // PRIMARY: Use /transactions/get with explicit date range for initial historical data
-  // /transactions/get is the correct endpoint for fetching initial historical data with a date range.
-  // /transactions/sync is designed for incremental updates AFTER you've already fetched initial data.
-  console.log(`[DEBUG] ========== FETCHING INITIAL HISTORICAL DATA ==========`);
-  console.log(`[DEBUG] Using /transactions/get with date range: ${startDate} to ${endDate}`);
-  console.log(`[DEBUG] This is the PRIMARY method for initial historical data`);
-  console.log(`[DEBUG] ======================================================`);
-  
-  try {
-    transactionsFetched = await fetchTransactionsWithGet(accessToken, startDate, endDate, allTransactions, maxRetries);
-    console.log(`[DEBUG] ✅ Initial fetch complete: ${allTransactions.length} transactions`);
-  } catch (error: any) {
-    const errorData = error?.response?.data || {};
-    console.error(`[DEBUG] ❌ /transactions/get failed:`, {
-      status: error?.response?.status,
-      error: errorData,
-    });
-    
-    // FALLBACK: Try 3-month chunks if full 12-month request fails
-    console.log(`[DEBUG] Trying 3-month chunks as fallback...`);
-    try {
-      transactionsFetched = await fetchTransactionsInChunks(accessToken, startDate, endDate, allTransactions, maxRetries);
-    } catch (chunkError: any) {
-      console.error(`[DEBUG] ❌ Chunking also failed:`, chunkError?.response?.data || chunkError);
-    }
-  }
-  
-  // OPTIONAL: Use /transactions/sync to catch any remaining/new transactions
-  // This is called AFTER initial fetch to ensure we get everything, including any transactions
-  // that may have been added during the fetch process.
-  if (transactionsFetched && allTransactions.length > 0) {
-    try {
-      console.log(`[DEBUG] Using /transactions/sync to catch any remaining transactions...`);
-      let cursor: string | undefined = undefined;
-      let syncPageCount = 0;
-      const syncTransactions: any[] = [];
-      const existingIds = new Set(allTransactions.map((t: any) => t.transaction_id));
-      
-      // Only sync a few pages to catch any remaining data
-      while (syncPageCount < 3) {
-        const syncResponse = await plaidClient.transactionsSync({
-          access_token: accessToken,
-          cursor: cursor,
-          count: 500,
-          options: {
-            include_original_description: true,
-            personal_finance_category_version: PersonalFinanceCategoryVersion.V2,
-          },
-        });
-        
-        const added = syncResponse.data.added ?? [];
-        if (added.length === 0 && !syncResponse.data.has_more) break;
-        
-        // Only add transactions we don't already have (deduplication)
-        const newTxns = added.filter((t: any) => !existingIds.has(t.transaction_id));
-        syncTransactions.push(...newTxns);
-        
-        // Update existing IDs set for next iteration
-        newTxns.forEach((t: any) => existingIds.add(t.transaction_id));
-        
-        cursor = syncResponse.data.next_cursor;
-        syncPageCount++;
-        
-        if (!syncResponse.data.has_more) break;
-      }
-      
-      if (syncTransactions.length > 0) {
-        console.log(`[DEBUG] ✅ Sync found ${syncTransactions.length} additional transactions`);
-        allTransactions.push(...syncTransactions);
-      } else {
-        console.log(`[DEBUG] ✅ Sync complete - no additional transactions found`);
-      }
-    } catch (syncError: any) {
-      console.warn(`[DEBUG] ⚠️  Sync failed (non-critical):`, syncError?.response?.data || syncError);
-      // Don't fail the whole operation if sync fails - we already have the initial data
-    }
-  }
-  
-  if (!transactionsFetched) {
-    console.warn(`Failed to fetch any transactions after trying both 12-month and 3-month chunk strategies`);
-  }
-  
   console.log(`Total transactions fetched: ${allTransactions.length}`);
-  
-  // Log actual date range of all fetched transactions
+
+  // Log actual date range
   if (allTransactions.length > 0) {
-    const sortedByDate = [...allTransactions].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    const actualOldest = sortedByDate[0].date;
-    const actualNewest = sortedByDate[sortedByDate.length - 1].date;
-    const daysDiff = Math.round(
-      (new Date(actualNewest).getTime() - new Date(actualOldest).getTime()) / 
-      (1000 * 60 * 60 * 24)
-    );
-    const monthsDiff = Math.round(daysDiff / 30);
-    const requestedDays = Math.round(
-      (new Date(endDate).getTime() - new Date(startDate).getTime()) / 
-      (1000 * 60 * 60 * 24)
-    );
-    
-    console.log(`[DEBUG] ========== TRANSACTION FETCH SUMMARY ==========`);
-    console.log(`[DEBUG] Requested: ${startDate} to ${endDate} (${requestedDays} days / ~12 months)`);
-    console.log(`[DEBUG] Actual: ${actualOldest} to ${actualNewest} (${daysDiff} days / ~${monthsDiff} months)`);
-    console.log(`[DEBUG] Total transactions fetched: ${allTransactions.length}`);
-    console.log(`[DEBUG] ================================================`);
-    
-    if (daysDiff < requestedDays * 0.8) { // If we got less than 80% of requested
-      console.warn(`⚠️  WARNING: Only fetched ~${monthsDiff} months (${daysDiff} days) of data, requested ${requestedDays} days.`);
-      console.warn(`⚠️  This is likely a BANK LIMITATION - many banks only provide 90 days of transaction history.`);
-      console.warn(`⚠️  Plaid can only return what the bank provides, regardless of days_requested in Link token.`);
-      console.warn(`⚠️  Check Plaid dashboard Item status to see what the bank actually provides.`);
-    }
-  } else {
-    console.error(`[DEBUG] ========== NO TRANSACTIONS FETCHED ==========`);
-    console.error(`[DEBUG] Requested: ${startDate} to ${endDate}`);
-    console.error(`[DEBUG] This is a critical issue - no transactions were returned.`);
-    console.error(`[DEBUG] ==============================================`);
-  }
-  
-  // Final check: Log a transaction that should have full original_description
-  // Look for income transactions (negative amount in Plaid) that might have payroll keywords
-  const incomeTxns = allTransactions.filter((t: any) => t.amount < 0).slice(0, 3);
-  if (incomeTxns.length > 0) {
-    console.log('Sample income transactions (checking original_description):');
-    incomeTxns.forEach((txn: any, idx: number) => {
-      console.log(`  Transaction ${idx + 1}:`, {
-        transaction_id: txn.transaction_id,
-        date: txn.date,
-        amount: txn.amount,
-        original_description: txn.original_description,
-        original_description_length: txn.original_description?.length,
-        name: txn.name,
-        name_length: txn.name?.length,
-        are_equal: txn.original_description === txn.name,
-      });
-    });
+    const oldest = allTransactions[0].date;
+    const newest = allTransactions[allTransactions.length - 1].date;
+    console.log(`Actual date range: ${oldest} to ${newest}`);
   }
 
-  // Store raw responses with provider field - NO PROCESSING, store exactly as Plaid returns
   return {
     accounts: accountsResponse.data.accounts,
-    item: accountsResponse.data.item,
-    transactions: allTransactions, // Raw Plaid transactions, unmodified
+    item: (await plaidClient.itemGet({ access_token: accessToken })).data.item,
+    transactions: allTransactions,
     total_transactions: allTransactions.length,
     fetched_at: new Date().toISOString(),
     date_range: {
       start: startDate,
       end: endDate,
     },
-    provider: 'plaid', // CRITICAL: Must be set for normalization layer
+    provider: 'plaid',
   };
 }
