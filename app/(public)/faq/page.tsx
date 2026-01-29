@@ -78,7 +78,7 @@ export default function FAQPage() {
       questions: [
         {
           q: "What information is included in the income report?",
-          a: "Our income reports include: monthly income estimates calculated from deposits, recurring payroll deposit patterns, deposit sources and transaction descriptions, current bank balances, transaction history (up to 12 months depending on your plan), account types, and transaction categorization. Reports also include illustrative monthly capacity calculations for 3x and 10x requirements."
+          a: "Our income reports include: monthly income estimates calculated from deposits, recurring payroll deposit patterns, deposit sources and transaction descriptions, current bank balances, transaction history (up to 12 months depending on your bank support), account types, and transaction categorization. Reports also include illustrative monthly capacity calculations for 3x and 10x requirements."
         },
         {
           q: "How accurate are the income calculations?",

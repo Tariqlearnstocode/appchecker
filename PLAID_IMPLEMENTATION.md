@@ -52,12 +52,16 @@ The implementation used the following Plaid API endpoints via the Plaid Node SDK
    - Fetches account information and balances
    - Called immediately after token exchange
 
-4. **`transactionsGet`** (`/transactions/get`)
-   - Fetches 3 months of transaction history
-   - Includes retry logic for `PRODUCT_NOT_READY` errors
-   - Options: `count: 500`
+4. **`transactionsSync`** (`/transactions/sync`)
+   - Primary method for fetching up to 12 months of transactions (cursor-based pagination)
+   - Polling when `has_more === false` (up to 10 times) to wait for historical data
+   - Fallback: 4×3‑month chunks via `transactionsGet` if sync fails
 
-5. **`itemRemove`** (`/item/remove`)
+5. **`transactionsGet`** (`/transactions/get`)
+   - Used in chunk fallback for 3‑month date ranges
+   - Includes retry logic for `PRODUCT_NOT_READY` errors
+
+6. **`itemRemove`** (`/item/remove`)
    - Disconnects Item immediately after fetching data
    - **Critical**: Prevents recurring monthly charges per connected Item
 
@@ -72,14 +76,14 @@ The implementation used the following Plaid API endpoints via the Plaid Node SDK
 5. Backend:
    - Exchanges public token for access token
    - Fetches accounts and balances
-   - Fetches transactions (with retry logic)
-   - **Immediately disconnects Item** to avoid monthly charges
-   - Stores raw data in `raw_plaid_data` column
-   - Clears `plaid_access_token` after disconnection
+   - Fetches transactions via `/transactions/sync` (with polling and fallback to 4×3‑month chunks)
+   - Stores raw data in `raw_plaid_data` column and sets status to completed
+   - **Immediately disconnects Item** to avoid monthly per-Item charges
+   - Clears `plaid_access_token` and `plaid_item_id` after disconnection
 
 ### Key Features
 
-- **Cost Optimization**: Item disconnected immediately after data fetch to avoid monthly per-Item charges
+- **Cost Optimization**: The Item is disconnected immediately after the initial transaction fetch and data save, so there are no ongoing per-Item monthly charges.
 - **Retry Logic**: Handles `PRODUCT_NOT_READY` errors with exponential backoff
 - **Raw Data Storage**: Stores unprocessed Plaid API responses, calculations done at display time
 - **Transactions Only**: Uses `Products.Transactions` (not Auth) to reduce costs
@@ -159,16 +163,12 @@ The frontend needs to:
 - Update the verification page to use Plaid Link component
 - Update API calls to use Plaid endpoints (`/api/plaid/create-link-token` and `/api/plaid/exchange-token`)
 
-### Step 5: Update Data Fetching
+### Step 5: Data Fetching
 
-The Plaid implementation now matches Teller's approach:
-- **Plaid**: Fetches 12 months of transactions (same as Teller)
-  - First tries 12 months in one call
-  - Falls back to 4 chunks of 3 months each if needed
-  - Handles pagination using Plaid's `cursor` field
-- **Teller**: Fetches 12 months of transactions
-
-Both implementations use the same chunking strategy for consistency.
+The Plaid implementation fetches up to 12 months of transactions:
+- **Primary**: `transactions/sync` with cursor-based pagination; when `has_more === false`, polls up to 10 times (10s wait) for historical data
+- **Fallback**: If sync fails, uses 4×3‑month chunks via `transactionsGet`
+- **Disconnect**: Item is disconnected immediately after saving data (no cron or delayed disconnect)
 
 ### Step 6: Update Webhook Handler (if needed)
 
@@ -227,7 +227,8 @@ app/api/plaid/exchange-token/route.ts
 - ✅ Plaid API routes restored (`app/api/plaid/create-link-token` and `app/api/plaid/exchange-token`)
 - ✅ Frontend updated to use Plaid Link (`app/(public)/verify/[token]/page.tsx`)
 - ✅ Plaid SDK and React component installed
-- ✅ 12-month transaction fetching implemented (matching Teller's approach)
+- ✅ 12-month transaction fetching via `transactions/sync` + polling, fallback to 4×3‑month chunks
+- ✅ Item disconnected immediately after data save (no ongoing per-Item monthly charges)
 - ✅ Provider field set correctly in stored data
 
 ## Quick Restore Command

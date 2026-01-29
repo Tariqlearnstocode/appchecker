@@ -837,7 +837,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
                       </div>
                       <div>
                         <span className="text-gray-900 font-semibold block leading-tight">Clear report in minutes</span>
-                        <span className="text-sm text-gray-600 leading-relaxed">12-month income history, deposit patterns, and payroll frequency.</span>
+                        <span className="text-sm text-gray-600 leading-relaxed">Up to 12-month income history, deposit patterns, and payroll frequency.</span>
                         <Link 
                           href="/report/example" 
                           className="text-xs text-emerald-600 hover:text-emerald-700 mt-1 inline-block"

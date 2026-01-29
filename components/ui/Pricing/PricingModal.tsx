@@ -366,10 +366,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                   </tr>
                   <tr className="bg-white">
                     <td className="px-6 py-3 text-sm text-gray-700">Transaction history</td>
-                    <td className="px-6 py-3 text-center text-sm text-gray-700">3 months</td>
-                    <td className="px-6 py-3 text-center text-sm text-gray-700">12 months</td>
-                    <td className="px-6 py-3 text-center text-sm text-gray-700">12 months</td>
-                    <td className="px-6 py-3 text-center text-sm text-gray-700">12 months</td>
+                    <td className="px-6 py-3 text-center text-sm text-gray-700">Up to 12 months</td>
+                    <td className="px-6 py-3 text-center text-sm text-gray-700">Up to 12 months</td>
+                    <td className="px-6 py-3 text-center text-sm text-gray-700">Up to 12 months</td>
+                    <td className="px-6 py-3 text-center text-sm text-gray-700">Up to 12 months</td>
                   </tr>
                   <tr className="bg-white">
                     <td className="px-6 py-3 text-sm text-gray-700">Bank-connected income verification</td>
