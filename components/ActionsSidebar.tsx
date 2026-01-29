@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ActionsSidebarProps {
   selectedVerification: Verification | null;
+  subscriptionRefreshTrigger?: number;
   onCopyLink: (token: string) => void;
   onDelete: (id: string) => void;
   onEmailSent?: () => void;
@@ -56,6 +57,7 @@ function formatDateTime(dateString: string | null): string {
 
 export function ActionsSidebar({
   selectedVerification,
+  subscriptionRefreshTrigger,
   onCopyLink,
   onDelete,
   onEmailSent,
@@ -107,12 +109,12 @@ export function ActionsSidebar({
     }
   }, [startEditing, selectedVerification, isActive]);
 
-  // Load subscription status when user is available
+  // Load subscription status when user is available or after verification created (PAYG credit consumed)
   useEffect(() => {
     if (user) {
       loadSubscriptionStatus();
     }
-  }, [user]);
+  }, [user, subscriptionRefreshTrigger]);
 
   async function loadSubscriptionStatus() {
     if (!user) return;
@@ -512,10 +514,10 @@ export function ActionsSidebar({
             <div className="mb-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-lg font-semibold text-gray-900">
-                  1 credit remaining
+                  {subscriptionStatus.availableCredits} credit{subscriptionStatus.availableCredits !== 1 ? 's' : ''} remaining
                 </span>
                 <span className="text-xs text-gray-500">
-                  1/1 available
+                  {subscriptionStatus.availableCredits} available
                 </span>
               </div>
             </div>

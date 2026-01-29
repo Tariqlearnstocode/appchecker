@@ -26,11 +26,13 @@ function PlanAndUsageMobile({
   user, 
   verifications, 
   selectedVerification, 
+  subscriptionRefreshTrigger = 0,
   onUpgradeClick 
 }: { 
   user: any; 
   verifications: Verification[]; 
   selectedVerification: Verification | null;
+  subscriptionRefreshTrigger?: number;
   onUpgradeClick: () => void;
 }) {
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
@@ -42,7 +44,7 @@ function PlanAndUsageMobile({
         .then(data => setSubscriptionStatus(data))
         .catch(err => console.error('Error loading subscription status:', err));
     }
-  }, [user]);
+  }, [user, subscriptionRefreshTrigger]);
 
   if (!user || verifications.length === 0 || !subscriptionStatus) {
     return null;
@@ -81,8 +83,10 @@ function PlanAndUsageMobile({
         {!subscriptionStatus.hasSubscription && subscriptionStatus.availableCredits !== undefined && (
           <div className="mb-3">
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-semibold text-gray-900">1 credit remaining</span>
-              <span className="text-xs text-gray-500">1/1 available</span>
+              <span className="text-lg font-semibold text-gray-900">
+                {subscriptionStatus.availableCredits} credit{subscriptionStatus.availableCredits !== 1 ? 's' : ''} remaining
+              </span>
+              <span className="text-xs text-gray-500">{subscriptionStatus.availableCredits} available</span>
             </div>
           </div>
         )}
@@ -153,6 +157,7 @@ export default function HomePageClient({
   } | null>(null);
   const [headerDismissed, setHeaderDismissed] = useState(false);
   const [startEditing, setStartEditing] = useState(false);
+  const [subscriptionRefreshTrigger, setSubscriptionRefreshTrigger] = useState(0);
   const { toast } = useToast();
 
   // Listen for auth modal events from navbar
@@ -253,6 +258,7 @@ export default function HomePageClient({
               setFormData({ name: '', email: '' });
               setSelectedVerification(result.verification);
               setActiveTab('all');
+              setSubscriptionRefreshTrigger((t) => t + 1);
         
               // Clear stored data
               sessionStorage.removeItem('pendingVerificationData');
@@ -436,11 +442,12 @@ export default function HomePageClient({
         });
         }
       } else {
-        // Subscription user - verification created, usage reported to Stripe
+        // Verification created (subscription or PAYG) - refresh usage/credits display
         setVerifications([result.verification, ...verifications]);
         setFormData({ name: '', email: '' });
         setSelectedVerification(result.verification);
         setActiveTab('all');
+        setSubscriptionRefreshTrigger((t) => t + 1);
         
         // Clear any stored pending data (in case user manually created after payment)
         sessionStorage.removeItem('pendingVerificationData');
@@ -502,6 +509,7 @@ export default function HomePageClient({
           ? 'Verification canceled and credit returned' 
           : 'Verification canceled'
       });
+      if (result.creditRefunded) setSubscriptionRefreshTrigger((t) => t + 1);
       
       // Reload verifications to get fresh data
       await loadVerifications();
@@ -725,6 +733,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
               user={user}
               verifications={verifications}
               selectedVerification={selectedVerification}
+              subscriptionRefreshTrigger={subscriptionRefreshTrigger}
               onUpgradeClick={() => {
                 analytics.ctaClicked({ cta_name: 'Compare Plans', location: 'sidebar' });
                 setShowPricingModal(true);
@@ -738,6 +747,7 @@ Stop fake paystubs with bank-verified income reports.         </h1>
               {user && verifications.length > 0 ? (
                 <ActionsSidebar
                   selectedVerification={selectedVerification}
+                  subscriptionRefreshTrigger={subscriptionRefreshTrigger}
                   onCopyLink={copyLink}
                   onDelete={(id) => {
                     cancelVerification(id);

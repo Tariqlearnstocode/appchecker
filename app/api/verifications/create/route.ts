@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
         // Log but don't fail - verification is created
       }
 
-      // Mark payment as used
+      // Mark payment as used (required so credit is consumed and UI shows correct count)
       const { error: updateError } = await supabaseAdmin
         .from('one_time_payments' as any)
         .update({
@@ -272,8 +272,11 @@ export async function POST(request: NextRequest) {
         .eq('id', availablePayment.id);
 
       if (updateError) {
-        console.error('Error updating payment record:', updateError);
-        // Don't fail - verification is created
+        console.error('Error updating one_time_payments (credit not consumed):', updateError);
+        return NextResponse.json(
+          { error: 'Verification created but failed to consume credit. Please refresh; if the issue persists, contact support.' },
+          { status: 500 }
+        );
       }
 
       // Log to audit logs
