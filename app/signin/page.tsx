@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeCompanyName } from '@/utils/sanitize';
+import { getRef, clearRef } from '@/utils/captureRef';
 import Link from 'next/link';
 import { FileCheck } from 'lucide-react';
 
@@ -44,9 +45,14 @@ export default function SignInPage() {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { ref: getRef() }
+        }
       });
 
       if (signUpError) throw signUpError;
+
+      clearRef();
 
       if (signUpData.user) {
         try {

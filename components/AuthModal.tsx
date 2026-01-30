@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeCompanyName } from '@/utils/sanitize';
+import { getRef, clearRef } from '@/utils/captureRef';
 
 type AuthMode = 'signin' | 'signup' | 'reset';
 
@@ -62,7 +63,9 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
 
     try {
       // If initialCompanyName was provided (from form pre-fill), save it silently
-      const metadata: any = {};
+      const metadata: any = {
+        ref: getRef(),
+      };
       if (initialCompanyName) {
         metadata.company_name = sanitizeCompanyName(initialCompanyName);
       }
@@ -70,14 +73,14 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        ...(Object.keys(metadata).length > 0 && {
-          options: {
-            data: metadata
-          }
-        })
+        options: {
+          data: metadata
+        }
       });
 
       if (signUpError) throw signUpError;
+
+      clearRef();
 
       // Create Stripe customer for the new user
       if (signUpData.user) {

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
+import { getRef, clearRef } from '@/utils/captureRef';
 
 interface AuthContextType {
   user: User | null;
@@ -47,8 +48,20 @@ export function AuthProvider({
         }
       } else {
         setUser(session.user);
+
+        // OAuth backfill: update ref for new signups (Google, etc.) when ref was captured
+        if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
+          const ref = getRef();
+          if (ref !== 'organic') {
+            fetch('/api/users/update-ref', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ref }),
+            }).finally(clearRef);
+          }
+        }
       }
-      
+
       // Only refresh on actual auth state changes, not on every render
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         router.refresh();

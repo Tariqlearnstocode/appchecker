@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import GlobalNavbar from '@/components/GlobalNavbar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GoogleOneTap } from '@/components/GoogleOneTap';
+import { RefCapture } from '@/components/RefCapture';
 import { createClient } from '@/utils/supabase/server';
 import { getUser } from '@/utils/supabase/queries';
 import 'styles/main.css';
@@ -93,6 +94,9 @@ export default async function RootLayout({ children }: PropsWithChildren) {
           `}
         </Script>
         <AuthProvider initialUser={user}>
+          <Suspense fallback={null}>
+            <RefCapture />
+          </Suspense>
           <GoogleOneTap />
           <GlobalNavbar />
           <main id="skip" className="flex-1">
