@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
-import { getRef, clearRef } from '@/utils/captureRef';
+import { getRef, getUtm, clearRef } from '@/utils/captureRef';
 
 interface AuthContextType {
   user: User | null;
@@ -49,14 +49,17 @@ export function AuthProvider({
       } else {
         setUser(session.user);
 
-        // OAuth backfill: update ref for new signups (Google, etc.) when ref was captured
+        // OAuth backfill: update ref + UTM for new signups (Google, etc.) when captured
         if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
           const ref = getRef();
-          if (ref !== 'organic') {
+          const utm = getUtm();
+          const hasRef = ref !== 'organic';
+          const hasUtm = utm.utm_source || utm.utm_medium || utm.utm_campaign;
+          if (hasRef || hasUtm) {
             fetch('/api/users/update-ref', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ref }),
+              body: JSON.stringify({ ref: hasRef ? ref : undefined, ...utm }),
             }).finally(clearRef);
           }
         }

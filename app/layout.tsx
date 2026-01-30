@@ -90,7 +90,8 @@ export default async function RootLayout({ children }: PropsWithChildren) {
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-Q8V6F4M6LF');
+            var loc = typeof window !== 'undefined' ? window.location : null;
+            gtag('config', 'G-Q8V6F4M6LF', loc ? { page_location: loc.href, page_path: loc.pathname + loc.search } : {});
           `}
         </Script>
         <AuthProvider initialUser={user}>

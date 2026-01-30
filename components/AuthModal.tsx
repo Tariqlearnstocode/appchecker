@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeCompanyName } from '@/utils/sanitize';
-import { getRef, clearRef } from '@/utils/captureRef';
+import { getRef, getUtm, clearRef } from '@/utils/captureRef';
 
 type AuthMode = 'signin' | 'signup' | 'reset';
 
@@ -65,6 +65,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signup', onAuthSucce
       // If initialCompanyName was provided (from form pre-fill), save it silently
       const metadata: any = {
         ref: getRef(),
+        ...getUtm(),
       };
       if (initialCompanyName) {
         metadata.company_name = sanitizeCompanyName(initialCompanyName);

@@ -36,6 +36,32 @@ https://incomechecker.com?ref=clarence&utm_source=clarence&utm_medium=direct&utm
 ---
 
 ## Query conversions
+
+**What you're counting:** Each row in `public.users` = one account creation (trigger on signup). So counts include every signup ever (team, test, real). No `created_at` on `public.users`; use `auth.users.created_at` if you need to filter by date or spot test accounts.
+
+Total user count:
 ```sql
-SELECT ref, COUNT(*) as signups FROM users GROUP BY ref ORDER BY signups DESC;
+SELECT COUNT(*) AS total_accounts FROM public.users;
+```
+
+By ref:
+```sql
+SELECT ref, COUNT(*) AS signups FROM public.users GROUP BY ref ORDER BY signups DESC;
+```
+
+By UTM source:
+```sql
+SELECT utm_source, utm_medium, utm_campaign, COUNT(*) AS signups 
+FROM public.users 
+WHERE utm_source IS NOT NULL 
+GROUP BY utm_source, utm_medium, utm_campaign 
+ORDER BY signups DESC;
+```
+
+To see who the 18 are (emails + when they signed up):
+```sql
+SELECT u.id, u.ref, u.utm_source, u.company_name, a.email, a.created_at
+FROM public.users u
+JOIN auth.users a ON a.id = u.id
+ORDER BY a.created_at DESC;
 ```
